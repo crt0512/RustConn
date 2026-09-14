@@ -216,6 +216,10 @@ pub struct RdpConfig {
     /// Uses multiple network paths for seamless mobility and bandwidth aggregation.
     /// Requires kernel MPTCP support (Linux 5.6+). Falls back to regular TCP.
     pub mptcp: bool,
+    /// Enable FIDO2/WebAuthn device redirection.
+    /// Allows using local FIDO2 security keys for authentication in the remote session.
+    /// Requires FreeRDP 3.x with `/fido` support. Only applies to External mode.
+    pub fido2_enabled: bool,
 }
 
 impl Default for RdpConfig {
@@ -263,6 +267,7 @@ impl Default for RdpConfig {
             graphics_mode: GraphicsMode::Auto,
             force_legacy_graphics: false,
             mptcp: false,
+            fido2_enabled: false,
         }
     }
 }

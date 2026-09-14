@@ -29,7 +29,7 @@ use crate::i18n::i18n;
 
 /// Creates the RDP options panel with all protocol-specific widgets.
 ///
-/// Returns a 35-element tuple matching the fields expected by `ConnectionDialog`.
+/// Returns a 36-element tuple matching the fields expected by `ConnectionDialog`.
 pub(super) fn create_rdp_options() -> (
     GtkBox,
     DropDown,
@@ -54,6 +54,7 @@ pub(super) fn create_rdp_options() -> (
     SpinButton,
     SpinButton,
     SpinButton,
+    adw::SwitchRow,
     adw::SwitchRow,
     adw::SwitchRow,
     DropDown,
@@ -425,6 +426,16 @@ pub(super) fn create_rdp_options() -> (
         .active(false)
         .build();
     features_group.add(&rdp_mptcp_check);
+
+    // FIDO2/WebAuthn device redirection
+    let rdp_fido2_check = adw::SwitchRow::builder()
+        .title(i18n("FIDO2 Passkey Redirection"))
+        .subtitle(i18n(
+            "Use local security keys in the remote session (External client, FreeRDP 3.x)",
+        ))
+        .active(false)
+        .build();
+    features_group.add(&rdp_fido2_check);
 
     // Disable NLA
     let disable_nla_check = adw::SwitchRow::builder()
@@ -799,6 +810,7 @@ pub(super) fn create_rdp_options() -> (
         rdp_autotype_initial_delay_spin,
         rdp_reconnect_on_resize_check,
         rdp_mptcp_check,
+        rdp_fido2_check,
         rdp_jump_host_dropdown,
         shared_folders,
         folders_list,

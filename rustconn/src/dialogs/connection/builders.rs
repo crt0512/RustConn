@@ -90,6 +90,9 @@ pub(super) struct ConnectionDialogData<'a> {
     pub ssh_remote_path_entry: &'a adw::EntryRow,
     pub ssh_keep_alive_interval: &'a adw::SpinRow,
     pub ssh_keep_alive_count_max: &'a adw::SpinRow,
+    pub ssh_elevated_switch: &'a adw::SwitchRow,
+    pub ssh_elevated_prompts_view: &'a TextView,
+    pub ssh_elevated_delay_spin: &'a adw::SpinRow,
     pub ssh_port_forwards: &'a Rc<RefCell<Vec<rustconn_core::models::PortForward>>>,
     pub rdp_client_mode_dropdown: &'a DropDown,
     pub rdp_performance_mode_dropdown: &'a DropDown,
@@ -116,6 +119,7 @@ pub(super) struct ConnectionDialogData<'a> {
     pub rdp_autotype_initial_delay_spin: &'a SpinButton,
     pub rdp_reconnect_on_resize_check: &'a adw::SwitchRow,
     pub rdp_mptcp_check: &'a adw::SwitchRow,
+    pub rdp_fido2_check: &'a adw::SwitchRow,
     pub rdp_jump_host_dropdown: &'a DropDown,
     pub rdp_connections_data: &'a Rc<RefCell<Vec<(Option<Uuid>, String)>>>,
     pub rdp_shared_folders: &'a Rc<RefCell<Vec<SharedFolder>>>,
@@ -237,6 +241,10 @@ pub(super) struct ConnectionDialogData<'a> {
     pub post_disconnect_command_entry: &'a Entry,
     pub post_disconnect_timeout_spin: &'a SpinButton,
     pub post_disconnect_last_only_switch: &'a adw::SwitchRow,
+    // Postpend command (output filter) fields
+    pub postpend_enabled_switch: &'a adw::SwitchRow,
+    pub postpend_command_entry: &'a Entry,
+    pub postpend_args_entry: &'a Entry,
     // Custom properties
     pub custom_properties: &'a Vec<CustomProperty>,
     // WOL fields
@@ -790,6 +798,9 @@ impl ConnectionDialogData<'_> {
             };
         }
 
+        // Set postpend command (output filter like ChromaTerm)
+        conn.postpend = self.build_postpend();
+
         // Set group from dropdown
         let selected_idx = self.group_dropdown.selected() as usize;
         let groups_data = self.groups_data.borrow();
@@ -930,6 +941,23 @@ impl ConnectionDialogData<'_> {
         }
 
         Some(task)
+    }
+
+    fn build_postpend(&self) -> Option<rustconn_core::models::PostpendCommand> {
+        let command = self.postpend_command_entry.text().trim().to_string();
+        if command.is_empty() {
+            return None;
+        }
+
+        // Parse args from space-separated string
+        let args_text = self.postpend_args_entry.text().to_string();
+        let args: Vec<String> = args_text.split_whitespace().map(str::to_string).collect();
+
+        Some(rustconn_core::models::PostpendCommand {
+            command,
+            args,
+            enabled: self.postpend_enabled_switch.is_active(),
+        })
     }
 
     fn build_log_config(&self) -> Option<LogConfig> {
@@ -1504,6 +1532,7 @@ impl ConnectionDialogData<'_> {
             remote_path,
             backspace_sends: BackspaceSends::from_index(self.ssh_backspace_dropdown.selected()),
             delete_sends: DeleteSends::from_index(self.ssh_delete_dropdown.selected()),
+            elevated: self.build_elevated_credentials(),
         }
     }
 
@@ -1640,6 +1669,7 @@ impl ConnectionDialogData<'_> {
             autotype_initial_delay_ms: self.rdp_autotype_initial_delay_spin.value() as u32,
             reconnect_on_resize: self.rdp_reconnect_on_resize_check.is_active(),
             mptcp: self.rdp_mptcp_check.is_active(),
+            fido2_enabled: self.rdp_fido2_check.is_active(),
             script_paste_via_clipboard: true,
             remote_app_program: {
                 let text = self.rdp_remote_app_program_entry.text();
@@ -1800,6 +1830,39 @@ impl ConnectionDialogData<'_> {
         text.split_whitespace()
             .map(std::string::ToString::to_string)
             .collect()
+    }
+
+    /// Builds elevated credentials from the SSH privilege escalation settings.
+    ///
+    /// Patterns are newline-separated, not comma-separated: a regex may contain a
+    /// comma — `\w{1,3}` is the ordinary case — and splitting on it would cut such
+    /// a pattern into two unusable halves.
+    fn build_elevated_credentials(&self) -> Option<rustconn_core::models::ElevatedCredentials> {
+        if !self.ssh_elevated_switch.is_active() {
+            return None;
+        }
+
+        let custom_prompts = {
+            let buffer = self.ssh_elevated_prompts_view.buffer();
+            let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+            text.lines()
+                .map(|line| line.trim().to_string())
+                .filter(|line| !line.is_empty())
+                .collect()
+        };
+
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "the adjustment clamps the spin row to 0..=5000, so the value is a small non-negative integer"
+        )]
+        let delay_ms = self.ssh_elevated_delay_spin.value() as u32;
+
+        Some(rustconn_core::models::ElevatedCredentials {
+            enabled: true,
+            custom_prompts,
+            delay_ms,
+        })
     }
 }
 

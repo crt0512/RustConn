@@ -2536,6 +2536,7 @@ impl TemplateDialog {
             remote_app_args: None,
             remote_app_name: None,
             mptcp: false,
+            fido2_enabled: false,
         })
     }
 

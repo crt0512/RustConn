@@ -50,6 +50,12 @@ pub(super) struct AutomationTabWidgets {
     pub(super) post_disconnect_timeout_spin: SpinButton,
     /// Post-disconnect last-connection-only switch.
     pub(super) post_disconnect_last_only_switch: adw::SwitchRow,
+    /// Postpend command enabled switch.
+    pub(super) postpend_enabled_switch: adw::SwitchRow,
+    /// Postpend command entry (e.g., chromaterm, pv).
+    pub(super) postpend_command_entry: Entry,
+    /// Postpend command arguments entry.
+    pub(super) postpend_args_entry: Entry,
 }
 
 /// Creates the combined Automation tab (Expect Rules + Tasks).
@@ -217,6 +223,11 @@ pub(super) fn create_automation_combined_tab() -> AutomationTabWidgets {
     ) = create_task_section(&i18n("Post-Disconnect Task"), false);
     content.append(&post_disconnect_group);
 
+    // === Postpend Command Section (ChromaTerm, etc.) ===
+    let (postpend_group, postpend_enabled_switch, postpend_command_entry, postpend_args_entry) =
+        create_postpend_section();
+    content.append(&postpend_group);
+
     clamp.set_child(Some(&content));
     scrolled.set_child(Some(&clamp));
 
@@ -242,6 +253,9 @@ pub(super) fn create_automation_combined_tab() -> AutomationTabWidgets {
         post_disconnect_command_entry,
         post_disconnect_timeout_spin,
         post_disconnect_last_only_switch,
+        postpend_enabled_switch,
+        postpend_command_entry,
+        postpend_args_entry,
     }
 }
 
@@ -429,4 +443,76 @@ pub(super) fn create_task_section(
         abort_switch,
         condition_switch,
     )
+}
+
+/// Creates the Postpend Command section for output filtering (e.g., ChromaTerm).
+///
+/// Allows piping terminal output through an external command for syntax
+/// highlighting, bandwidth metering, or other transformations.
+///
+/// Returns the group, the enabled switch, command entry, and args entry.
+fn create_postpend_section() -> (adw::PreferencesGroup, adw::SwitchRow, Entry, Entry) {
+    let group = adw::PreferencesGroup::builder()
+        .title(i18n("Output Filter"))
+        .description(i18n(
+            "Pipe terminal output through an external command for highlighting or processing",
+        ))
+        .build();
+
+    let expander = adw::ExpanderRow::builder()
+        .title(i18n("Postpend Command"))
+        .subtitle(i18n("e.g., ChromaTerm for syntax highlighting"))
+        .show_enable_switch(false)
+        .build();
+
+    // Enable switch
+    let enabled_switch = adw::SwitchRow::builder()
+        .title(i18n("Enable"))
+        .subtitle(i18n("Pipe session output through this command"))
+        .active(false)
+        .build();
+    expander.add_row(&enabled_switch);
+
+    // Command entry
+    let command_entry = Entry::builder()
+        .hexpand(true)
+        .valign(gtk4::Align::Center)
+        .placeholder_text("chromaterm")
+        .sensitive(false)
+        .build();
+
+    let command_row = adw::ActionRow::builder()
+        .title(i18n("Command"))
+        .subtitle(i18n("Executable name or path (e.g., chromaterm, pv, ccze)"))
+        .build();
+    command_row.add_suffix(&command_entry);
+    expander.add_row(&command_row);
+
+    // Arguments entry
+    let args_entry = Entry::builder()
+        .hexpand(true)
+        .valign(gtk4::Align::Center)
+        .placeholder_text("--config /path/to/config.yml")
+        .sensitive(false)
+        .build();
+
+    let args_row = adw::ActionRow::builder()
+        .title(i18n("Arguments"))
+        .subtitle(i18n("Space-separated arguments to pass to the command"))
+        .build();
+    args_row.add_suffix(&args_entry);
+    expander.add_row(&args_row);
+
+    group.add(&expander);
+
+    // Connect enabled switch to enable/disable other fields
+    let command_entry_clone = command_entry.clone();
+    let args_entry_clone = args_entry.clone();
+    enabled_switch.connect_active_notify(move |switch| {
+        let enabled = switch.is_active();
+        command_entry_clone.set_sensitive(enabled);
+        args_entry_clone.set_sensitive(enabled);
+    });
+
+    (group, enabled_switch, command_entry, args_entry)
 }

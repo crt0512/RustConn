@@ -1030,6 +1030,35 @@ pub enum Commands {
         /// Zoom level for the embedded browser (0.3–3.0, default: 1.0)
         #[arg(long, value_name = "FLOAT")]
         zoom_level: Option<f64>,
+
+        /// Output filter: pipe terminal output through this command
+        /// (e.g. chromaterm, ccze). Pass an empty string to remove the filter.
+        #[arg(long, value_name = "COMMAND")]
+        postpend_command: Option<String>,
+
+        /// Argument for the output filter. Repeat for several arguments,
+        /// e.g. --postpend-arg --config --postpend-arg ~/.chromaterm.yml
+        #[arg(long, value_name = "ARG")]
+        postpend_arg: Vec<String>,
+
+        /// Enable or disable the configured output filter without removing it.
+        /// Bare --postpend-enabled enables; --postpend-enabled false disables.
+        #[arg(long, value_name = "BOOL", num_args = 0..=1, default_missing_value = "true")]
+        postpend_enabled: Option<bool>,
+
+        /// SSH: answer sudo/su/doas password prompts with the connection password.
+        /// Bare --elevated-enabled enables; --elevated-enabled false disables.
+        #[arg(long, value_name = "BOOL", num_args = 0..=1, default_missing_value = "true")]
+        elevated_enabled: Option<bool>,
+
+        /// SSH: an anchored regex matching a privilege-escalation prompt.
+        /// Repeat for several patterns; replaces the built-in set.
+        #[arg(long, value_name = "REGEX")]
+        elevated_prompt: Vec<String>,
+
+        /// SSH: milliseconds to wait after an escalation prompt before answering
+        #[arg(long, value_name = "MS")]
+        elevated_delay: Option<u32>,
     },
 
     /// Send Wake-on-LAN magic packet
@@ -1227,6 +1256,9 @@ pub enum ExportFormatArg {
     /// SecureCRT session format (.ini directory)
     #[value(name = "secure-crt", alias = "securecrt")]
     SecureCrt,
+    /// Microsoft Remote Desktop file (.rdp) — RDP connections only
+    #[value(name = "rdp-file", alias = "rdp")]
+    RdpFile,
 }
 
 /// Import format options

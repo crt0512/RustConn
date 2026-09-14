@@ -618,9 +618,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.4.5"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80"
+checksum = "a3eb0f42d6c360dc3f8a821f6bf2fdea7f72bfd36b3076eb0e6d1e9e0752fff4"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -4788,7 +4788,7 @@ dependencies = [
 
 [[package]]
 name = "rustconn"
-version = "0.21.12"
+version = "0.21.13"
 dependencies = [
  "async-channel",
  "chrono",
@@ -4828,7 +4828,7 @@ dependencies = [
 
 [[package]]
 name = "rustconn-cli"
-version = "0.21.12"
+version = "0.21.13"
 dependencies = [
  "chrono",
  "clap",
@@ -4850,7 +4850,7 @@ dependencies = [
 
 [[package]]
 name = "rustconn-core"
-version = "0.21.12"
+version = "0.21.13"
 dependencies = [
  "aes 0.9.3",
  "ar",
@@ -4909,7 +4909,7 @@ dependencies = [
 
 [[package]]
 name = "rustconn-dock-sys"
-version = "0.21.12"
+version = "0.21.13"
 dependencies = [
  "objc2",
  "objc2-app-kit",
@@ -4918,18 +4918,18 @@ dependencies = [
 
 [[package]]
 name = "rustconn-env-sys"
-version = "0.21.12"
+version = "0.21.13"
 
 [[package]]
 name = "rustconn-locale-sys"
-version = "0.21.12"
+version = "0.21.13"
 dependencies = [
  "gettext-rs",
 ]
 
 [[package]]
 name = "rustconn-pty-sys"
-version = "0.21.12"
+version = "0.21.13"
 dependencies = [
  "libc",
  "nix",
@@ -4997,9 +4997,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.44"
+version = "0.23.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6725596c3f2c3a0aef021139e145d4eafe314a6623e4680ca83852b2c67ab2ba"
+checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -5873,18 +5873,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.13.2"
+version = "1.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cf0ded5c4e56918d8f8a339e1bb67d038d3bc6d144ac407904015ba2e4cde9b"
-dependencies = [
- "tinyvec_macros",
-]
-
-[[package]]
-name = "tinyvec_macros"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tls_codec"

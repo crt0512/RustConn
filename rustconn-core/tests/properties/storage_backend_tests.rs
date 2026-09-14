@@ -104,6 +104,7 @@ fn create_test_connection(id: Uuid, name: &str, host: &str) -> Connection {
         retry_config: None,
         knock_sequence: None,
         spa_config: None,
+        postpend: None,
     }
 }
 

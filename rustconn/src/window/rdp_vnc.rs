@@ -609,6 +609,9 @@ fn start_embedded_rdp_session(
     embedded_config.tls_security_level = rdp_config.tls_security_level;
     embedded_config.disable_nla = rdp_config.disable_nla;
 
+    // FIDO2/WebAuthn device redirection (FreeRDP 3.x only, external mode)
+    embedded_config.fido2_enabled = rdp_config.fido2_enabled;
+
     // Wrap in Rc to keep widget alive in notebook
     let embedded_widget = Rc::new(embedded_widget);
 
@@ -939,6 +942,7 @@ fn start_external_rdp_session(
         window_geometry: None,
         remember_window_position: false,
         ignore_certificate: rdp_config.ignore_certificate,
+        fido2_enabled: rdp_config.fido2_enabled,
     };
 
     // Early-failure callback. With no tab, this rarely fires: the spawned child

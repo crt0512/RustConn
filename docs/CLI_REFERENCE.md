@@ -1,6 +1,6 @@
 # RustConn CLI Reference
 
-**Version 0.21.12** | Command-line interface for RustConn connection management
+**Version 0.21.13** | Command-line interface for RustConn connection management
 
 The `rustconn-cli` binary provides headless connection management from the terminal. It shares the same configuration files as the GUI (`~/.config/rustconn/`), so changes made in either tool are immediately visible to the other. The default build is the minimal headless path; desktop/client-launch and secret-management commands are enabled with optional features.
 
@@ -425,9 +425,38 @@ All flags from `add` are available (except `--protocol`), plus:
 - `--add-tag` / `--remove-tag` for incremental tag editing
 - `--skip-port-check=false` to clear the flag
 
-Two boolean flags accept an explicit value on `update` so they can be *cleared*, unlike on `add` where they only turn a feature on:
+Four boolean flags accept an explicit value on `update` so they can be *cleared*, unlike on `add` where they only turn a feature on:
 - `--mptcp` — bare `--mptcp` (or `--mptcp true`) enables Multipath TCP; `--mptcp false` disables it
 - `--skip-port-check` — bare `--skip-port-check` (or `=true`) sets the flag; `--skip-port-check=false` clears it
+- `--postpend-enabled` — turns the configured output filter on; `--postpend-enabled false` turns it off without forgetting the command
+- `--elevated-enabled` — turns sudo password injection on; `--elevated-enabled false` turns it off, keeping the patterns and delay
+
+`update`-only flags:
+
+| Flag | Description |
+|------|-------------|
+| `--postpend-command` | Output filter: pipe terminal output through this command (`chromaterm`, `ccze`, `pv`). An empty string removes the filter. Terminal protocols only |
+| `--postpend-arg` | One argument for the output filter; repeatable. Replaces the whole argument list |
+| `--elevated-prompt` | An anchored regex matching a privilege-escalation prompt; repeatable. Replaces the built-in set. SSH only |
+| `--elevated-delay` | Milliseconds to wait after an escalation prompt before answering (0–5000). SSH only |
+
+```bash
+# Output filter: colourise a session through ChromaTerm
+rustconn-cli update "My Server" --postpend-command chromaterm \
+    --postpend-arg --config --postpend-arg ~/.chromaterm.yml
+rustconn-cli update "My Server" --postpend-enabled false
+rustconn-cli update "My Server" --postpend-command ""
+
+# Answer sudo prompts with the connection password
+rustconn-cli update "My Server" --elevated-enabled
+rustconn-cli update "Switch" --elevated-enabled \
+    --elevated-prompt '^Enable [Pp]assword:\s*$' --elevated-delay 500
+```
+
+A custom `--elevated-prompt` replaces the built-in patterns and gives up their
+anchoring. Anchor yours with `^` and `$` too: an unanchored `Password:` also matches
+OpenSSH's own `user@host's password:`, and behind a jump host that prompt can be the
+bastion's.
 
 Only specified fields are changed; unspecified fields remain unchanged.
 
@@ -526,6 +555,7 @@ rustconn-cli export -f royal-ts -o connections.rtsz
 rustconn-cli export -f moba-xterm -o sessions.mxtsessions
 rustconn-cli export -f asbru -o asbru.yml
 rustconn-cli export -f secure-crt -o ~/securecrt-sessions/
+rustconn-cli export -f rdp-file -o ~/rdp-exports/
 rustconn-cli export -f csv -o connections.csv
 rustconn-cli export -f csv -o connections.csv --csv-delimiter semicolon
 rustconn-cli export -f csv -o connections.csv --csv-fields "name,host,port,protocol"
@@ -541,6 +571,7 @@ rustconn-cli export -f csv -o connections.csv --csv-fields "name,host,port,proto
 | `royal-ts` | Royal TS JSON (`.rtsz`) |
 | `moba-xterm` | MobaXterm sessions (`.mxtsessions`) |
 | `secure-crt` | SecureCRT session format (`.ini` directory) |
+| `rdp-file` | Microsoft Remote Desktop files (`.rdp` directory, one file per connection) — RDP connections only, everything else is skipped |
 | `csv` | CSV format (`.csv`) |
 
 **CSV options** (only valid with `--format csv`):

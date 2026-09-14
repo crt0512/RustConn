@@ -130,6 +130,7 @@ fn arb_ssh_config() -> impl Strategy<Value = SshConfig> {
                     remote_path: None,
                     backspace_sends,
                     delete_sends,
+                    elevated: None,
                 }
             },
         )
@@ -223,6 +224,7 @@ fn arb_rdp_config() -> impl Strategy<Value = RdpConfig> {
                 remote_app_args: None,
                 remote_app_name: None,
                 mptcp: false,
+                fido2_enabled: false,
             },
         )
 }

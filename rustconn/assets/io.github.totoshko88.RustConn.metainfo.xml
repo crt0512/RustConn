@@ -140,6 +140,22 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.21.13" date="2026-09-14">
+      <description>
+        <p>Version 0.21.13 - RDP export, FIDO2, automatic sudo answers, and output filtering, with the credential and injection edges tightened:</p>
+        <ul>
+          <li>Added: export RDP connections to Microsoft .rdp files for mstsc.exe or FreeRDP; no password is written and every value is stripped of control characters so a newline cannot append a key the client would honour</li>
+          <li>Added: FIDO2/WebAuthn passkey redirection for RDP sessions, for signing in to a remote Windows session with a local security key</li>
+          <li>Added: elevated credentials answer sudo, su, doas and enable prompts with the connection password on SSH and SFTP, only on the active prompt line, never twice for the same prompt, and at most three times per rule</li>
+          <li>Added: an output filter pipes a session's output through ChromaTerm, ccze or pv before it is displayed</li>
+          <li>Added: expect rules can wait before answering, for equipment that prints a prompt before it can read the reply</li>
+          <li>Fixed: SDL-FreeRDP now shows the certificate dialog when a server certificate changes</li>
+          <li>Fixed: a delayed answer is dropped if the prompt is gone by the time it would be sent, so a password is not typed into whatever took the prompt's place</li>
+          <li>Fixed: an output filter that is not installed or not executable is caught before the session starts and reported instead of losing the output silently</li>
+          <li>Improved: sidebar search remembers 20 recent searches instead of 10</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.21.12" date="2026-09-12">
       <description>
         <p>Version 0.21.12 - external RDP now asks about a changed server certificate instead of doing nothing:</p>

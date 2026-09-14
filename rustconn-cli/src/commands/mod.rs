@@ -400,6 +400,12 @@ pub fn dispatch(config_path: Option<&Path>, command: Commands) -> Result<(), Cli
             web_toolbar,
             private_mode,
             zoom_level,
+            postpend_command,
+            postpend_arg,
+            postpend_enabled,
+            elevated_enabled,
+            elevated_prompt,
+            elevated_delay,
         } => update::cmd_update(
             config_path,
             update::UpdateParams {
@@ -507,6 +513,12 @@ pub fn dispatch(config_path: Option<&Path>, command: Commands) -> Result<(), Cli
                 web_toolbar,
                 private_mode,
                 zoom_level,
+                postpend_command: postpend_command.as_deref(),
+                postpend_arg: &postpend_arg,
+                postpend_enabled,
+                elevated_enabled,
+                elevated_prompt: &elevated_prompt,
+                elevated_delay,
             },
         ),
         Commands::Wol {

@@ -815,6 +815,140 @@ pub enum SshAuthMethod {
     SecurityKey,
 }
 
+/// Elevated/privilege escalation credentials for automatic sudo password injection.
+///
+/// When enabled, the connection's password is sent automatically once a
+/// privilege-escalation prompt (sudo, su, doas, a Cisco-style `enable`) appears
+/// on the active prompt line. The mechanism is the ordinary expect engine:
+/// [`crate::automation::elevated_credentials_rules`] turns this configuration
+/// into [`crate::automation::ExpectRule`]s whose response is the `${password}`
+/// placeholder, so the credential is resolved and scrubbed on exactly the same
+/// path a hand-written rule takes.
+///
+/// # Security
+///
+/// Injection answers whatever matches, so the patterns decide what the password
+/// can be handed to. Two properties keep that bounded:
+///
+/// 1. **The defaults are anchored** with `^` and `$`. That is not cosmetic: the
+///    unanchored `\w+'s password:` matches inside OpenSSH's own
+///    `user@host's password:`, and an unanchored `Password:` matches it too, so
+///    either one would type the elevated password at the *login* prompt — and
+///    behind a jump host that prompt can be the bastion's, which is the leak the
+///    issue #191 guard exists to prevent.
+/// 2. **Only the active prompt line is matched**, because these rules are not
+///    one-shot; a stale sudo prompt left higher up the screen cannot re-trigger
+///    them.
+///
+/// A custom pattern gives up the first property. Anchor it.
+///
+/// Remaining exposure, unchanged by any of the above: a program on the remote
+/// host can print something that looks like a sudo prompt and be answered.
+/// Prefer `sudoers` `NOPASSWD` for trusted commands, and enable this only on
+/// hosts you trust.
+///
+/// # A distinct elevated password
+///
+/// There is deliberately no second credential slot here. A sudo password that
+/// differs from the login password goes in a connection-local secret variable
+/// (issue #317) referenced from a hand-written expect rule — that route already
+/// stores, resolves and scrubs a second secret, where a new field on this struct
+/// would need the same work repeated in every keyring backend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ElevatedCredentials {
+    /// Enable automatic sudo password injection.
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Custom prompts to detect (regex patterns).
+    /// When empty, uses the default patterns: sudo, su, doas and enable prompts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom_prompts: Vec<String>,
+
+    /// Delay before sending the password, in milliseconds.
+    ///
+    /// Network equipment often prints its prompt before it is ready to read the
+    /// answer, and swallows a reply that arrives too early. `0` sends
+    /// immediately.
+    ///
+    /// Read through [`ElevatedCredentials::effective_delay_ms`] rather than
+    /// directly: the field is whatever was stored, which for a hand-edited or
+    /// imported config can be far past what the UI allows.
+    #[serde(default = "default_sudo_delay")]
+    pub delay_ms: u32,
+}
+
+/// The longest delay that may be configured before sending a credential, in ms.
+///
+/// The same ceiling the SSH options dialog offers, enforced here as well because
+/// the dialog is not the only way a value arrives: a shared or hand-edited config
+/// deserializes straight into this struct. The ceiling is a security property, not
+/// a UI nicety — the delayed send is what makes a prompt able to disappear before
+/// the response lands, so a five-minute delay would be a five-minute window in
+/// which the password can be typed into whatever took the prompt's place.
+pub const MAX_ELEVATED_DELAY_MS: u32 = 5_000;
+
+/// Enough for a local `sudo` to finish switching the tty to no-echo, short
+/// enough not to be felt. Network gear usually needs several hundred ms more.
+const fn default_sudo_delay() -> u32 {
+    100
+}
+
+impl Default for ElevatedCredentials {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            custom_prompts: Vec::new(),
+            delay_ms: default_sudo_delay(),
+        }
+    }
+}
+
+impl ElevatedCredentials {
+    /// Returns the default privilege-escalation prompt patterns.
+    ///
+    /// Every pattern is anchored to the whole line. See the type's security
+    /// notes for why: the unanchored forms also match OpenSSH's login prompt.
+    #[must_use]
+    pub fn default_prompts() -> Vec<String> {
+        vec![
+            // sudo, including the localised `for` forms that keep the brackets.
+            r"^\[sudo\] password for [^:]+:\s*$".to_string(),
+            // su on most systems, and `sudo -S` with a bare prompt. Anchored, so
+            // `user@host's password:` does not match.
+            r"^[Pp]assword:\s*$".to_string(),
+            // doas prints `doas (user@host) password:`.
+            r"^doas \([^)]+\) password:\s*$".to_string(),
+            // Cisco-style enable prompt on network equipment.
+            r"^[Ee]nable [Pp]assword:\s*$".to_string(),
+        ]
+    }
+
+    /// Returns the prompts to use, falling back to defaults if custom is empty.
+    #[must_use]
+    pub fn effective_prompts(&self) -> Vec<String> {
+        if self.custom_prompts.is_empty() {
+            Self::default_prompts()
+        } else {
+            self.custom_prompts.clone()
+        }
+    }
+
+    /// Returns the delay to actually use, clamped to [`MAX_ELEVATED_DELAY_MS`].
+    ///
+    /// Clamped rather than rejected: a config with an out-of-range delay is still
+    /// a usable config, and refusing to build the rule at all would turn a value
+    /// nobody may have typed on purpose into silently missing sudo injection.
+    #[must_use]
+    pub const fn effective_delay_ms(&self) -> u32 {
+        if MAX_ELEVATED_DELAY_MS < self.delay_ms {
+            MAX_ELEVATED_DELAY_MS
+        } else {
+            self.delay_ms
+        }
+    }
+}
+
 /// SSH protocol configuration
 // Allow 6 bools - these are distinct SSH connection options that map directly to CLI flags
 #[expect(
@@ -952,6 +1086,12 @@ pub struct SshConfig {
     /// need `^H` or `^?` named explicitly.
     #[serde(default)]
     pub delete_sends: DeleteSends,
+
+    /// Elevated/privilege escalation credentials for automatic SUDO injection.
+    /// When enabled and a SUDO/su/doas prompt is detected, the password is
+    /// automatically sent to the terminal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elevated: Option<ElevatedCredentials>,
 }
 
 fn default_true() -> bool {
@@ -2139,6 +2279,12 @@ pub struct RdpConfig {
     /// Only applies to Embedded mode; External FreeRDP handles its own sockets.
     #[serde(default)]
     pub mptcp: bool,
+
+    /// Enable FIDO2/WebAuthn device redirection.
+    /// Allows using local FIDO2 security keys for authentication in the remote session.
+    /// Requires FreeRDP 3.x with `/fido` support. Only applies to External mode.
+    #[serde(default)]
+    pub fido2_enabled: bool,
 }
 
 /// Written out by hand rather than derived, so that it agrees with the serde
@@ -2195,6 +2341,7 @@ impl Default for RdpConfig {
             remote_app_args: None,
             remote_app_name: None,
             mptcp: false,
+            fido2_enabled: false,
         }
     }
 }

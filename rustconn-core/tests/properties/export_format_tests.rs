@@ -10,7 +10,7 @@ proptest! {
     #[test]
     fn export_format_all_returns_all(_dummy in 0..1) {
         let all = ExportFormat::all();
-        prop_assert_eq!(all.len(), 9);
+        prop_assert_eq!(all.len(), 10);
         prop_assert!(all.contains(&ExportFormat::Ansible));
         prop_assert!(all.contains(&ExportFormat::SshConfig));
         prop_assert!(all.contains(&ExportFormat::Remmina));
@@ -20,6 +20,7 @@ proptest! {
         prop_assert!(all.contains(&ExportFormat::MobaXterm));
         prop_assert!(all.contains(&ExportFormat::Csv));
         prop_assert!(all.contains(&ExportFormat::SecureCrt));
+        prop_assert!(all.contains(&ExportFormat::RdpFile));
     }
 
     /// Property: Each ExportFormat has a non-empty display name
@@ -42,12 +43,21 @@ proptest! {
         }
     }
 
-    /// Property: Only Remmina and SecureCrt export to directory
+    /// Property: exactly the one-file-per-connection formats export to a directory
+    ///
+    /// Remmina, SecureCRT and `.rdp` each describe a single connection per file and
+    /// have no container format, so a selection of several has to become several
+    /// files. Every other format writes one file. The dialog picks a file chooser or
+    /// a folder chooser from this answer before it knows what is selected, so a
+    /// format that got this wrong would offer the wrong chooser.
     #[test]
-    fn only_remmina_exports_to_directory(_dummy in 0..1) {
+    fn only_per_connection_formats_export_to_directory(_dummy in 0..1) {
         for format in ExportFormat::all() {
             let exports_to_dir = format.exports_to_directory();
-            if *format == ExportFormat::Remmina || *format == ExportFormat::SecureCrt {
+            if matches!(
+                format,
+                ExportFormat::Remmina | ExportFormat::SecureCrt | ExportFormat::RdpFile
+            ) {
                 prop_assert!(exports_to_dir);
             } else {
                 prop_assert!(!exports_to_dir);

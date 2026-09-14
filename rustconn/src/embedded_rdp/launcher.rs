@@ -35,6 +35,24 @@ const CANCELLED_CHILD_REAP_TIMEOUT: Duration = Duration::from_millis(500);
 /// Poll interval keeps child cleanup bounded without busy-waiting.
 const CANCELLED_CHILD_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
+/// Whether the binary name is an SDL-based FreeRDP variant.
+///
+/// SDL-FreeRDP (`sdl-freerdp3`, `sdl-freerdp`) uses its own SDL-based GUI for
+/// certificate prompts and credentials dialogs, which does not print anything to
+/// stdout. The certificate-change watchdog relies on capturing the
+/// "Certificate … has changed!!!" banner from stdout, so an SDL client must be
+/// forced into console mode via `+force-console-callbacks`.
+fn is_sdl_freerdp_binary(binary: &str) -> bool {
+    // The binary can be a full path on macOS (/Applications/SDL-freerdp.app/…)
+    // or a simple name on Linux. Extract the filename and compare case-insensitively.
+    let name = std::path::Path::new(binary)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(binary);
+    let lower = name.to_ascii_lowercase();
+    lower.starts_with("sdl-freerdp") || lower.starts_with("sdl_freerdp")
+}
+
 fn kill_and_reap_child(mut child: Child) {
     if let Err(error) = child.kill() {
         tracing::debug!(protocol = "rdp", %error, "FreeRDP process exited before cancellation");
@@ -377,7 +395,18 @@ impl SafeFreeRdpLauncher {
         }
 
         // Collect all plain-text connection arguments into a Vec<String>
-        let plain_args = Self::build_connection_args(config);
+        let mut plain_args = Self::build_connection_args(config);
+
+        // SDL-FreeRDP (sdl-freerdp3, sdl-freerdp) uses its own SDL-based GUI for
+        // certificate prompts instead of printing to stdout. That breaks the
+        // certificate-change detection in arm_external_exit_watchdog, which
+        // relies on parsing stdout for the "Certificate … has changed!!!" banner.
+        // Force the console callback so SDL behaves like xfreerdp3: it prints the
+        // certificate report to stdout and reads the answer from stdin, where
+        // `/dev/null` makes it decline and exit with a classifiable error. (#324)
+        if is_sdl_freerdp_binary(&actual_binary) {
+            plain_args.push("+force-console-callbacks".to_string());
+        }
 
         let prepared_args =
             Self::prepare_args_file_with_cancel(&binary, &plain_args, &secret_args, cancellation)?;
@@ -580,6 +609,7 @@ impl SafeFreeRdpLauncher {
             }),
             remember_window_position: config.remember_window_position,
             ignore_certificate: config.ignore_certificate,
+            fido2_enabled: config.fido2_enabled,
         }
     }
 
@@ -815,5 +845,26 @@ mod tests {
                 .any(|a| a == "/gateway:g:gw.example.com:443,u:gwadmin"),
             "expected gateway option with distinct user, got {args:?}"
         );
+    }
+
+    #[test]
+    fn is_sdl_freerdp_binary_matches_variants() {
+        // Linux simple names
+        assert!(is_sdl_freerdp_binary("sdl-freerdp3"));
+        assert!(is_sdl_freerdp_binary("sdl-freerdp"));
+        assert!(is_sdl_freerdp_binary("SDL-FREERDP3")); // case-insensitive
+
+        // macOS full paths
+        assert!(is_sdl_freerdp_binary(
+            "/Applications/SDL-freerdp.app/Contents/MacOS/sdl-freerdp"
+        ));
+        assert!(is_sdl_freerdp_binary("/usr/local/bin/sdl-freerdp3"));
+
+        // Non-SDL variants must not match
+        assert!(!is_sdl_freerdp_binary("xfreerdp3"));
+        assert!(!is_sdl_freerdp_binary("xfreerdp"));
+        assert!(!is_sdl_freerdp_binary("wlfreerdp3"));
+        assert!(!is_sdl_freerdp_binary("wlfreerdp"));
+        assert!(!is_sdl_freerdp_binary("/usr/bin/xfreerdp3"));
     }
 }

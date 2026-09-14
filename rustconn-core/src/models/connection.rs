@@ -208,6 +208,95 @@ impl WindowGeometry {
     }
 }
 
+/// Configuration for a command to pipe terminal output through.
+///
+/// Wraps the session in a shell pipeline that processes output before it is
+/// displayed — `chromaterm` for syntax highlighting, `pv` for bandwidth
+/// metering, `ccze` for log colouring. The filter reads the session's stdout on
+/// its own stdin and writes to the terminal.
+///
+/// Only the session's *output* is redirected. In a POSIX pipeline the filter's
+/// stdin is the pipe, so the session keeps the terminal for input and typing is
+/// unaffected — which is what makes this usable for an interactive shell rather
+/// than only for a one-shot command.
+///
+/// # Example
+///
+/// ```
+/// use rustconn_core::models::PostpendCommand;
+///
+/// let filter = PostpendCommand {
+///     command: "chromaterm".to_string(),
+///     args: vec!["--config".to_string(), "/home/u/ct.yml".to_string()],
+///     enabled: true,
+/// };
+/// assert_eq!(
+///     filter.filter_argv(),
+///     Some(vec![
+///         "chromaterm".to_string(),
+///         "--config".to_string(),
+///         "/home/u/ct.yml".to_string(),
+///     ])
+/// );
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PostpendCommand {
+    /// The command to execute (e.g., `chromaterm`, `pv`, `ccze`).
+    pub command: String,
+    /// Arguments to pass to the command.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<String>,
+    /// Whether the postpend command is active.
+    ///
+    /// When `false`, the connection runs without piping through this command,
+    /// allowing quick toggling without deleting the configuration.
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+}
+
+impl PostpendCommand {
+    /// Returns the filter's argv, or `None` when no filter should be applied.
+    ///
+    /// `None` for a disabled filter and for a blank command, so a caller can
+    /// treat "configured but off" and "not configured" identically. A leading
+    /// `~/` is expanded in the command and in every argument: the values are
+    /// quoted before they reach the shell, so nothing else would expand them,
+    /// and a path typed with a tilde is the ordinary case for a filter's config
+    /// file.
+    #[must_use]
+    pub fn filter_argv(&self) -> Option<Vec<String>> {
+        if !self.enabled {
+            return None;
+        }
+        let command = self.command.trim();
+        if command.is_empty() {
+            return None;
+        }
+
+        let mut argv = Vec::with_capacity(self.args.len() + 1);
+        argv.push(expand_leading_tilde(command));
+        argv.extend(self.args.iter().map(|arg| expand_leading_tilde(arg)));
+        Some(argv)
+    }
+}
+
+/// Expands a leading `~/` (or a bare `~`) against `$HOME`, leaving the rest alone.
+///
+/// `~user` is deliberately not handled: resolving another account's home needs
+/// the password database, and a filter argument is not where that belongs.
+fn expand_leading_tilde(value: &str) -> String {
+    let Some(rest) = value.strip_prefix('~') else {
+        return value.to_string();
+    };
+    if !rest.is_empty() && !rest.starts_with('/') {
+        return value.to_string();
+    }
+    match std::env::var("HOME") {
+        Ok(home) if !home.is_empty() => format!("{home}{rest}"),
+        _ => value.to_string(),
+    }
+}
+
 /// Per-connection terminal color override.
 ///
 /// Stores optional background, foreground, and cursor colors as CSS hex strings
@@ -410,6 +499,12 @@ pub struct Connection {
     /// Sends an encrypted UDP packet to open a firewall rule for this client.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spa_config: Option<crate::connection::knock::SpaConfig>,
+    /// Command to pipe terminal output through (e.g., ChromaTerm for syntax highlighting).
+    ///
+    /// When set and enabled, the terminal session is wrapped in a pipeline where
+    /// the session's stdout is piped through this command before display.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postpend: Option<PostpendCommand>,
 }
 
 impl Connection {
@@ -503,6 +598,7 @@ impl Connection {
             retry_config: None,
             knock_sequence: None,
             spa_config: None,
+            postpend: None,
         }
     }
 
@@ -1069,6 +1165,11 @@ impl Connection {
     }
 }
 
+/// Helper for serde defaults.
+const fn default_true() -> bool {
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1084,6 +1185,67 @@ mod tests {
             ProtocolConfig::Ssh(cfg) => cfg,
             _ => unreachable!("create_test_connection builds an SSH connection"),
         }
+    }
+
+    /// The `~/` expansion an output filter's config path relies on. Previously
+    /// untested, including the two cases it deliberately refuses.
+    mod tilde {
+        use super::super::expand_leading_tilde;
+
+        /// `$HOME` is process-global, so these assertions are grouped into one
+        /// test rather than racing each other across parallel test threads.
+        #[test]
+        fn a_leading_tilde_expands_and_nothing_else_does() {
+            // A read of the real environment, never a write: whatever HOME is, the
+            // expected value is expressed relative to it.
+            let home = std::env::var("HOME").unwrap_or_default();
+            assert!(
+                !home.is_empty(),
+                "HOME must be set for this test to mean anything"
+            );
+
+            assert_eq!(expand_leading_tilde("~/ct.yml"), format!("{home}/ct.yml"));
+            assert_eq!(expand_leading_tilde("~"), home);
+
+            // Another account's home needs the password database; refused.
+            assert_eq!(expand_leading_tilde("~root/x"), "~root/x");
+            // Only a *leading* tilde is a home reference.
+            assert_eq!(
+                expand_leading_tilde("--config=~/ct.yml"),
+                "--config=~/ct.yml"
+            );
+            assert_eq!(expand_leading_tilde("/abs/path"), "/abs/path");
+            assert_eq!(expand_leading_tilde("chromaterm"), "chromaterm");
+            assert_eq!(expand_leading_tilde(""), "");
+        }
+    }
+
+    /// A disabled or blank filter is indistinguishable from no filter, and a
+    /// non-empty `argv[0]` is the invariant the spawn path indexes on.
+    #[test]
+    fn filter_argv_refuses_disabled_and_blank_commands() {
+        let disabled = PostpendCommand {
+            command: "ccze".to_string(),
+            args: vec![],
+            enabled: false,
+        };
+        assert_eq!(disabled.filter_argv(), None);
+
+        let blank = PostpendCommand {
+            command: "   ".to_string(),
+            args: vec![],
+            enabled: true,
+        };
+        assert_eq!(blank.filter_argv(), None, "a blank command is not a filter");
+
+        let real = PostpendCommand {
+            command: "  ccze  ".to_string(),
+            args: vec!["-A".to_string()],
+            enabled: true,
+        };
+        let argv = real.filter_argv().expect("an enabled filter yields argv");
+        assert_eq!(argv, vec!["ccze".to_string(), "-A".to_string()]);
+        assert!(!argv[0].is_empty(), "argv[0] must never be empty");
     }
 
     #[test]

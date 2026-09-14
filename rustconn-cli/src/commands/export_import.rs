@@ -56,6 +56,7 @@ pub(super) fn cmd_export(
         ExportFormatArg::MobaXterm => rustconn_core::export::ExportFormat::MobaXterm,
         ExportFormatArg::Csv => rustconn_core::export::ExportFormat::Csv,
         ExportFormatArg::SecureCrt => rustconn_core::export::ExportFormat::SecureCrt,
+        ExportFormatArg::RdpFile => rustconn_core::export::ExportFormat::RdpFile,
     };
 
     let mut options =
@@ -106,7 +107,8 @@ fn export_connections(
 ) -> Result<rustconn_core::export::ExportResult, CliError> {
     use rustconn_core::export::{
         AnsibleExporter, AsbruExporter, CsvExporter, ExportFormat, ExportTarget, MobaXtermExporter,
-        NativeExport, RemminaExporter, RoyalTsExporter, SecureCrtExporter, SshConfigExporter,
+        NativeExport, RdpFileExporter, RemminaExporter, RoyalTsExporter, SecureCrtExporter,
+        SshConfigExporter,
     };
 
     let result = match options.format {
@@ -175,6 +177,12 @@ fn export_connections(
         }
         ExportFormat::SecureCrt => {
             let exporter = SecureCrtExporter::new();
+            exporter
+                .export(connections, groups, options)
+                .map_err(|e| CliError::Export(e.to_string()))?
+        }
+        ExportFormat::RdpFile => {
+            let exporter = RdpFileExporter::new();
             exporter
                 .export(connections, groups, options)
                 .map_err(|e| CliError::Export(e.to_string()))?

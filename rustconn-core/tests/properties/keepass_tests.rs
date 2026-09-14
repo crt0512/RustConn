@@ -412,6 +412,7 @@ fn create_test_connection(name: &str, host: &str) -> Connection {
         retry_config: None,
         knock_sequence: None,
         spa_config: None,
+        postpend: None,
     }
 }
 
@@ -815,6 +816,7 @@ mod hierarchy_tests {
             retry_config: None,
             knock_sequence: None,
             spa_config: None,
+            postpend: None,
         }
     }
 

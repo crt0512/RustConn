@@ -71,6 +71,15 @@ pub struct SshOptionsWidgets {
     pub ssh_remote_path_entry: adw::EntryRow,
     pub keep_alive_interval: adw::SpinRow,
     pub keep_alive_count_max: adw::SpinRow,
+    /// Privilege escalation (sudo injection) settings.
+    pub elevated_switch: adw::SwitchRow,
+    /// Custom prompt patterns, one regex per line.
+    ///
+    /// A multi-line view rather than a single-line entry on purpose: a regex may
+    /// contain a comma (`\w{1,3}`), so there is no separator that could split
+    /// several patterns out of one line without corrupting some of them.
+    pub elevated_prompts_view: gtk4::TextView,
+    pub elevated_delay_spin: adw::SpinRow,
 }
 
 /// Creates the SSH options panel using libadwaita components following GNOME HIG.
@@ -168,6 +177,68 @@ pub fn create_ssh_options() -> SshOptionsWidgets {
 
     content.append(&mosh_group);
 
+    // === Elevated Credentials Group ===
+    let elevated_group = adw::PreferencesGroup::builder()
+        .title(i18n("Elevated Credentials"))
+        .description(i18n(
+            "Answer sudo, su and doas password prompts with this connection's password",
+        ))
+        .build();
+
+    let elevated_switch = adw::SwitchRow::builder()
+        .title(i18n("Inject Password at Escalation Prompts"))
+        .subtitle(i18n(
+            "Only the active prompt line is answered, never a prompt left on screen",
+        ))
+        .active(false)
+        .build();
+    elevated_group.add(&elevated_switch);
+
+    let elevated_delay_spin = adw::SpinRow::builder()
+        .title(i18n("Delay Before Sending"))
+        .subtitle(i18n(
+            "Milliseconds to wait after the prompt appears — raise it for network equipment",
+        ))
+        .adjustment(&gtk4::Adjustment::new(100.0, 0.0, 5000.0, 10.0, 100.0, 0.0))
+        .build();
+    elevated_group.add(&elevated_delay_spin);
+
+    let elevated_prompts_view = gtk4::TextView::builder()
+        .hexpand(true)
+        .vexpand(false)
+        .accepts_tab(false)
+        .monospace(true)
+        .top_margin(8)
+        .bottom_margin(8)
+        .left_margin(8)
+        .right_margin(8)
+        .build();
+    // One source line on purpose. `update-pot.sh` runs xgettext with
+    // `--language=C`, and C keeps the indentation after a `\`-continuation where
+    // Rust strips it — so a wrapped literal lands in the POT with whitespace the
+    // binary never asks for, and the lookup misses at runtime.
+    elevated_prompts_view.set_tooltip_text(Some(&i18n(
+        "One anchored regex per line, for example ^Secret code:\\s*$. Leave empty to use the built-in sudo, su, doas and enable patterns.",
+    )));
+    let elevated_prompts_scrolled = gtk4::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .min_content_height(80)
+        .hexpand(true)
+        .child(&elevated_prompts_view)
+        .build();
+    let elevated_prompts_row = adw::ActionRow::builder()
+        .title(i18n("Custom Prompt Patterns"))
+        .subtitle(i18n(
+            "One regex per line; empty means the built-in patterns",
+        ))
+        .build();
+    elevated_prompts_row.add_suffix(&elevated_prompts_scrolled);
+    elevated_group.add(&elevated_prompts_row);
+    crate::utils::set_labelled_by(&elevated_prompts_view, &elevated_prompts_row);
+
+    content.append(&elevated_group);
+
     SshOptionsWidgets {
         container,
         content,
@@ -203,6 +274,9 @@ pub fn create_ssh_options() -> SshOptionsWidgets {
         ssh_remote_path_entry,
         keep_alive_interval,
         keep_alive_count_max,
+        elevated_switch,
+        elevated_prompts_view,
+        elevated_delay_spin,
     }
 }
 

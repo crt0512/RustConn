@@ -95,6 +95,8 @@ pub struct FreeRdpConfig {
     pub remember_window_position: bool,
     /// Whether to ignore certificate errors (skip verification)
     pub ignore_certificate: bool,
+    /// Enable FIDO2/WebAuthn device redirection
+    pub fido2_enabled: bool,
 }
 
 /// Written by hand so that it agrees with [`FreeRdpConfig::new`].
@@ -140,6 +142,7 @@ impl FreeRdpConfig {
             window_geometry: None,
             remember_window_position: true,
             ignore_certificate: false,
+            fido2_enabled: false,
         }
     }
 
@@ -434,6 +437,12 @@ fn push_redirection_args(args: &mut Vec<String>, config: &FreeRdpConfig) {
     // Map the local default printer into the session via CUPS.
     if config.printer_enabled {
         args.push("/printer".to_string());
+    }
+
+    // FIDO2/WebAuthn device redirection (FreeRDP 3.x).
+    // Allows using local FIDO2 security keys for authentication in the remote session.
+    if config.fido2_enabled {
+        args.push("/fido".to_string());
     }
 }
 

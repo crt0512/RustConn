@@ -299,6 +299,16 @@ pub struct TerminalNotebook {
     /// displaying. They are `Rc` so the delivery loop can clone the list and
     /// release its borrow before calling anything.
     output_observers: Rc<RefCell<HashMap<Uuid, Vec<Rc<dyn Fn(&[u8])>>>>>,
+    /// Output filter (postpend command) argv for sessions that configured one.
+    ///
+    /// Registered by the protocol launcher before it spawns, and read by
+    /// [`Self::spawn_command_with_cleanup`], which wraps the session command in a
+    /// shell pipeline. It is a per-session map rather than a spawn parameter
+    /// because the notebook holds no connections: the launcher has the
+    /// `PostpendCommand`, the spawn does not, and every terminal protocol shares
+    /// one spawn. Kept across a reconnect on purpose, so the filter comes back
+    /// with the session; removed when the tab closes.
+    output_filters: Rc<RefCell<HashMap<Uuid, Vec<String>>>>,
     /// Sessions whose terminal already forwards `commit` to its relay.
     ///
     /// The handler resolves the relay through [`Self::pty_relays`] on every
@@ -496,6 +506,7 @@ impl TerminalNotebook {
             cursor_row_base: Rc::new(RefCell::new(HashMap::new())),
             pty_relays: Rc::new(RefCell::new(HashMap::new())),
             output_observers: Rc::new(RefCell::new(HashMap::new())),
+            output_filters: Rc::new(RefCell::new(HashMap::new())),
             commit_forwarded: Rc::new(RefCell::new(HashSet::new())),
             pty_size_timers: Rc::new(RefCell::new(HashMap::new())),
             cluster_sessions: Rc::new(RefCell::new(HashMap::new())),
@@ -559,6 +570,7 @@ impl TerminalNotebook {
         let cursor_row_base_on_close = Rc::clone(&self.cursor_row_base);
         let pty_relays_on_close = Rc::clone(&self.pty_relays);
         let output_observers_on_close = Rc::clone(&self.output_observers);
+        let output_filters_on_close = Rc::clone(&self.output_filters);
         let commit_forwarded_on_close = Rc::clone(&self.commit_forwarded);
         let pty_size_timers_on_close = Rc::clone(&self.pty_size_timers);
 
@@ -693,6 +705,7 @@ impl TerminalNotebook {
                 }
                 drop(pty_relays_on_close.borrow_mut().remove(&session_id));
                 output_observers_on_close.borrow_mut().remove(&session_id);
+                output_filters_on_close.borrow_mut().remove(&session_id);
                 commit_forwarded_on_close.borrow_mut().remove(&session_id);
                 auto_reconnect_on_close.borrow_mut().remove(&session_id);
                 // The widget goes with the tab, so the handlers die with it —
@@ -884,9 +897,25 @@ impl TerminalNotebook {
 
         let env_vec = build_child_env(envv, ssh_agent_socket);
         let env_refs: Vec<&str> = env_vec.iter().map(|e| e.as_str()).collect();
+        // Diagnostics keep naming the session's own command, not `sh`, so a
+        // "command not found" message still names the thing the user configured.
         let command_name = (*argv.first().unwrap_or(&"")).to_owned();
         let size = grid_size(&terminal);
 
+        // An output filter turns the command into a shell pipeline. Built here
+        // rather than in each launcher because this is the one point every
+        // terminal protocol passes through.
+        let filtered = self.wrap_in_output_filter(session_id, argv);
+        let spawn_argv: Vec<&str> = match filtered.as_deref() {
+            Some(script) => vec!["sh", "-c", script],
+            None => argv.to_vec(),
+        };
+
+        // The session's own argv, not `spawn_argv`: with a filter the latter is
+        // the whole `sh -c` script with the session command quoted inside it, so
+        // logging it would put the same content in the log twice as much noise.
+        // Which filter was chosen is already logged, by name, in
+        // `set_output_filter`.
         tracing::debug!(
             command = %command_name,
             %session_id,
@@ -895,10 +924,11 @@ impl TerminalNotebook {
             env_count = env_refs.len(),
             rows = size.0,
             cols = size.1,
+            filtered = filtered.is_some(),
             "Spawning session command"
         );
 
-        let child = match pty_spawn::spawn_on_pty(argv, &env_refs, working_directory, size) {
+        let child = match pty_spawn::spawn_on_pty(&spawn_argv, &env_refs, working_directory, size) {
             Ok(child) => child,
             Err(e) => {
                 tracing::error!(
@@ -944,6 +974,67 @@ impl TerminalNotebook {
         watch_child_exit(&terminal, child.pid, cleanup_paths);
 
         true
+    }
+
+    /// Registers, or clears, the output filter a session's command is piped through.
+    ///
+    /// Call before spawning. A filter whose executable cannot be found is
+    /// refused here rather than at spawn time: the session then starts unfiltered,
+    /// which is the documented fallback, where a pipeline to a missing command
+    /// would start and immediately lose every byte the session wrote.
+    pub fn set_output_filter(
+        &self,
+        session_id: Uuid,
+        postpend: Option<&rustconn_core::models::PostpendCommand>,
+    ) {
+        let Some(argv) = postpend.and_then(rustconn_core::models::PostpendCommand::filter_argv)
+        else {
+            self.output_filters.borrow_mut().remove(&session_id);
+            return;
+        };
+
+        // `argv[0]` is guaranteed non-empty by `filter_argv`.
+        let program = argv[0].clone();
+        if !filter_program_is_runnable(&program) {
+            tracing::warn!(
+                %session_id,
+                filter = %program,
+                "Output filter is not installed or not executable; session output is unfiltered"
+            );
+            // A log line is not feedback: the session starts and looks completely
+            // normal, just unfiltered, so nothing tells the user their filter did
+            // not run. A background failure the user can act on is a toast, per
+            // the project's error-feedback rule.
+            crate::toast::show_error_toast_on_active_window(&i18n_f(
+                "Output filter '{}' is not installed; session output is not filtered",
+                &[&program],
+            ));
+            self.output_filters.borrow_mut().remove(&session_id);
+            return;
+        }
+
+        tracing::info!(%session_id, filter = %program, "Session output will be piped through a filter");
+        self.output_filters.borrow_mut().insert(session_id, argv);
+    }
+
+    /// Returns the `sh -c` script for a filtered session, or `None` when unfiltered.
+    ///
+    /// See [`filter_program_is_runnable`] for why availability is decided before
+    /// this point rather than at spawn time.
+    ///
+    /// ponytail: the pipeline's exit status is the *filter's*, not the session's,
+    /// because POSIX `sh` has no portable `PIPESTATUS`. A filtered session that
+    /// fails therefore looks like a clean exit to the reconnect heuristics. Worth
+    /// revisiting only if a filter turns out to be common enough that the lost
+    /// status matters.
+    fn wrap_in_output_filter(&self, session_id: Uuid, argv: &[&str]) -> Option<String> {
+        let filters = self.output_filters.borrow();
+        let filter = filters.get(&session_id)?;
+        let filter_refs: Vec<&str> = filter.iter().map(String::as_str).collect();
+        Some(rustconn_core::shell_escape::pipe_argv_through(
+            argv,
+            &filter_refs,
+        ))
     }
 
     /// Feeds a session's PTY output to its terminal and to its observers.
@@ -1247,6 +1338,25 @@ impl TerminalNotebook {
 fn grid_size(terminal: &Terminal) -> (u16, u16) {
     let clamp = |value: i64| u16::try_from(value.max(0)).unwrap_or(u16::MAX);
     (clamp(terminal.row_count()), clamp(terminal.column_count()))
+}
+
+/// Whether an output filter's program can actually be executed.
+///
+/// Both shapes a filter can take — a bare command name and an absolute path — go
+/// through the one lookup, because `find_in_path` checks the **executable bit**
+/// and also knows about Flatpak's `/app/bin`, Snap's bundled directories and the
+/// sandboxed CLI download dirs. A leading `~/` has already been expanded by
+/// `PostpendCommand::filter_argv`, so it arrives here absolute.
+///
+/// The absolute-path case used to be checked with `Path::is_file()` alone. That
+/// passes for `/etc/passwd`, which then fails at exec time with the pipeline
+/// already built — losing every byte the session wrote, the exact failure this
+/// gate exists to prevent, and inconsistent with the bare-name case that was
+/// checked properly.
+///
+/// A free function rather than a method so it is testable without a GTK notebook.
+fn filter_program_is_runnable(program: &str) -> bool {
+    rustconn_core::which::find_in_path(program).is_some()
 }
 
 /// Kills a child and collects it, so a failed startup leaves no zombie.
@@ -2999,6 +3109,62 @@ fn cursor_line_text(terminal: &Terminal) -> Option<String> {
             .find(|l| !l.trim().is_empty())
             .map(str::to_owned)
     })
+}
+
+/// The output-filter availability gate.
+///
+/// Extracted into a free function precisely so this can be checked without a GTK
+/// notebook — the absolute-path branch used to accept any existing file.
+#[cfg(test)]
+mod output_filter_gate_tests {
+    use super::filter_program_is_runnable;
+
+    #[test]
+    fn a_bare_command_on_path_is_runnable() {
+        assert!(filter_program_is_runnable("sh"));
+    }
+
+    #[test]
+    fn a_command_that_does_not_exist_is_not_runnable() {
+        assert!(!filter_program_is_runnable(
+            "rustconn-no-such-filter-binary"
+        ));
+        assert!(!filter_program_is_runnable(""));
+    }
+
+    /// The regression this gate was rewritten for: an absolute path that exists
+    /// but is not executable must be refused *before* the pipeline is built.
+    /// Checking `Path::is_file()` alone passed it and then lost every byte of the
+    /// session at exec time.
+    #[test]
+    fn an_existing_but_non_executable_absolute_path_is_refused() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("not-executable");
+        std::fs::write(&path, b"#!/bin/sh\necho hi\n").expect("write");
+
+        assert!(
+            !filter_program_is_runnable(path.to_str().expect("utf-8 path")),
+            "a file without the executable bit is not a runnable filter"
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+            assert!(
+                filter_program_is_runnable(path.to_str().expect("utf-8 path")),
+                "the same path becomes runnable once it is executable"
+            );
+        }
+    }
+
+    #[test]
+    fn a_directory_is_not_a_runnable_filter() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        assert!(!filter_program_is_runnable(
+            dir.path().to_str().expect("utf-8 path")
+        ));
+    }
 }
 
 #[cfg(test)]

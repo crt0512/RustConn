@@ -420,4 +420,4 @@ impl SelectionModelWrapper {
 }
 
 /// Maximum number of search history entries to keep
-pub const MAX_SEARCH_HISTORY: usize = 10;
+pub const MAX_SEARCH_HISTORY: usize = 20;

@@ -28,18 +28,63 @@ pub type SharedNotebook = Rc<TerminalNotebook>;
 
 /// Resolves the effective automation config for a connection, inheriting from
 /// the group hierarchy if the connection has no own expect rules / post-login scripts.
+///
+/// Elevated credentials are folded in here, after inheritance, because this is
+/// the one function every terminal launcher calls to get the rules a session will
+/// run with — wiring the sudo rules into each launcher separately is how one of
+/// them ends up missing them.
 pub(super) fn resolve_automation_for_connection(
     state: &SharedAppState,
     conn: &rustconn_core::Connection,
 ) -> AutomationConfig {
-    state
+    let mut resolved = state
         .try_borrow()
         .ok()
         .map(|s| {
             let groups: Vec<_> = s.list_groups_owned();
             automation_inheritance::resolve_automation(conn, &groups)
         })
-        .unwrap_or_else(|| conn.automation.clone())
+        .unwrap_or_else(|| conn.automation.clone());
+
+    append_elevated_rules(conn, &mut resolved);
+    resolved
+}
+
+/// Appends the generated sudo/su/doas rules to a resolved automation config.
+///
+/// The rules answer with the `${password}` placeholder, so they resolve through
+/// the same path `automation_variables` already uses for a hand-written rule: the
+/// credential is copied out of the cache only because a rule asks for it, lands in
+/// a secret [`Variable`], and the substituted response is scrubbed when the
+/// session ends. Handing the plaintext to `rustconn-core` instead would put an
+/// unscrubbed second copy in every rule.
+///
+/// Appended rather than prepended; ordering inside the engine is by priority, and
+/// the generated rules carry a higher one.
+fn append_elevated_rules(conn: &rustconn_core::Connection, automation: &mut AutomationConfig) {
+    // SFTP shares `SshConfig`, so the flag can be saved on an SFTP connection and
+    // has to be honoured there too; matching `Ssh` alone made the switch look
+    // enabled while nothing was ever injected.
+    let (rustconn_core::ProtocolConfig::Ssh(ssh) | rustconn_core::ProtocolConfig::Sftp(ssh)) =
+        &conn.protocol_config
+    else {
+        return;
+    };
+    let Some(elevated) = ssh.elevated.as_ref().filter(|e| e.enabled) else {
+        return;
+    };
+
+    let rules = rustconn_core::elevated_credentials_rules(elevated);
+    if rules.is_empty() {
+        return;
+    }
+    tracing::debug!(
+        connection_id = %conn.id,
+        rules = rules.len(),
+        delay_ms = elevated.delay_ms,
+        "Elevated credentials enabled; added privilege-escalation expect rules"
+    );
+    automation.expect_rules.extend(rules);
 }
 
 /// Resolves global variables and overlays this connection's interactive
@@ -1636,6 +1681,13 @@ pub fn reconnect_generic_vte_in_place(
         notebook.set_highlight_rules(session_id, &global_rules, &conn.highlight_rules);
     }
 
+    // Re-register the output filter, for the same reason the SSH reconnect path
+    // does: the map survives a reconnect (it is keyed by session and cleared only
+    // when the tab closes), so without this a filter edited between connect and
+    // reconnect is honoured for SSH and silently ignored for every protocol that
+    // reconnects through here.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
+
     // Record connection start in history
     if let Ok(mut state_mut) = state.try_borrow_mut() {
         let entry_id = state_mut.record_connection_start(&conn, conn.username.as_deref());
@@ -1916,6 +1968,11 @@ fn start_telnet_connection_internal(
             &global_variables,
         ),
     );
+
+    // Pipe this session's output through the configured output filter, when
+    // one is set and installed (`PostpendCommand`). Registered before the
+    // spawn, which is what reads it.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
     if let Some(observer) = observer {
         observer.complete(session_id);
     }
@@ -2190,6 +2247,11 @@ pub fn start_zerotrust_connection(
         ),
     );
 
+    // Pipe this session's output through the configured output filter, when
+    // one is set and installed (`PostpendCommand`). Registered before the
+    // spawn, which is what reads it.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
+
     // Record connection start in history
     let history_entry_id = if let Ok(mut state_mut) = state.try_borrow_mut() {
         Some(state_mut.record_connection_start(conn, conn.username.as_deref()))
@@ -2313,6 +2375,11 @@ pub fn start_serial_connection(
             &global_variables,
         ),
     );
+
+    // Pipe this session's output through the configured output filter, when
+    // one is set and installed (`PostpendCommand`). Registered before the
+    // spawn, which is what reads it.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
 
     // Apply highlight rules (built-in defaults + global + per-connection)
     {
@@ -2500,6 +2567,11 @@ pub fn start_kubernetes_connection(
             &global_variables,
         ),
     );
+
+    // Pipe this session's output through the configured output filter, when
+    // one is set and installed (`PostpendCommand`). Registered before the
+    // spawn, which is what reads it.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
 
     // Apply highlight rules (built-in defaults + global + per-connection)
     {
@@ -2751,6 +2823,11 @@ fn start_mosh_connection_internal(
             &global_variables,
         ),
     );
+
+    // Pipe this session's output through the configured output filter, when
+    // one is set and installed (`PostpendCommand`). Registered before the
+    // spawn, which is what reads it.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
     if let Some(observer) = observer {
         observer.complete(session_id);
     }
