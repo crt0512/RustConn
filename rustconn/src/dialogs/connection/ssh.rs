@@ -71,6 +71,10 @@ pub struct SshOptionsWidgets {
     pub ssh_remote_path_entry: adw::EntryRow,
     pub keep_alive_interval: adw::SpinRow,
     pub keep_alive_count_max: adw::SpinRow,
+    /// Privilege escalation (SUDO injection) settings
+    pub elevated_switch: adw::SwitchRow,
+    pub elevated_prompts_entry: adw::EntryRow,
+    pub elevated_delay_spin: adw::SpinRow,
 }
 
 /// Creates the SSH options panel using libadwaita components following GNOME HIG.
@@ -168,6 +172,36 @@ pub fn create_ssh_options() -> SshOptionsWidgets {
 
     content.append(&mosh_group);
 
+    // === Privilege Escalation Group ===
+    let elevated_group = adw::PreferencesGroup::builder()
+        .title(i18n("Privilege Escalation"))
+        .description(i18n("Automatic SUDO/su/doas password injection"))
+        .build();
+
+    let elevated_switch = adw::SwitchRow::builder()
+        .title(i18n("Enable SUDO Password Injection"))
+        .subtitle(i18n("Automatically send password on privilege prompts"))
+        .active(false)
+        .build();
+    elevated_group.add(&elevated_switch);
+
+    let elevated_prompts_entry = adw::EntryRow::builder()
+        .title(i18n("Custom Prompts"))
+        .build();
+    elevated_prompts_entry.set_tooltip_text(Some(&i18n(
+        "Regex patterns, comma-separated. Leave empty for default: sudo, su, doas",
+    )));
+    elevated_group.add(&elevated_prompts_entry);
+
+    let elevated_delay_spin = adw::SpinRow::builder()
+        .title(i18n("Delay Before Sending"))
+        .subtitle(i18n("Milliseconds to wait before sending password"))
+        .adjustment(&gtk4::Adjustment::new(100.0, 0.0, 1000.0, 10.0, 50.0, 0.0))
+        .build();
+    elevated_group.add(&elevated_delay_spin);
+
+    content.append(&elevated_group);
+
     SshOptionsWidgets {
         container,
         content,
@@ -203,6 +237,9 @@ pub fn create_ssh_options() -> SshOptionsWidgets {
         ssh_remote_path_entry,
         keep_alive_interval,
         keep_alive_count_max,
+        elevated_switch,
+        elevated_prompts_entry,
+        elevated_delay_spin,
     }
 }
 

@@ -118,7 +118,7 @@ pub use automation::{
     AutomationTemplate, CompiledRule, ConnectionTask, ExpectEngine, ExpectError, ExpectResult,
     ExpectRule, FolderConnectionTracker, KeyElement, KeySequence, KeySequenceError,
     KeySequenceResult, SpecialKey, TaskCondition, TaskError, TaskExecutor, TaskResult, TaskTiming,
-    builtin_templates, templates_for_protocol,
+    builtin_templates, elevated_credentials_rules, templates_for_protocol,
 };
 pub use busy::{BusyGuard, BusyStack};
 pub use cache::{CacheRef, Cached, DEFAULT_CACHE_TTL_SECS, LoadCacheObject};

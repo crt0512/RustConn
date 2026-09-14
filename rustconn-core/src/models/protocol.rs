@@ -815,6 +815,86 @@ pub enum SshAuthMethod {
     SecurityKey,
 }
 
+/// Elevated/privilege escalation credentials for automatic SUDO password injection.
+///
+/// When enabled, automatically sends the password when a privilege escalation
+/// prompt (sudo, su, doas) is detected in the terminal output.
+///
+/// # Security Warning
+///
+/// SUDO password injection sends the password to the terminal when a matching
+/// prompt is detected. This has security implications:
+///
+/// 1. **Prompt spoofing**: A malicious program on the remote host could print
+///    a fake SUDO prompt to capture the password.
+///
+/// 2. **Timing attacks**: The delay between prompt and password might be
+///    observable.
+///
+/// Mitigations:
+/// - Use SSH agent forwarding instead of password-based SUDO when possible
+/// - Configure `sudoers` with `NOPASSWD` for trusted commands
+/// - Use this feature only on trusted hosts
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ElevatedCredentials {
+    /// Enable automatic SUDO password injection.
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Use a separate password for elevated access.
+    /// When false or password is empty, uses the connection's primary password.
+    #[serde(default)]
+    pub use_separate_password: bool,
+
+    /// Custom prompts to detect (regex patterns).
+    /// When empty, uses the default patterns: sudo, su, doas prompts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom_prompts: Vec<String>,
+
+    /// Delay before sending password in milliseconds.
+    /// Gives the remote side time to set up secure input.
+    #[serde(default = "default_sudo_delay")]
+    pub delay_ms: u32,
+}
+
+const fn default_sudo_delay() -> u32 {
+    100
+}
+
+impl Default for ElevatedCredentials {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            use_separate_password: false,
+            custom_prompts: Vec::new(),
+            delay_ms: default_sudo_delay(),
+        }
+    }
+}
+
+impl ElevatedCredentials {
+    /// Returns the default SUDO prompt patterns.
+    #[must_use]
+    pub fn default_prompts() -> Vec<String> {
+        vec![
+            r"\[sudo\] password for \w+:".to_string(),
+            r"Password:".to_string(),
+            r"doas \(".to_string(),
+            r"\w+'s password:".to_string(), // su prompt
+        ]
+    }
+
+    /// Returns the prompts to use, falling back to defaults if custom is empty.
+    #[must_use]
+    pub fn effective_prompts(&self) -> Vec<String> {
+        if self.custom_prompts.is_empty() {
+            Self::default_prompts()
+        } else {
+            self.custom_prompts.clone()
+        }
+    }
+}
+
 /// SSH protocol configuration
 // Allow 6 bools - these are distinct SSH connection options that map directly to CLI flags
 #[expect(
@@ -952,6 +1032,12 @@ pub struct SshConfig {
     /// need `^H` or `^?` named explicitly.
     #[serde(default)]
     pub delete_sends: DeleteSends,
+
+    /// Elevated/privilege escalation credentials for automatic SUDO injection.
+    /// When enabled and a SUDO/su/doas prompt is detected, the password is
+    /// automatically sent to the terminal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elevated: Option<ElevatedCredentials>,
 }
 
 fn default_true() -> bool {
@@ -2139,6 +2225,12 @@ pub struct RdpConfig {
     /// Only applies to Embedded mode; External FreeRDP handles its own sockets.
     #[serde(default)]
     pub mptcp: bool,
+
+    /// Enable FIDO2/WebAuthn device redirection.
+    /// Allows using local FIDO2 security keys for authentication in the remote session.
+    /// Requires FreeRDP 3.x with `/fido` support. Only applies to External mode.
+    #[serde(default)]
+    pub fido2_enabled: bool,
 }
 
 /// Written out by hand rather than derived, so that it agrees with the serde
@@ -2195,6 +2287,7 @@ impl Default for RdpConfig {
             remote_app_args: None,
             remote_app_name: None,
             mptcp: false,
+            fido2_enabled: false,
         }
     }
 }

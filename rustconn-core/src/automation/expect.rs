@@ -528,6 +528,40 @@ impl Drop for ExpectEngine {
     }
 }
 
+/// Generates expect rules for elevated credentials (SUDO/su/doas injection).
+///
+/// Creates rules that match privilege escalation prompts and respond with the
+/// provided password. The password is sent after the configured delay.
+///
+/// # Arguments
+///
+/// * `elevated` - The elevated credentials configuration
+/// * `password` - The password to send (connection password or separate elevated password)
+///
+/// # Returns
+///
+/// A vector of expect rules, one for each prompt pattern, or an empty vector
+/// if elevated credentials are disabled.
+#[must_use]
+pub fn elevated_credentials_rules(
+    elevated: &crate::models::ElevatedCredentials,
+    password: &str,
+) -> Vec<ExpectRule> {
+    if !elevated.enabled || password.is_empty() {
+        return vec![];
+    }
+
+    elevated
+        .effective_prompts()
+        .into_iter()
+        .map(|prompt| {
+            ExpectRule::new(&prompt, password)
+                .with_priority(100) // High priority to match before other rules
+                .with_one_shot(false) // Can fire multiple times (multiple sudo commands)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

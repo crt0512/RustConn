@@ -138,6 +138,9 @@ impl ConnectionDialog {
         let ssh_remote_path_entry = ssh_widgets.ssh_remote_path_entry;
         let ssh_keep_alive_interval = ssh_widgets.keep_alive_interval;
         let ssh_keep_alive_count_max = ssh_widgets.keep_alive_count_max;
+        let ssh_elevated_switch = ssh_widgets.elevated_switch;
+        let ssh_elevated_prompts_entry = ssh_widgets.elevated_prompts_entry;
+        let ssh_elevated_delay_spin = ssh_widgets.elevated_delay_spin;
 
         // Add port forwarding group to SSH options panel
         {
@@ -175,6 +178,7 @@ impl ConnectionDialog {
             rdp_autotype_initial_delay_spin,
             rdp_reconnect_on_resize_check,
             rdp_mptcp_check,
+            rdp_fido2_check,
             rdp_jump_host_dropdown,
             rdp_shared_folders,
             rdp_shared_folders_list,
@@ -520,6 +524,9 @@ impl ConnectionDialog {
             &ssh_remote_path_entry,
             &ssh_keep_alive_interval,
             &ssh_keep_alive_count_max,
+            &ssh_elevated_switch,
+            &ssh_elevated_prompts_entry,
+            &ssh_elevated_delay_spin,
             &ssh_port_forwards,
             &rdp_client_mode_dropdown,
             &rdp_performance_mode_dropdown,
@@ -546,6 +553,7 @@ impl ConnectionDialog {
             &rdp_autotype_initial_delay_spin,
             &rdp_reconnect_on_resize_check,
             &rdp_mptcp_check,
+            &rdp_fido2_check,
             &rdp_jump_host_dropdown,
             &rdp_connections_data,
             &rdp_shared_folders,
@@ -757,6 +765,9 @@ impl ConnectionDialog {
             ssh_remote_path_entry,
             ssh_keep_alive_interval,
             ssh_keep_alive_count_max,
+            ssh_elevated_switch,
+            ssh_elevated_prompts_entry,
+            ssh_elevated_delay_spin,
             ssh_port_forwards,
             ssh_port_forwards_list,
             rdp_client_mode_dropdown,
@@ -784,6 +795,7 @@ impl ConnectionDialog {
             rdp_autotype_initial_delay_spin,
             rdp_reconnect_on_resize_check,
             rdp_mptcp_check,
+            rdp_fido2_check,
             rdp_jump_host_dropdown,
             rdp_connections_data,
             rdp_shared_folders,
@@ -905,6 +917,9 @@ impl ConnectionDialog {
             post_disconnect_command_entry: automation_widgets.post_disconnect_command_entry,
             post_disconnect_timeout_spin: automation_widgets.post_disconnect_timeout_spin,
             post_disconnect_last_only_switch: automation_widgets.post_disconnect_last_only_switch,
+            postpend_enabled_switch: automation_widgets.postpend_enabled_switch,
+            postpend_command_entry: automation_widgets.postpend_command_entry,
+            postpend_args_entry: automation_widgets.postpend_args_entry,
             custom_properties_list,
             custom_properties,
             add_custom_property_button,

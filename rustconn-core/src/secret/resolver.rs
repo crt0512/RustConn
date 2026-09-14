@@ -1403,6 +1403,7 @@ mod tests {
             retry_config: None,
             knock_sequence: None,
             spa_config: None,
+            postpend: None,
         }
     }
 

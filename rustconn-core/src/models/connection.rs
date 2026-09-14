@@ -208,6 +208,37 @@ impl WindowGeometry {
     }
 }
 
+/// Configuration for a command to pipe terminal output through.
+///
+/// Allows wrapping the session in a pipeline that processes output before
+/// display — for example, `chromaterm` for syntax highlighting or `pv` for
+/// bandwidth metering. The command receives the session's stdout on its stdin
+/// and writes to the terminal's actual stdout.
+///
+/// # Example
+///
+/// ```text
+/// PostpendCommand {
+///     command: "chromaterm".to_string(),
+///     args: vec!["--config".to_string(), "/path/to/ct.yml".to_string()],
+///     enabled: true,
+/// }
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PostpendCommand {
+    /// The command to execute (e.g., `chromaterm`, `pv`, `ccze`).
+    pub command: String,
+    /// Arguments to pass to the command.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<String>,
+    /// Whether the postpend command is active.
+    ///
+    /// When `false`, the connection runs without piping through this command,
+    /// allowing quick toggling without deleting the configuration.
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+}
+
 /// Per-connection terminal color override.
 ///
 /// Stores optional background, foreground, and cursor colors as CSS hex strings
@@ -410,6 +441,12 @@ pub struct Connection {
     /// Sends an encrypted UDP packet to open a firewall rule for this client.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spa_config: Option<crate::connection::knock::SpaConfig>,
+    /// Command to pipe terminal output through (e.g., ChromaTerm for syntax highlighting).
+    ///
+    /// When set and enabled, the terminal session is wrapped in a pipeline where
+    /// the session's stdout is piped through this command before display.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postpend: Option<PostpendCommand>,
 }
 
 impl Connection {
@@ -503,6 +540,7 @@ impl Connection {
             retry_config: None,
             knock_sequence: None,
             spa_config: None,
+            postpend: None,
         }
     }
 
@@ -1067,6 +1105,11 @@ impl Connection {
         self.pin_order = order;
         self.touch();
     }
+}
+
+/// Helper for serde defaults.
+const fn default_true() -> bool {
+    true
 }
 
 #[cfg(test)]

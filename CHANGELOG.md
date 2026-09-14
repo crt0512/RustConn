@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Export connections to `.rdp` files** — connections can now be exported to standard Microsoft RDP files (`.rdp`) for use with other RDP clients. The export omits passwords for security — credentials must be entered in the target application.
+- **FIDO2/WebAuthn passkey redirection for RDP sessions** — a new "FIDO2 Passkey Redirection" toggle in the RDP connection dialog enables the FreeRDP `/fido` flag, allowing passkeys stored on local FIDO2 security keys to authenticate with the remote Windows session. Requires Windows 11 22H2+ and FreeRDP 3.0+.
+- **Elevated credentials (sudo/su injection) for SSH sessions** — a new "Elevated Credentials" section in the SSH connection dialog automatically handles sudo, su, doas and similar privilege-escalation prompts. Configurable prompt patterns and an optional delay allow tuning for network equipment and custom environments.
+- **Postpend command (output filter) for terminal sessions** — the Automation tab now includes an "Output Filter" section that pipes terminal output through an external command before display. Useful for syntax highlighting with ChromaTerm, bandwidth metering with pv, or log colorization with ccze.
+
+### Improved
+
+- **Search history increased from 10 to 20 entries** — the sidebar search now remembers up to 20 recent searches instead of 10.
+
 ### Fixed
 
 - **SDL-FreeRDP did not show the certificate dialog after the stdout/stdin fix (issue #324 follow-up)** — the 0.21.12 fix worked for console-based clients (`xfreerdp3`, `wlfreerdp3`) but not for SDL-based ones (`sdl-freerdp3`, `sdl-freerdp`). SDL-FreeRDP uses its own SDL GUI for certificate prompts instead of printing to stdout, so the watchdog's banner detection could never fire. The launcher now passes `+force-console-callbacks` when launching an SDL variant, which makes it behave like `xfreerdp3`: print the certificate report to stdout, read the answer from stdin (where `/dev/null` makes it decline), and exit with a classifiable error. Thanks to LichiMan for the follow-up report.

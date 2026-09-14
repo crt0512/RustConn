@@ -280,6 +280,9 @@ impl ConnectionDialog {
         self.set_pre_connect_task(conn.pre_connect_task.as_ref());
         self.set_post_disconnect_task(conn.post_disconnect_task.as_ref());
 
+        // Set postpend command (output filter like ChromaTerm)
+        self.set_postpend(conn.postpend.as_ref());
+
         // Set custom properties
         self.set_custom_properties(&conn.custom_properties);
 
@@ -666,6 +669,23 @@ impl ConnectionDialog {
         }
     }
 
+    /// Sets the postpend command fields (output filter like ChromaTerm).
+    pub(super) fn set_postpend(&self, postpend: Option<&rustconn_core::models::PostpendCommand>) {
+        if let Some(cmd) = postpend {
+            self.postpend_enabled_switch.set_active(cmd.enabled);
+            self.postpend_command_entry.set_text(&cmd.command);
+            self.postpend_command_entry.set_sensitive(cmd.enabled);
+            self.postpend_args_entry.set_text(&cmd.args.join(" "));
+            self.postpend_args_entry.set_sensitive(cmd.enabled);
+        } else {
+            self.postpend_enabled_switch.set_active(false);
+            self.postpend_command_entry.set_text("");
+            self.postpend_command_entry.set_sensitive(false);
+            self.postpend_args_entry.set_text("");
+            self.postpend_args_entry.set_sensitive(false);
+        }
+    }
+
     /// Sets the expect rules for this connection
     pub(super) fn set_expect_rules(&self, rules: &[ExpectRule]) {
         // Clear existing rows
@@ -1027,6 +1047,23 @@ impl ConnectionDialog {
             self.ssh_keep_alive_count_max.set_value(3.0);
         }
 
+        // Populate elevated credentials (SUDO injection)
+        if let Some(ref elevated) = ssh.elevated {
+            self.ssh_elevated_switch.set_active(elevated.enabled);
+            if !elevated.custom_prompts.is_empty() {
+                self.ssh_elevated_prompts_entry
+                    .set_text(&elevated.custom_prompts.join(", "));
+            } else {
+                self.ssh_elevated_prompts_entry.set_text("");
+            }
+            self.ssh_elevated_delay_spin
+                .set_value(f64::from(elevated.delay_ms));
+        } else {
+            self.ssh_elevated_switch.set_active(false);
+            self.ssh_elevated_prompts_entry.set_text("");
+            self.ssh_elevated_delay_spin.set_value(100.0);
+        }
+
         // Format custom options as "Key=Value, Key2=Value2"
         if !ssh.custom_options.is_empty() {
             let opts: Vec<String> = ssh
@@ -1268,6 +1305,7 @@ impl ConnectionDialog {
         self.rdp_reconnect_on_resize_check
             .set_active(rdp.reconnect_on_resize);
         self.rdp_mptcp_check.set_active(rdp.mptcp);
+        self.rdp_fido2_check.set_active(rdp.fido2_enabled);
         self.rdp_disable_nla_check.set_active(rdp.disable_nla);
         self.rdp_security_layer_dropdown
             .set_selected(rdp.security_layer.index());

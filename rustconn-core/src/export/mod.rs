@@ -13,6 +13,7 @@ pub mod batch;
 pub mod csv_export;
 pub mod mobaxterm;
 pub mod native;
+pub mod rdp_file;
 pub mod remmina;
 pub mod royalts;
 pub mod securecrt;
@@ -29,6 +30,7 @@ pub use batch::{
 pub use csv_export::{CsvExportField, CsvExportOptions, CsvExporter};
 pub use mobaxterm::MobaXtermExporter;
 pub use native::{NATIVE_FILE_EXTENSION, NATIVE_FORMAT_VERSION, NativeExport, NativeImportError};
+pub use rdp_file::{RdpFileExporter, export_rdp_file};
 pub use remmina::RemminaExporter;
 pub use royalts::RoyalTsExporter;
 pub use securecrt::SecureCrtExporter;
@@ -61,6 +63,8 @@ pub enum ExportFormat {
     Csv,
     /// SecureCRT session INI format (directory of .ini files)
     SecureCrt,
+    /// Microsoft RDP file (.rdp) for Windows Remote Desktop
+    RdpFile,
 }
 
 impl ExportFormat {
@@ -77,6 +81,7 @@ impl ExportFormat {
             Self::MobaXterm,
             Self::Csv,
             Self::SecureCrt,
+            Self::RdpFile,
         ]
     }
 
@@ -93,6 +98,7 @@ impl ExportFormat {
             Self::MobaXterm => "MobaXterm",
             Self::Csv => "CSV",
             Self::SecureCrt => "SecureCRT",
+            Self::RdpFile => "RDP File (.rdp)",
         }
     }
 
@@ -109,6 +115,7 @@ impl ExportFormat {
             Self::MobaXterm => "mxtsessions",
             Self::Csv => "csv",
             Self::SecureCrt => "ini",
+            Self::RdpFile => "rdp",
         }
     }
 
@@ -384,7 +391,7 @@ mod tests {
     #[test]
     fn test_export_format_all() {
         let formats = ExportFormat::all();
-        assert_eq!(formats.len(), 9);
+        assert_eq!(formats.len(), 10);
         assert!(formats.contains(&ExportFormat::Ansible));
         assert!(formats.contains(&ExportFormat::SshConfig));
         assert!(formats.contains(&ExportFormat::Remmina));
@@ -393,6 +400,7 @@ mod tests {
         assert!(formats.contains(&ExportFormat::RoyalTs));
         assert!(formats.contains(&ExportFormat::MobaXterm));
         assert!(formats.contains(&ExportFormat::Csv));
+        assert!(formats.contains(&ExportFormat::RdpFile));
     }
 
     #[test]
@@ -406,6 +414,7 @@ mod tests {
         assert_eq!(ExportFormat::MobaXterm.display_name(), "MobaXterm");
         assert_eq!(ExportFormat::Csv.display_name(), "CSV");
         assert_eq!(ExportFormat::SecureCrt.display_name(), "SecureCRT");
+        assert_eq!(ExportFormat::RdpFile.display_name(), "RDP File (.rdp)");
     }
 
     #[test]
@@ -419,6 +428,7 @@ mod tests {
         assert_eq!(ExportFormat::MobaXterm.file_extension(), "mxtsessions");
         assert_eq!(ExportFormat::Csv.file_extension(), "csv");
         assert_eq!(ExportFormat::SecureCrt.file_extension(), "ini");
+        assert_eq!(ExportFormat::RdpFile.file_extension(), "rdp");
     }
 
     #[test]

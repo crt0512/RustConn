@@ -10,7 +10,9 @@ mod key_sequence;
 mod tasks;
 mod templates;
 
-pub use expect::{CompiledRule, ExpectEngine, ExpectError, ExpectResult, ExpectRule};
+pub use expect::{
+    CompiledRule, ExpectEngine, ExpectError, ExpectResult, ExpectRule, elevated_credentials_rules,
+};
 pub use key_sequence::{KeyElement, KeySequence, KeySequenceError, KeySequenceResult, SpecialKey};
 pub use tasks::{
     ConnectionTask, FolderConnectionTracker, TaskCondition, TaskError, TaskExecutor, TaskResult,

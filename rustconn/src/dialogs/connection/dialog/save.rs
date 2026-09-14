@@ -81,6 +81,9 @@ impl ConnectionDialog {
         ssh_remote_path_entry: &adw::EntryRow,
         ssh_keep_alive_interval: &adw::SpinRow,
         ssh_keep_alive_count_max: &adw::SpinRow,
+        ssh_elevated_switch: &adw::SwitchRow,
+        ssh_elevated_prompts_entry: &adw::EntryRow,
+        ssh_elevated_delay_spin: &adw::SpinRow,
         ssh_port_forwards: &Rc<RefCell<Vec<rustconn_core::models::PortForward>>>,
         rdp_client_mode_dropdown: &DropDown,
         rdp_performance_mode_dropdown: &DropDown,
@@ -107,6 +110,7 @@ impl ConnectionDialog {
         rdp_autotype_initial_delay_spin: &SpinButton,
         rdp_reconnect_on_resize_check: &adw::SwitchRow,
         rdp_mptcp_check: &adw::SwitchRow,
+        rdp_fido2_check: &adw::SwitchRow,
         rdp_jump_host_dropdown: &DropDown,
         rdp_connections_data: &Rc<RefCell<Vec<(Option<Uuid>, String)>>>,
         rdp_shared_folders: &Rc<RefCell<Vec<SharedFolder>>>,
@@ -292,6 +296,9 @@ impl ConnectionDialog {
         let ssh_remote_path_entry = ssh_remote_path_entry.clone();
         let ssh_keep_alive_interval = ssh_keep_alive_interval.clone();
         let ssh_keep_alive_count_max = ssh_keep_alive_count_max.clone();
+        let ssh_elevated_switch = ssh_elevated_switch.clone();
+        let ssh_elevated_prompts_entry = ssh_elevated_prompts_entry.clone();
+        let ssh_elevated_delay_spin = ssh_elevated_delay_spin.clone();
         let ssh_port_forwards = ssh_port_forwards.clone();
         let rdp_client_mode_dropdown = rdp_client_mode_dropdown.clone();
         let rdp_display_mode_dropdown = rdp_display_mode_dropdown.clone();
@@ -317,6 +324,7 @@ impl ConnectionDialog {
         let rdp_autotype_initial_delay_spin = rdp_autotype_initial_delay_spin.clone();
         let rdp_reconnect_on_resize_check = rdp_reconnect_on_resize_check.clone();
         let rdp_mptcp_check = rdp_mptcp_check.clone();
+        let rdp_fido2_check = rdp_fido2_check.clone();
         let rdp_jump_host_dropdown = rdp_jump_host_dropdown.clone();
         let rdp_connections_data = rdp_connections_data.clone();
         let rdp_shared_folders = rdp_shared_folders.clone();
@@ -517,6 +525,9 @@ impl ConnectionDialog {
                 ssh_remote_path_entry: &ssh_remote_path_entry,
                 ssh_keep_alive_interval: &ssh_keep_alive_interval,
                 ssh_keep_alive_count_max: &ssh_keep_alive_count_max,
+                ssh_elevated_switch: &ssh_elevated_switch,
+                ssh_elevated_prompts_entry: &ssh_elevated_prompts_entry,
+                ssh_elevated_delay_spin: &ssh_elevated_delay_spin,
                 ssh_port_forwards: &ssh_port_forwards,
                 rdp_client_mode_dropdown: &rdp_client_mode_dropdown,
                 rdp_display_mode_dropdown: &rdp_display_mode_dropdown,
@@ -542,6 +553,7 @@ impl ConnectionDialog {
                 rdp_autotype_initial_delay_spin: &rdp_autotype_initial_delay_spin,
                 rdp_reconnect_on_resize_check: &rdp_reconnect_on_resize_check,
                 rdp_mptcp_check: &rdp_mptcp_check,
+                rdp_fido2_check: &rdp_fido2_check,
                 rdp_jump_host_dropdown: &rdp_jump_host_dropdown,
                 rdp_connections_data: &rdp_connections_data,
                 rdp_shared_folders: &rdp_shared_folders,

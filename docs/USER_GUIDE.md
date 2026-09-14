@@ -430,6 +430,67 @@ Run commands automatically before connecting or after disconnecting.
 - Post-disconnect: `nmcli con down VPN-Work` (disconnect VPN after session)
 - Post-disconnect: `notify-send "Session ended"` (desktop notification)
 
+### Output Filter (Postpend Command)
+
+Pipe terminal output through an external command before displaying it. The filter receives raw terminal bytes on stdin and writes processed output to stdout, which then appears in the terminal widget. This is useful for syntax highlighting, bandwidth metering, or log colorization.
+
+**Use cases:**
+
+- **ChromaTerm** — highlight keywords in SSH output (errors, warnings, IP addresses) with colors
+- **pv** — meter bandwidth of data flowing through the session
+- **ccze** — colorize log output (syslog, Apache, etc.)
+- **lnav** — structured log viewing
+- Custom filters for grep-like highlighting or redaction
+
+**Setup:**
+
+1. Edit a connection (SSH, Telnet, Serial, Kubernetes, MOSH, Zero Trust) → **Automation** tab
+2. Scroll to **Output Filter**
+3. Enable the filter with the toggle
+4. Enter the filter **Command** (e.g., `chromaterm`)
+5. Optionally enter **Arguments** (space-separated; e.g., `--config ~/.chromaterm.yml`)
+6. Click **Save**
+
+**How it works:**
+
+When the connection starts, RustConn spawns the filter command and pipes the PTY output through it. The filter process inherits the terminal's environment and runs for the life of the session. If the filter exits or fails to start, the session continues with unfiltered output (a warning is logged).
+
+**Example — ChromaTerm setup:**
+
+1. Install ChromaTerm: `pip install chromaterm` or `pipx install chromaterm`
+2. Create a config (optional): `~/.chromaterm.yml`
+3. Set Command to `chromaterm` (no arguments needed for default config)
+4. Connect — errors appear red, warnings yellow, IPs highlighted
+
+**Example ChromaTerm config (~/.chromaterm.yml):**
+
+```yaml
+rules:
+  - regex: '(?i)\berror\b'
+    color: red bold
+  - regex: '(?i)\bwarning\b'
+    color: yellow
+  - regex: '\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b'
+    color: cyan
+```
+
+**CLI:**
+
+```bash
+# Enable output filter with chromaterm
+rustconn-cli update "server" --postpend-enabled --postpend-command chromaterm
+
+# Disable output filter
+rustconn-cli update "server" --postpend-enabled false
+```
+
+**Notes:**
+
+- The filter applies to terminal-based protocols only (SSH, Telnet, Serial, Kubernetes, MOSH, Zero Trust). RDP, VNC, SPICE, and Web connections do not have terminal output.
+- The filter command must be installed and on PATH, or specified as an absolute path.
+- Arguments are space-separated. For complex arguments with spaces, quote them in the UI field.
+- The filter's stderr is discarded by default. If you need to debug filter issues, check that the command works in a regular terminal first.
+
 ### Custom Properties
 
 Add arbitrary key-value metadata to connections for organization and scripting.
@@ -795,6 +856,53 @@ transparently.
 - To check which display protocol your local session uses:
   `echo $XDG_SESSION_TYPE` (should print `wayland`).
 
+#### Elevated Credentials (sudo/su Injection)
+
+Automatically handles privilege-escalation prompts (sudo, su, doas, enable) during SSH sessions. When the remote system prompts for a password, RustConn's expect engine recognizes the prompt pattern and injects the configured password automatically.
+
+**Use cases:**
+
+- Running commands as root without typing the password each time
+- Automating multi-step administrative workflows
+- Network equipment that prompts for an "enable" password
+- Systems with custom privilege-escalation tools
+
+**Setup:**
+
+1. Edit an SSH connection → **Protocol** tab
+2. Scroll to **Elevated Credentials**
+3. Enable the feature with the toggle
+4. Choose the password source:
+   - **Use connection password** — reuses the SSH login password
+   - **Use separate password** — prompts for or retrieves a distinct password from your vault
+5. Optionally customize the **Prompt Patterns** (comma-separated regexes that match the system's password prompts)
+6. Set an optional **Delay** (milliseconds to wait after detecting a prompt before injecting — useful for slow network gear)
+7. Click **Save**
+
+**Default prompt patterns:**
+
+```
+[Pp]assword:?\s*$
+\[sudo\] password for \S+:\s*$
+Password for \S+@\S+:\s*$
+doas \(\S+@\S+\) password:\s*$
+[Ee]nable [Pp]assword:\s*$
+```
+
+These cover sudo, su, doas, and Cisco-style enable prompts. Add your own patterns if the remote system uses a non-standard prompt (e.g., `Enter passphrase:` for encrypted containers).
+
+**Security note:** The injected password is handled via RustConn's expect engine — it is sent directly to the PTY and never echoed or logged. The password source follows the same vault/keyring path as the connection password, so it benefits from the same protection.
+
+**CLI:**
+
+```bash
+# Enable elevated credentials with connection password
+rustconn-cli update "server" --elevated-enabled
+
+# Enable with separate password (will prompt)
+rustconn-cli update "server" --elevated-enabled --elevated-separate-password
+```
+
 #### Multipath TCP (MPTCP)
 
 Multipath TCP allows a single TCP connection to use multiple network paths simultaneously. This enables:
@@ -946,6 +1054,20 @@ For embedded RDP, the chosen scale is also sent to the Windows server as its des
 *Changed in 0.20.9:* the external FreeRDP client receives the same scale, as `/scale-desktop:` with a matching `/scale-device:`. It used to be embedded-only, and the row was hidden whenever the client mode was External — so a session in a separate window on a 4K display had no way to ask for legible text. The row is now shown for both client modes.
 
 When the available area is smaller than the minimum remote desktop resolution (640×480) — for example a very small split panel or a narrow window — the embedded viewer requests an aspect-matched resolution scaled up to that minimum, raises the remote scale so content stays legible, and locally downscales the frame to fully fill the area. The result is that a small or oddly-shaped area is filled without letterboxing rather than clipping the remote view.
+
+#### FIDO2 Passkey Redirection
+
+Enables FIDO2/WebAuthn passkey redirection from local hardware security keys (YubiKey, SoloKey, Titan) to the remote Windows session. When a Windows application or browser requests a passkey authentication, the prompt is forwarded to your local FIDO2 device.
+
+**Requirements:**
+
+- Windows 11 22H2 or later (the remote side)
+- FreeRDP 3.0+ (external client mode)
+- A FIDO2-compatible security key connected locally
+
+**To enable:** Connection Dialog → RDP → Features → **FIDO2 Passkey Redirection**
+
+This adds the FreeRDP `/fido` flag to the session launch. The embedded IronRDP client does not currently support FIDO2 redirection — use External client mode for this feature.
 
 #### Dynamic Resolution on Resize
 
@@ -3045,7 +3167,7 @@ Double-click source to start import immediately.
 
 ### Export (Ctrl+Shift+E)
 
-**Supported formats:** SSH Config, Remmina profiles, Asbru-CM, Ansible inventory, Royal TS (.rtsz), MobaXterm (.mxtsessions), SecureCRT (.ini), RustConn Native (.rcn).
+**Supported formats:** SSH Config, Remmina profiles, Asbru-CM, Ansible inventory, Royal TS (.rtsz), MobaXterm (.mxtsessions), SecureCRT (.ini), RDP files (.rdp), RustConn Native (.rcn).
 
 Options: Export selected only.
 
@@ -3070,6 +3192,7 @@ Options: Export selected only.
 | Royal TS | All | Never | Yes | XML `.rtsz` archive |
 | MobaXterm | SSH, RDP, VNC, Telnet | Never | Yes | INI-based `.mxtsessions` |
 | SecureCRT | SSH, Telnet, RDP, VNC | Never | Yes | Directory of `.ini` files |
+| RDP File | RDP only | Never | No | Standard Microsoft `.rdp` format |
 | RustConn Native | All | Never (source only) | Yes | Full-fidelity backup of connections |
 
 ### CSV Import/Export

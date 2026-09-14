@@ -609,6 +609,7 @@ impl SafeFreeRdpLauncher {
             }),
             remember_window_position: config.remember_window_position,
             ignore_certificate: config.ignore_certificate,
+            fido2_enabled: config.fido2_enabled,
         }
     }
 

@@ -182,6 +182,7 @@ pub fn sample_rdp_connection_with_domain() -> Connection {
         remote_app_args: None,
         remote_app_name: None,
         mptcp: false,
+        fido2_enabled: false,
     };
 
     let mut conn = Connection::new(

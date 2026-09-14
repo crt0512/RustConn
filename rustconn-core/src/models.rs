@@ -19,7 +19,7 @@ mod workspace;
 
 pub use connection::{
     AutomationConfig, Connection, ConnectionThemeOverride, NetworkMode, PasswordSource,
-    WindowGeometry, WindowMode,
+    PostpendCommand, WindowGeometry, WindowMode,
 };
 pub use credentials::Credentials;
 pub use custom_property::{CustomProperty, PropertyType};
@@ -29,8 +29,8 @@ pub use highlight::HighlightRule;
 pub use history::{ConnectionHistoryEntry, ConnectionStatistics, HistorySettings};
 pub use protocol::{
     AwsSsmConfig, AzureBastionConfig, AzureSshConfig, BackspaceSends, BoundaryConfig,
-    CloudflareAccessConfig, DeleteSends, GcpIapConfig, GenericZeroTrustConfig, HoopDevConfig,
-    KubernetesConfig, MoshConfig, MoshPredictMode, OciBastionConfig, PortForward,
+    CloudflareAccessConfig, DeleteSends, ElevatedCredentials, GcpIapConfig, GenericZeroTrustConfig,
+    HoopDevConfig, KubernetesConfig, MoshConfig, MoshPredictMode, OciBastionConfig, PortForward,
     PortForwardDirection, ProtocolConfig, ProtocolType, RdpAudioMode, RdpClientMode, RdpConfig,
     RdpDisplayMode, RdpGateway, RdpPerformanceMode, RdpSecurityLayer, Resolution, ScaleOverride,
     SerialBaudRate, SerialConfig, SerialDataBits, SerialFlowControl, SerialParity, SerialStopBits,

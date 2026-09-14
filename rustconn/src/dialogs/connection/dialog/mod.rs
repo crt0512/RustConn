@@ -174,6 +174,9 @@ pub struct ConnectionDialog {
     ssh_remote_path_entry: adw::EntryRow,
     ssh_keep_alive_interval: adw::SpinRow,
     ssh_keep_alive_count_max: adw::SpinRow,
+    ssh_elevated_switch: adw::SwitchRow,
+    ssh_elevated_prompts_entry: adw::EntryRow,
+    ssh_elevated_delay_spin: adw::SpinRow,
     ssh_port_forwards: Rc<RefCell<Vec<rustconn_core::models::PortForward>>>,
     ssh_port_forwards_list: gtk4::ListBox,
     // RDP fields
@@ -202,6 +205,7 @@ pub struct ConnectionDialog {
     rdp_autotype_initial_delay_spin: gtk4::SpinButton,
     rdp_reconnect_on_resize_check: adw::SwitchRow,
     rdp_mptcp_check: adw::SwitchRow,
+    rdp_fido2_check: adw::SwitchRow,
     rdp_jump_host_dropdown: DropDown,
     rdp_connections_data: Rc<RefCell<Vec<(Option<Uuid>, String)>>>,
     rdp_shared_folders: Rc<RefCell<Vec<SharedFolder>>>,
@@ -354,6 +358,10 @@ pub struct ConnectionDialog {
     post_disconnect_command_entry: Entry,
     post_disconnect_timeout_spin: SpinButton,
     post_disconnect_last_only_switch: adw::SwitchRow,
+    // Postpend command (output filter) fields
+    postpend_enabled_switch: adw::SwitchRow,
+    postpend_command_entry: Entry,
+    postpend_args_entry: Entry,
     // Custom properties fields
     custom_properties_list: ListBox,
     custom_properties: Rc<RefCell<Vec<CustomProperty>>>,
