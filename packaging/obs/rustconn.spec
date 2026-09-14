@@ -6,7 +6,7 @@
 #
 
 Name:           rustconn
-Version:        0.21.12
+Version:        0.21.13
 Release:        0
 # rpmlint caps Summary at 79 characters (summary-too-long, badness 200); the
 # protocol list belongs in %description, which has room for all of it. Kept in
@@ -387,6 +387,22 @@ done
 %{_datadir}/icons/hicolor/*/apps/io.github.totoshko88.RustConn.*
 
 %changelog
+* Mon Sep 14 2026 Anton Isaiev <totoshko88@gmail.com> - 0.21.13-0
+- Version bump to 0.21.13
+- Added: export RDP connections to Microsoft .rdp files (mstsc.exe, FreeRDP); one file per connection, no password written, control characters stripped from every value so a newline cannot append a key the client honours
+- Added: FIDO2/WebAuthn passkey redirection for RDP sessions (external client, the FreeRDP /fido flag)
+- Added: elevated credentials for SSH and SFTP — answer sudo, su, doas and enable prompts with the connection password, answered only on the active prompt line, never twice for the same prompt, and at most three times per rule
+- Added: output filter (postpend command) piping a session's stdout through ChromaTerm, ccze or pv; also rustconn-cli update --postpend-command
+- Added: expect rules can carry a delay applied between the match and the response
+- Fixed: SDL-FreeRDP now shows the certificate dialog (issue #324 follow-up) via +force-console-callbacks
+- Fixed: a delayed expect response is dropped if the prompt left the active line during the delay
+- Fixed: a repeating expect rule no longer answers the same prompt twice on a redraw; a credential rule stops after three prompts
+- Fixed: an output filter that exists but is not executable is refused before the pipeline is built and reported in a toast
+- Fixed: output filters are re-applied when a non-SSH session reconnects
+- Fixed: elevated credentials are honoured on SFTP connections
+- Improved: sidebar search history increased from 10 to 20 entries
+- Improved: the export dialog can no longer omit a format
+- Dependencies: cc 1.4.5->1.4.6, rustls 0.23.44->0.23.45, tinyvec 1.13.2->1.13.3; advisories clean
 * Sat Sep 12 2026 Anton Isaiev <totoshko88@gmail.com> - 0.21.12-0
 - Version bump to 0.21.12
 - Fixed: external RDP now shows the certificate confirmation dialog when the server certificate changed; FreeRDP prints its certificate report to stdout while the error codes go to stderr, and only stderr was classified

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.13] - 2026-09-14
+
 ### Added
 
 - **Export connections to `.rdp` files** — RDP connections can be exported to the standard Microsoft `.rdp` format for use with `mstsc.exe`, FreeRDP or any other client that reads it. Available as "RDP Files (.rdp)" in the export dialog and as `rustconn-cli export --format rdp-file`. The output is a directory with one file per connection, because a `.rdp` file describes exactly one host and there is no container format for several; a single-connection selection is written the same way, since the file chooser has to be picked before the selection is known. No password is written — the format's own `password 51:b:` field is DPAPI-encrypted against one machine's key, which is neither secure nor portable, so credentials are entered in the target application. Every exported value has its control characters removed first: the format is line-oriented, so a newline in a host, username, domain or connection name would otherwise append a second key that the client honours. Display, performance, redirection, gateway, security and RemoteApp settings are carried across; the performance rows mirror the flags a RustConn session itself uses.
@@ -29,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Search history increased from 10 to 20 entries** — the sidebar search now remembers up to 20 recent searches instead of 10.
 - **The export dialog can no longer omit a format** — the format list and its index-to-format mapping are both written by hand, so a format added to `ExportFormat` reached the enum, `ExportFormat::all()` and the exporter registry while remaining unselectable in the dialog. A test now walks the index range and compares the result against `all()`, and asserts that no two indices resolve to the same format.
+
+### Dependencies
+
+- **Updated**: cc 1.4.5→1.4.6, rustls 0.23.44→0.23.45, tinyvec 1.13.2→1.13.3
+- **Unchanged, checked**: `cargo deny check advisories` is clean. The CLI download catalogue is current on every entry, with all version endpoints reachable (TigerVNC stays 1.16.2). The bundled Flatpak sources are unchanged and still current — FreeRDP 3.31.1, cJSON 1.7.19, openh264 2.6.0, VTE 0.80.5, waypipe 0.11.2 — and the local and Flathub manifests carry identical pins on GNOME runtime 50. Snap stays on `core24` with the `gnome-46-2404` extension because no `core26` GNOME extension exists yet (issue #174).
 
 ## [0.21.12] - 2026-09-12
 
