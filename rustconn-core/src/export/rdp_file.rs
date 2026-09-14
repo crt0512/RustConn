@@ -28,6 +28,21 @@ use super::{
 };
 use crate::models::{Connection, ConnectionGroup, ProtocolConfig, ProtocolType, RdpAudioMode};
 
+/// The `.rdp` performance keys, named so the polarity is visible at the call site.
+///
+/// A bare tuple of six integers was how this started, and it shipped with two of
+/// the three modes wrong: `disable wallpaper` was set for Quality and cleared for
+/// Speed's neighbour. Named fields make that class of mistake readable.
+struct PerformanceKeys {
+    disable_wallpaper: u8,
+    allow_font_smoothing: u8,
+    allow_desktop_composition: u8,
+    disable_full_window_drag: u8,
+    disable_menu_anims: u8,
+    disable_themes: u8,
+    disable_cursor_setting: u8,
+}
+
 /// Microsoft `.rdp` file exporter.
 ///
 /// Exports RDP connections to the standard `.rdp` file format.
@@ -131,23 +146,73 @@ impl RdpFileExporter {
     }
 
     /// Writes performance-related settings.
+    ///
+    /// The three modes mirror `rdp_client::client::connection::build_performance_flags`,
+    /// which is the definition RustConn's own sessions use. Note the polarity
+    /// difference: `.rdp` spells four of these as `disable …` and two as
+    /// `allow …`, so a mode that enables an effect writes `0` to one key and `1`
+    /// to the other. Getting that backwards is invisible in a diff, which is why
+    /// `performance_modes_match_the_session_flags` pins all three rows.
     fn write_performance_settings(output: &mut String, rdp: &crate::models::RdpConfig) {
         use crate::models::RdpPerformanceMode;
 
-        // Performance flags based on mode
-        let (wallpaper, font_smooth, composition, drag, anims, themes) =
-            match rdp.performance_mode {
-                RdpPerformanceMode::Quality => (1, 1, 1, 0, 0, 0),
-                RdpPerformanceMode::Balanced => (0, 1, 1, 0, 1, 0),
-                RdpPerformanceMode::Speed => (1, 0, 0, 1, 1, 1),
-            };
+        let flags = match rdp.performance_mode {
+            // Font smoothing and desktop composition on, nothing disabled.
+            RdpPerformanceMode::Quality => PerformanceKeys {
+                disable_wallpaper: 0,
+                allow_font_smoothing: 1,
+                allow_desktop_composition: 1,
+                disable_full_window_drag: 0,
+                disable_menu_anims: 0,
+                disable_themes: 0,
+                disable_cursor_setting: 0,
+            },
+            // The session default: drag and menu animations off, font smoothing
+            // on, composition off.
+            RdpPerformanceMode::Balanced => PerformanceKeys {
+                disable_wallpaper: 0,
+                allow_font_smoothing: 1,
+                allow_desktop_composition: 0,
+                disable_full_window_drag: 1,
+                disable_menu_anims: 1,
+                disable_themes: 0,
+                disable_cursor_setting: 0,
+            },
+            // Every visual effect off.
+            RdpPerformanceMode::Speed => PerformanceKeys {
+                disable_wallpaper: 1,
+                allow_font_smoothing: 0,
+                allow_desktop_composition: 0,
+                disable_full_window_drag: 1,
+                disable_menu_anims: 1,
+                disable_themes: 1,
+                disable_cursor_setting: 1,
+            },
+        };
 
-        let _ = writeln!(output, "disable wallpaper:i:{wallpaper}");
-        let _ = writeln!(output, "allow font smoothing:i:{font_smooth}");
-        let _ = writeln!(output, "allow desktop composition:i:{composition}");
-        let _ = writeln!(output, "disable full window drag:i:{drag}");
-        let _ = writeln!(output, "disable menu anims:i:{anims}");
-        let _ = writeln!(output, "disable themes:i:{themes}");
+        let _ = writeln!(output, "disable wallpaper:i:{}", flags.disable_wallpaper);
+        let _ = writeln!(
+            output,
+            "allow font smoothing:i:{}",
+            flags.allow_font_smoothing
+        );
+        let _ = writeln!(
+            output,
+            "allow desktop composition:i:{}",
+            flags.allow_desktop_composition
+        );
+        let _ = writeln!(
+            output,
+            "disable full window drag:i:{}",
+            flags.disable_full_window_drag
+        );
+        let _ = writeln!(output, "disable menu anims:i:{}", flags.disable_menu_anims);
+        let _ = writeln!(output, "disable themes:i:{}", flags.disable_themes);
+        let _ = writeln!(
+            output,
+            "disable cursor setting:i:{}",
+            flags.disable_cursor_setting
+        );
 
         // Compression and bitmap caching (always enabled for better performance)
         let _ = writeln!(output, "compression:i:1");
@@ -237,7 +302,11 @@ impl RdpFileExporter {
 
         // Enable CredSSP support (NLA)
         let enable_credssp = !rdp.disable_nla;
-        let _ = writeln!(output, "enablecredsspsupport:i:{}", i32::from(enable_credssp));
+        let _ = writeln!(
+            output,
+            "enablecredsspsupport:i:{}",
+            i32::from(enable_credssp)
+        );
 
         // Security protocol: negotiation, nla, tls, rdp
         let negotiate = match rdp.security_layer {
@@ -300,43 +369,46 @@ impl ExportTarget for RdpFileExporter {
             return Ok(result);
         }
 
-        // Single connection: write to specified path
-        // Multiple connections: create directory with individual files
-        if rdp_connections.len() == 1 {
-            let conn = rdp_connections[0];
-            let content = Self::export_to_rdp_content(conn)?;
-            write_export_file(&options.output_path, &content)?;
-            result.add_output_file(options.output_path.clone());
-            result.increment_exported();
-        } else {
-            // Multiple connections — create a directory
-            std::fs::create_dir_all(&options.output_path)?;
+        // Always a directory with one file per connection, even for a single
+        // connection — see `ExportFormat::exports_to_directory` for why the
+        // count cannot decide this. `export_rdp_file` is the single-file API.
+        std::fs::create_dir_all(&options.output_path)?;
 
-            for conn in rdp_connections {
-                let filename = sanitize_filename(&conn.name);
-                let file_path = options.output_path.join(format!("{filename}.rdp"));
+        let mut used_names: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for conn in rdp_connections {
+            let file_path = options.output_path.join(format!(
+                "{}.rdp",
+                unique_filename(&conn.name, &mut used_names)
+            ));
 
-                match Self::export_to_rdp_content(conn) {
-                    Ok(content) => {
-                        write_export_file(&file_path, &content)?;
-                        result.add_output_file(file_path);
-                        result.increment_exported();
-                    }
-                    Err(e) => {
-                        result.add_warning(format!("Failed to export '{}': {}", conn.name, e));
-                        result.increment_skipped();
-                    }
+            match Self::export_to_rdp_content(conn) {
+                Ok(content) => {
+                    write_export_file(&file_path, &content)?;
+                    result.add_output_file(file_path);
+                    result.increment_exported();
+                }
+                Err(e) => {
+                    result.add_warning(format!("Failed to export '{}': {}", conn.name, e));
                 }
             }
         }
 
-        // Count skipped non-RDP connections
-        let skipped = connections.len() - result.exported_count;
+        // Count what did not make it out. Assigned rather than added to, because
+        // the per-file loop above already counted its own failures; deriving the
+        // total from `exported_count` covers both those and the non-RDP
+        // connections in one number, so the two cannot double-count.
+        let skipped = connections.len().saturating_sub(result.exported_count);
         if skipped > 0 {
+            let non_rdp = connections
+                .iter()
+                .filter(|c| c.protocol != ProtocolType::Rdp)
+                .count();
             result.skipped_count = skipped;
-            result.add_warning(format!(
-                "{skipped} non-RDP connection(s) skipped (only RDP can be exported to .rdp format)"
-            ));
+            if non_rdp > 0 {
+                result.add_warning(format!(
+                    "{non_rdp} non-RDP connection(s) skipped (only RDP can be exported to .rdp format)"
+                ));
+            }
         }
 
         Ok(result)
@@ -352,8 +424,14 @@ impl ExportTarget for RdpFileExporter {
 }
 
 /// Sanitizes a connection name for use as a filename.
+///
+/// Anything outside `[A-Za-z0-9-_.]` becomes `_`. A name that leaves nothing
+/// usable — empty, or all separators — falls back to `connection`, because the
+/// alternatives are a hidden `.rdp` file (an empty name) or a `...rdp` that reads
+/// like a traversal attempt (a name of dots).
 fn sanitize_filename(name: &str) -> String {
-    name.chars()
+    let sanitized: String = name
+        .chars()
         .map(|c| {
             if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' {
                 c
@@ -361,7 +439,32 @@ fn sanitize_filename(name: &str) -> String {
                 '_'
             }
         })
-        .collect()
+        .collect();
+
+    if sanitized.chars().all(|c| c == '.' || c == '_' || c == '-') {
+        return "connection".to_string();
+    }
+    sanitized
+}
+
+/// Returns a sanitized filename stem that has not been used in this export yet.
+///
+/// Sanitizing is lossy — `web/prod` and `web prod` both become `web_prod` — so
+/// without this a second connection would silently overwrite the first and the
+/// export would report more files than it wrote. Collisions get a `-2`, `-3` …
+/// suffix.
+fn unique_filename(name: &str, used: &mut std::collections::HashSet<String>) -> String {
+    let base = sanitize_filename(name);
+    if used.insert(base.clone()) {
+        return base;
+    }
+    for suffix in 2..=u32::MAX {
+        let candidate = format!("{base}-{suffix}");
+        if used.insert(candidate.clone()) {
+            return candidate;
+        }
+    }
+    base
 }
 
 /// Exports a single RDP connection directly to a file.
@@ -534,5 +637,152 @@ mod tests {
         assert!(exporter.supports_protocol(&ProtocolType::Rdp));
         assert!(!exporter.supports_protocol(&ProtocolType::Ssh));
         assert!(!exporter.supports_protocol(&ProtocolType::Vnc));
+    }
+
+    fn export_with_performance(mode: crate::models::RdpPerformanceMode) -> String {
+        let mut conn = make_rdp_connection("Perf", "server.example.com", 3389);
+        if let ProtocolConfig::Rdp(ref mut rdp) = conn.protocol_config {
+            rdp.performance_mode = mode;
+        }
+        RdpFileExporter::export_to_rdp_content(&conn).unwrap()
+    }
+
+    /// Pins every row of the performance table against the flags a RustConn
+    /// session itself uses (`build_performance_flags`). Two of the three rows
+    /// disagreed with it on arrival, and `disable …`/`allow …` polarity makes that
+    /// unreadable in a diff.
+    #[test]
+    fn performance_modes_match_the_session_flags() {
+        use crate::models::RdpPerformanceMode;
+
+        let quality = export_with_performance(RdpPerformanceMode::Quality);
+        for expected in [
+            "disable wallpaper:i:0",
+            "allow font smoothing:i:1",
+            "allow desktop composition:i:1",
+            "disable full window drag:i:0",
+            "disable menu anims:i:0",
+            "disable themes:i:0",
+            "disable cursor setting:i:0",
+        ] {
+            assert!(
+                quality.contains(expected),
+                "Quality must emit {expected}\n{quality}"
+            );
+        }
+
+        let balanced = export_with_performance(RdpPerformanceMode::Balanced);
+        for expected in [
+            "disable wallpaper:i:0",
+            "allow font smoothing:i:1",
+            "allow desktop composition:i:0",
+            "disable full window drag:i:1",
+            "disable menu anims:i:1",
+            "disable themes:i:0",
+        ] {
+            assert!(
+                balanced.contains(expected),
+                "Balanced must emit {expected}\n{balanced}"
+            );
+        }
+
+        let speed = export_with_performance(RdpPerformanceMode::Speed);
+        for expected in [
+            "disable wallpaper:i:1",
+            "allow font smoothing:i:0",
+            "allow desktop composition:i:0",
+            "disable full window drag:i:1",
+            "disable menu anims:i:1",
+            "disable themes:i:1",
+            "disable cursor setting:i:1",
+        ] {
+            assert!(
+                speed.contains(expected),
+                "Speed must emit {expected}\n{speed}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_name_with_nothing_usable_does_not_become_a_hidden_file() {
+        assert_eq!(sanitize_filename(""), "connection");
+        assert_eq!(sanitize_filename(".."), "connection");
+        assert_eq!(sanitize_filename("///"), "connection");
+    }
+
+    /// A mixed selection reports the non-RDP entries once, and the two counters
+    /// add up to what was handed in.
+    #[test]
+    fn a_mixed_selection_counts_skipped_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let connections = vec![
+            make_rdp_connection("win-a", "a.example.com", 3389),
+            make_rdp_connection("win-b", "b.example.com", 3389),
+            Connection::new_ssh("shell".to_string(), "c.example.com".to_string(), 22),
+        ];
+        let options = ExportOptions::new(ExportFormat::RdpFile, dir.path().join("out"));
+
+        let result = RdpFileExporter::new()
+            .export(&connections, &[], &options)
+            .unwrap();
+
+        assert_eq!(result.exported_count, 2);
+        assert_eq!(result.skipped_count, 1);
+        assert_eq!(result.exported_count + result.skipped_count, 3);
+        assert_eq!(
+            result
+                .warnings
+                .iter()
+                .filter(|w| w.contains("non-RDP"))
+                .count(),
+            1
+        );
+        assert!(dir.path().join("out").join("win-a.rdp").exists());
+        assert!(dir.path().join("out").join("win-b.rdp").exists());
+    }
+
+    /// Sanitizing is lossy, so two different names can collide. Both must survive.
+    #[test]
+    fn colliding_names_do_not_overwrite_each_other() {
+        let dir = tempfile::tempdir().unwrap();
+        let connections = vec![
+            make_rdp_connection("web/prod", "a.example.com", 3389),
+            make_rdp_connection("web prod", "b.example.com", 3389),
+        ];
+        let options = ExportOptions::new(ExportFormat::RdpFile, dir.path().join("out"));
+
+        let result = RdpFileExporter::new()
+            .export(&connections, &[], &options)
+            .unwrap();
+
+        assert_eq!(result.exported_count, 2);
+        assert_eq!(result.output_files.len(), 2);
+        let out = dir.path().join("out");
+        assert!(out.join("web_prod.rdp").exists());
+        assert!(out.join("web_prod-2.rdp").exists());
+        let first = std::fs::read_to_string(out.join("web_prod.rdp")).unwrap();
+        let second = std::fs::read_to_string(out.join("web_prod-2.rdp")).unwrap();
+        assert!(first.contains("a.example.com"));
+        assert!(second.contains("b.example.com"));
+    }
+
+    /// A selection with no RDP connection is a warning, not an error, and creates
+    /// nothing.
+    #[test]
+    fn a_selection_without_rdp_exports_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let connections = vec![Connection::new_ssh(
+            "shell".to_string(),
+            "c.example.com".to_string(),
+            22,
+        )];
+        let options = ExportOptions::new(ExportFormat::RdpFile, dir.path().join("out"));
+
+        let result = RdpFileExporter::new()
+            .export(&connections, &[], &options)
+            .unwrap();
+
+        assert_eq!(result.exported_count, 0);
+        assert!(!dir.path().join("out").exists());
     }
 }

@@ -75,6 +75,14 @@ pub struct ExpectRule {
     /// Whether this rule should only fire once (default: true)
     #[serde(default = "default_one_shot")]
     pub one_shot: bool,
+    /// How long to wait after the match before sending the response, in
+    /// milliseconds.
+    ///
+    /// `None` and `Some(0)` both send immediately. A delay exists for peers that
+    /// print their prompt before they are ready to read: network equipment
+    /// commonly discards a reply that arrives in the same breath as the prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_ms: Option<u32>,
 }
 
 /// Default value for `one_shot` — true for backward compatibility
@@ -99,6 +107,7 @@ impl ExpectRule {
             timeout_ms: None,
             enabled: true,
             one_shot: true,
+            delay_ms: None,
         }
     }
 
@@ -113,6 +122,7 @@ impl ExpectRule {
             timeout_ms: None,
             enabled: true,
             one_shot: true,
+            delay_ms: None,
         }
     }
 
@@ -141,6 +151,17 @@ impl ExpectRule {
     #[must_use]
     pub const fn with_one_shot(mut self, one_shot: bool) -> Self {
         self.one_shot = one_shot;
+        self
+    }
+
+    /// Sets how long to wait after the match before sending the response.
+    ///
+    /// `0` is stored as "no delay" rather than as a zero-length timer, so a
+    /// caller that passes a config default of `0` gets an immediate send instead
+    /// of a main-loop round trip.
+    #[must_use]
+    pub const fn with_delay(mut self, delay_ms: u32) -> Self {
+        self.delay_ms = if delay_ms == 0 { None } else { Some(delay_ms) };
         self
     }
 
@@ -181,6 +202,7 @@ impl std::fmt::Debug for ExpectRule {
             .field("timeout_ms", &self.timeout_ms)
             .field("enabled", &self.enabled)
             .field("one_shot", &self.one_shot)
+            .field("delay_ms", &self.delay_ms)
             .finish()
     }
 }
@@ -194,6 +216,7 @@ impl PartialEq for ExpectRule {
             && self.timeout_ms == other.timeout_ms
             && self.enabled == other.enabled
             && self.one_shot == other.one_shot
+            && self.delay_ms == other.delay_ms
     }
 }
 
@@ -528,36 +551,60 @@ impl Drop for ExpectEngine {
     }
 }
 
-/// Generates expect rules for elevated credentials (SUDO/su/doas injection).
+/// The response every generated elevated rule carries.
 ///
-/// Creates rules that match privilege escalation prompts and respond with the
-/// provided password. The password is sent after the configured delay.
+/// A placeholder rather than the password itself: the caller merges these rules
+/// into the connection's [`crate::models::AutomationConfig`], and the GUI's
+/// `prepare_rules_from_config` then resolves `${password}` from the credential
+/// cache into a `Zeroizing` buffer. Handing the plaintext in here instead would
+/// put a second, unscrubbed copy in every rule for the life of the session.
+pub const ELEVATED_RESPONSE_TEMPLATE: &str = "${password}\\n";
+
+/// The priority generated elevated rules are given.
 ///
-/// # Arguments
+/// Above the default `0` so a prompt that also matches a user's own rule is
+/// answered with the credential rather than with whatever that rule sends, and
+/// well below `i32::MAX` so a deliberate override is still possible.
+const ELEVATED_PRIORITY: i32 = 100;
+
+/// Builds expect rules that answer privilege-escalation prompts (sudo, su, doas).
 ///
-/// * `elevated` - The elevated credentials configuration
-/// * `password` - The password to send (connection password or separate elevated password)
+/// One rule per configured prompt pattern, each responding with the
+/// [`ELEVATED_RESPONSE_TEMPLATE`] placeholder and carrying the configured delay.
+/// The rules are **not** one-shot, because a session runs `sudo` more than once;
+/// the consumer is expected to match them against the active prompt line only, so
+/// a prompt still visible further up the screen cannot re-trigger them.
 ///
-/// # Returns
-///
-/// A vector of expect rules, one for each prompt pattern, or an empty vector
-/// if elevated credentials are disabled.
+/// Returns an empty vector when elevated credentials are disabled, and skips any
+/// pattern that is not a valid regex — an unusable pattern must not take the
+/// whole engine down with it, since [`ExpectEngine::from_rules`] fails as a unit.
 #[must_use]
 pub fn elevated_credentials_rules(
     elevated: &crate::models::ElevatedCredentials,
-    password: &str,
 ) -> Vec<ExpectRule> {
-    if !elevated.enabled || password.is_empty() {
-        return vec![];
+    if !elevated.enabled {
+        return Vec::new();
     }
 
     elevated
         .effective_prompts()
         .into_iter()
-        .map(|prompt| {
-            ExpectRule::new(&prompt, password)
-                .with_priority(100) // High priority to match before other rules
-                .with_one_shot(false) // Can fire multiple times (multiple sudo commands)
+        .filter_map(|prompt| {
+            let rule = ExpectRule::new(&prompt, ELEVATED_RESPONSE_TEMPLATE)
+                .with_priority(ELEVATED_PRIORITY)
+                .with_one_shot(false)
+                .with_delay(elevated.delay_ms);
+            match rule.validate_pattern() {
+                Ok(()) => Some(rule),
+                Err(error) => {
+                    tracing::warn!(
+                        pattern = %prompt,
+                        %error,
+                        "Skipping elevated-credentials prompt pattern: not a valid regex"
+                    );
+                    None
+                }
+            }
         })
         .collect()
 }
@@ -874,5 +921,131 @@ mod tests {
         assert_eq!(removed, 1); // rule1 expired
         assert_eq!(engine.len(), 1);
         assert!(engine.get_rule(id2).is_some());
+    }
+
+    #[test]
+    fn with_delay_treats_zero_as_no_delay() {
+        assert_eq!(ExpectRule::new("p", "r").with_delay(0).delay_ms, None);
+        assert_eq!(
+            ExpectRule::new("p", "r").with_delay(250).delay_ms,
+            Some(250)
+        );
+    }
+
+    #[test]
+    fn delay_survives_a_serde_round_trip_and_is_absent_when_unset() {
+        let with_delay = ExpectRule::new("p", "r").with_delay(400);
+        let json = serde_json::to_string(&with_delay).unwrap();
+        assert!(json.contains("delay_ms"));
+        let back: ExpectRule = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.delay_ms, Some(400));
+
+        // Omitted from the wire form when unset, and a rule stored before the
+        // field existed still deserializes.
+        let plain = serde_json::to_string(&ExpectRule::new("p", "r")).unwrap();
+        assert!(!plain.contains("delay_ms"));
+        let legacy: ExpectRule =
+            serde_json::from_str(r#"{"id":"00000000-0000-0000-0000-000000000001","pattern":"p","response":"r","priority":0,"timeout_ms":null,"enabled":true}"#)
+                .unwrap();
+        assert_eq!(legacy.delay_ms, None);
+    }
+
+    mod elevated {
+        use super::*;
+        use crate::models::ElevatedCredentials;
+
+        fn enabled() -> ElevatedCredentials {
+            ElevatedCredentials {
+                enabled: true,
+                ..ElevatedCredentials::default()
+            }
+        }
+
+        #[test]
+        fn disabled_config_produces_no_rules() {
+            assert!(elevated_credentials_rules(&ElevatedCredentials::default()).is_empty());
+        }
+
+        #[test]
+        fn rules_carry_the_placeholder_never_a_password() {
+            let rules = elevated_credentials_rules(&enabled());
+            assert_eq!(rules.len(), ElevatedCredentials::default_prompts().len());
+            for rule in &rules {
+                assert_eq!(rule.response, ELEVATED_RESPONSE_TEMPLATE);
+                assert!(!rule.one_shot, "a session runs sudo more than once");
+                assert_eq!(rule.priority, ELEVATED_PRIORITY);
+                assert_eq!(rule.delay_ms, Some(100));
+            }
+        }
+
+        #[test]
+        fn custom_prompts_replace_the_defaults() {
+            let config = ElevatedCredentials {
+                enabled: true,
+                custom_prompts: vec![r"^Secret code:\s*$".to_string()],
+                delay_ms: 0,
+            };
+            let rules = elevated_credentials_rules(&config);
+            assert_eq!(rules.len(), 1);
+            assert_eq!(rules[0].pattern, r"^Secret code:\s*$");
+            assert_eq!(rules[0].delay_ms, None, "0 ms means send immediately");
+        }
+
+        #[test]
+        fn an_invalid_custom_pattern_is_dropped_not_fatal() {
+            let config = ElevatedCredentials {
+                enabled: true,
+                custom_prompts: vec!["[unclosed".to_string(), r"^ok:\s*$".to_string()],
+                delay_ms: 100,
+            };
+            let rules = elevated_credentials_rules(&config);
+            assert_eq!(rules.len(), 1);
+            assert_eq!(rules[0].pattern, r"^ok:\s*$");
+            // The surviving rule must still build an engine — `from_rules` fails
+            // as a unit, so a bad pattern reaching it would disable sudo
+            // injection entirely.
+            assert!(ExpectEngine::from_rules(rules).is_ok());
+        }
+
+        /// The property the anchoring exists for: none of the defaults may match
+        /// OpenSSH's own login prompt. An unanchored `Password:` or
+        /// `\w+'s password:` does, and behind a jump host that prompt can belong
+        /// to the bastion (issue #191).
+        #[test]
+        fn defaults_never_match_an_ssh_login_prompt() {
+            let engine = ExpectEngine::from_rules(elevated_credentials_rules(&enabled())).unwrap();
+            for line in [
+                "totoshko88@db.example.com's password: ",
+                "admin@10.0.0.5's password:",
+                "root's password: ",
+                "Enter passphrase for key '/home/u/.ssh/id_ed25519': ",
+                "admin@bastion password:",
+            ] {
+                assert!(
+                    engine.match_line(line).is_none(),
+                    "elevated injection must not answer {line:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn defaults_match_the_escalation_prompts_they_are_for() {
+            let engine = ExpectEngine::from_rules(elevated_credentials_rules(&enabled())).unwrap();
+            for line in [
+                "[sudo] password for totoshko88: ",
+                "[sudo] password for domain\\user:",
+                "Password:",
+                "Password: ",
+                "password:",
+                "doas (totoshko88@laptop) password: ",
+                "Enable Password:",
+                "enable password: ",
+            ] {
+                assert!(
+                    engine.match_line(line).is_some(),
+                    "elevated injection should answer {line:?}"
+                );
+            }
+        }
     }
 }

@@ -139,7 +139,7 @@ impl ConnectionDialog {
         let ssh_keep_alive_interval = ssh_widgets.keep_alive_interval;
         let ssh_keep_alive_count_max = ssh_widgets.keep_alive_count_max;
         let ssh_elevated_switch = ssh_widgets.elevated_switch;
-        let ssh_elevated_prompts_entry = ssh_widgets.elevated_prompts_entry;
+        let ssh_elevated_prompts_view = ssh_widgets.elevated_prompts_view;
         let ssh_elevated_delay_spin = ssh_widgets.elevated_delay_spin;
 
         // Add port forwarding group to SSH options panel
@@ -525,7 +525,7 @@ impl ConnectionDialog {
             &ssh_keep_alive_interval,
             &ssh_keep_alive_count_max,
             &ssh_elevated_switch,
-            &ssh_elevated_prompts_entry,
+            &ssh_elevated_prompts_view,
             &ssh_elevated_delay_spin,
             &ssh_port_forwards,
             &rdp_client_mode_dropdown,
@@ -665,6 +665,9 @@ impl ConnectionDialog {
             &automation_widgets.post_disconnect_command_entry,
             &automation_widgets.post_disconnect_timeout_spin,
             &automation_widgets.post_disconnect_last_only_switch,
+            &automation_widgets.postpend_enabled_switch,
+            &automation_widgets.postpend_command_entry,
+            &automation_widgets.postpend_args_entry,
             &custom_properties,
             &wol_enabled_check,
             &wol_mac_entry,
@@ -766,7 +769,7 @@ impl ConnectionDialog {
             ssh_keep_alive_interval,
             ssh_keep_alive_count_max,
             ssh_elevated_switch,
-            ssh_elevated_prompts_entry,
+            ssh_elevated_prompts_view,
             ssh_elevated_delay_spin,
             ssh_port_forwards,
             ssh_port_forwards_list,

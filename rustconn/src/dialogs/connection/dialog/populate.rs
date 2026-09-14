@@ -1047,20 +1047,18 @@ impl ConnectionDialog {
             self.ssh_keep_alive_count_max.set_value(3.0);
         }
 
-        // Populate elevated credentials (SUDO injection)
+        // Populate elevated credentials (sudo/su/doas injection). Patterns are
+        // one per line, matching how `build_elevated_credentials` reads them back.
         if let Some(ref elevated) = ssh.elevated {
             self.ssh_elevated_switch.set_active(elevated.enabled);
-            if !elevated.custom_prompts.is_empty() {
-                self.ssh_elevated_prompts_entry
-                    .set_text(&elevated.custom_prompts.join(", "));
-            } else {
-                self.ssh_elevated_prompts_entry.set_text("");
-            }
+            self.ssh_elevated_prompts_view
+                .buffer()
+                .set_text(&elevated.custom_prompts.join("\n"));
             self.ssh_elevated_delay_spin
                 .set_value(f64::from(elevated.delay_ms));
         } else {
             self.ssh_elevated_switch.set_active(false);
-            self.ssh_elevated_prompts_entry.set_text("");
+            self.ssh_elevated_prompts_view.buffer().set_text("");
             self.ssh_elevated_delay_spin.set_value(100.0);
         }
 

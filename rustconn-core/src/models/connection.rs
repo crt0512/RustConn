@@ -210,19 +210,34 @@ impl WindowGeometry {
 
 /// Configuration for a command to pipe terminal output through.
 ///
-/// Allows wrapping the session in a pipeline that processes output before
-/// display — for example, `chromaterm` for syntax highlighting or `pv` for
-/// bandwidth metering. The command receives the session's stdout on its stdin
-/// and writes to the terminal's actual stdout.
+/// Wraps the session in a shell pipeline that processes output before it is
+/// displayed — `chromaterm` for syntax highlighting, `pv` for bandwidth
+/// metering, `ccze` for log colouring. The filter reads the session's stdout on
+/// its own stdin and writes to the terminal.
+///
+/// Only the session's *output* is redirected. In a POSIX pipeline the filter's
+/// stdin is the pipe, so the session keeps the terminal for input and typing is
+/// unaffected — which is what makes this usable for an interactive shell rather
+/// than only for a one-shot command.
 ///
 /// # Example
 ///
-/// ```text
-/// PostpendCommand {
+/// ```
+/// use rustconn_core::models::PostpendCommand;
+///
+/// let filter = PostpendCommand {
 ///     command: "chromaterm".to_string(),
-///     args: vec!["--config".to_string(), "/path/to/ct.yml".to_string()],
+///     args: vec!["--config".to_string(), "/home/u/ct.yml".to_string()],
 ///     enabled: true,
-/// }
+/// };
+/// assert_eq!(
+///     filter.filter_argv(),
+///     Some(vec![
+///         "chromaterm".to_string(),
+///         "--config".to_string(),
+///         "/home/u/ct.yml".to_string(),
+///     ])
+/// );
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PostpendCommand {
@@ -237,6 +252,49 @@ pub struct PostpendCommand {
     /// allowing quick toggling without deleting the configuration.
     #[serde(default = "default_true")]
     pub enabled: bool,
+}
+
+impl PostpendCommand {
+    /// Returns the filter's argv, or `None` when no filter should be applied.
+    ///
+    /// `None` for a disabled filter and for a blank command, so a caller can
+    /// treat "configured but off" and "not configured" identically. A leading
+    /// `~/` is expanded in the command and in every argument: the values are
+    /// quoted before they reach the shell, so nothing else would expand them,
+    /// and a path typed with a tilde is the ordinary case for a filter's config
+    /// file.
+    #[must_use]
+    pub fn filter_argv(&self) -> Option<Vec<String>> {
+        if !self.enabled {
+            return None;
+        }
+        let command = self.command.trim();
+        if command.is_empty() {
+            return None;
+        }
+
+        let mut argv = Vec::with_capacity(self.args.len() + 1);
+        argv.push(expand_leading_tilde(command));
+        argv.extend(self.args.iter().map(|arg| expand_leading_tilde(arg)));
+        Some(argv)
+    }
+}
+
+/// Expands a leading `~/` (or a bare `~`) against `$HOME`, leaving the rest alone.
+///
+/// `~user` is deliberately not handled: resolving another account's home needs
+/// the password database, and a filter argument is not where that belongs.
+fn expand_leading_tilde(value: &str) -> String {
+    let Some(rest) = value.strip_prefix('~') else {
+        return value.to_string();
+    };
+    if !rest.is_empty() && !rest.starts_with('/') {
+        return value.to_string();
+    }
+    match std::env::var("HOME") {
+        Ok(home) if !home.is_empty() => format!("{home}{rest}"),
+        _ => value.to_string(),
+    }
 }
 
 /// Per-connection terminal color override.

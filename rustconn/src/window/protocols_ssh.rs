@@ -1335,6 +1335,11 @@ fn start_ssh_connection_internal(
         observer.complete(session_id);
     }
 
+    // Pipe this session's output through the configured output filter, when one
+    // is set and installed (`PostpendCommand`). Registered before the spawn,
+    // which is what reads it.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
+
     // Apply highlight rules (built-in defaults + global + per-connection)
     {
         let global_rules = state
@@ -1741,6 +1746,11 @@ pub fn reconnect_ssh_in_place(
             .unwrap_or_default();
         notebook.set_highlight_rules(session_id, &global_rules, &conn.highlight_rules);
     }
+
+    // Re-register the output filter from the connection as it stands now: it is
+    // kept across a reconnect, so without this an edit made in between would be
+    // ignored until the tab was closed.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
 
     // Record connection start in history
     let history_entry_id = if let Ok(mut state_mut) = state.try_borrow_mut() {

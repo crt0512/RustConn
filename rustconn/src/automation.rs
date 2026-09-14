@@ -46,6 +46,7 @@ pub(crate) struct PreparedExpectRule {
     priority: i32,
     timeout_ms: Option<u32>,
     one_shot: bool,
+    delay_ms: Option<u32>,
 }
 
 impl PreparedExpectRule {
@@ -58,8 +59,21 @@ impl PreparedExpectRule {
             timeout_ms: self.timeout_ms,
             enabled: true,
             one_shot: self.one_shot,
+            delay_ms: self.delay_ms,
         }
     }
+}
+
+/// A matched rule's response, waiting to be written to the session.
+///
+/// Carried out of the borrow on the shared state so nothing is held while the
+/// terminal is written to, and so a delayed response can be moved into a timer.
+struct PendingResponse {
+    rule_id: Uuid,
+    /// Scrubbed on drop — it may be a resolved credential (issue #257).
+    response: Zeroizing<String>,
+    one_shot: bool,
+    delay_ms: Option<u32>,
 }
 
 /// Manages automation for a terminal session
@@ -282,12 +296,26 @@ impl AutomationSession {
 
         state_ref.last_content = content.clone();
 
-        // Collect matches: (rule_id, response, one_shot)
+        // The active prompt line: the last line with anything on it. A rule that
+        // can fire repeatedly is matched against this line alone, because the
+        // whole visible grid is rescanned on every change and a prompt that has
+        // already been answered stays on screen. Without this, a non-one-shot
+        // sudo rule re-fires on the next screen update and types the password as
+        // a shell command. One-shot rules keep scanning everything: they are
+        // removed the first time they match, so they cannot repeat.
+        // A forward scan, because `str::lines` is not a double-ended iterator.
+        let mut active_line: Option<usize> = None;
+        for (index, line) in content.lines().enumerate() {
+            if !line.trim().is_empty() {
+                active_line = Some(index);
+            }
+        }
+
         // Responses are wrapped in `Zeroizing` so that credentials resolved into
         // them (issue #257) are scrubbed from memory as soon as they are sent.
-        let mut matches: Vec<(Uuid, zeroize::Zeroizing<String>, bool)> = Vec::new();
+        let mut matches: Vec<PendingResponse> = Vec::new();
 
-        for line in content.lines() {
+        for (index, line) in content.lines().enumerate() {
             if line.trim().is_empty() {
                 continue;
             }
@@ -297,7 +325,11 @@ impl AutomationSession {
                 let rule = &compiled.rule;
 
                 // Skip if we already matched this rule in this cycle
-                if matches.iter().any(|(id, _, _)| *id == rule.id) {
+                if matches.iter().any(|pending| pending.rule_id == rule.id) {
+                    continue;
+                }
+
+                if !rule.one_shot && active_line != Some(index) {
                     continue;
                 }
 
@@ -305,6 +337,7 @@ impl AutomationSession {
                     rule_id = %rule.id,
                     pattern = %rule.pattern,
                     matched_line_len = line.trim().len(),
+                    delay_ms = ?rule.delay_ms,
                     "AutomationSession matched expect rule"
                 );
 
@@ -320,28 +353,50 @@ impl AutomationSession {
                     response.len()
                 );
 
-                matches.push((rule.id, response, rule.one_shot));
+                matches.push(PendingResponse {
+                    rule_id: rule.id,
+                    response,
+                    one_shot: rule.one_shot,
+                    delay_ms: rule.delay_ms,
+                });
             }
         }
 
         // Remove one-shot rules that matched and zeroize their stored response
         // so the credential does not linger in the freed allocation.
-        for (id, _, one_shot) in &matches {
-            if *one_shot {
-                if let Some(rule) = state_ref.engine.get_rule_mut(*id) {
+        for pending in &matches {
+            if pending.one_shot {
+                if let Some(rule) = state_ref.engine.get_rule_mut(pending.rule_id) {
                     rule.response.zeroize();
                 }
-                state_ref.engine.remove_by_id(*id);
-                state_ref.created_at.remove(id);
+                state_ref.engine.remove_by_id(pending.rule_id);
+                state_ref.created_at.remove(&pending.rule_id);
             }
         }
 
         // Drop borrow before sending
         drop(state_ref);
 
-        // Send responses — `Zeroizing` scrubs the String on drop.
-        for (_, response, _) in matches {
-            terminal.feed_child(response.as_bytes());
+        // Send responses — `Zeroizing` scrubs the String on drop, whether that
+        // happens here or after a delay timer has run.
+        for pending in matches {
+            match pending.delay_ms {
+                None => terminal.feed_child(pending.response.as_bytes()),
+                Some(delay_ms) => {
+                    // A weak handle, so a tab closed inside the delay window
+                    // drops the response instead of writing to a dead widget.
+                    let terminal_weak = terminal.downgrade();
+                    let response = pending.response;
+                    glib::timeout_add_local_once(
+                        Duration::from_millis(u64::from(delay_ms)),
+                        move || {
+                            if let Some(terminal) = terminal_weak.upgrade() {
+                                terminal.feed_child(response.as_bytes());
+                            }
+                        },
+                    );
+                }
+            }
         }
     }
 }
@@ -425,6 +480,7 @@ pub(crate) fn prepare_rules_from_config(
             priority: rule.priority,
             timeout_ms: rule.timeout_ms,
             one_shot: rule.one_shot,
+            delay_ms: rule.delay_ms,
         });
     }
 
@@ -549,5 +605,53 @@ mod tests {
         assert_eq!(prepared[0].priority, 10);
         assert_eq!(prepared[0].timeout_ms, Some(30_000));
         assert!(prepared[0].one_shot);
+    }
+
+    /// The elevated-credentials path end to end at the level this file owns: the
+    /// generated rules must resolve `${password}` from the credential cache and
+    /// arrive with their delay intact, or the feature is a config field nothing
+    /// acts on.
+    #[test]
+    fn generated_elevated_rules_resolve_the_password_and_keep_their_delay() {
+        let elevated = rustconn_core::models::ElevatedCredentials {
+            enabled: true,
+            custom_prompts: Vec::new(),
+            delay_ms: 250,
+        };
+        let rules = rustconn_core::elevated_credentials_rules(&elevated);
+        assert!(!rules.is_empty());
+
+        let manager = manager_with("password", "hunter2");
+        let prepared = prepare_rules_from_config(&rules, &manager);
+
+        assert_eq!(prepared.len(), rules.len());
+        for rule in &prepared {
+            assert_eq!(
+                rule.response.as_str(),
+                "hunter2\n",
+                "the placeholder must be resolved and its \\n expanded"
+            );
+            assert_eq!(rule.delay_ms, Some(250));
+            assert!(
+                !rule.one_shot,
+                "sudo is run more than once in a session; repeat firing is bounded \
+                 by matching the active prompt line only"
+            );
+        }
+    }
+
+    /// Without a resolved password the rules are dropped rather than typing a
+    /// literal `${password}` into the session — the same contract a hand-written
+    /// rule has.
+    #[test]
+    fn generated_elevated_rules_are_dropped_without_a_password() {
+        let elevated = rustconn_core::models::ElevatedCredentials {
+            enabled: true,
+            ..rustconn_core::models::ElevatedCredentials::default()
+        };
+        let rules = rustconn_core::elevated_credentials_rules(&elevated);
+        let empty = rustconn_core::variables::VariableManager::new();
+
+        assert!(prepare_rules_from_config(&rules, &empty).is_empty());
     }
 }

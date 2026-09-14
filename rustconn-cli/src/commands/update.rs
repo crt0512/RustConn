@@ -12,6 +12,103 @@ use crate::commands::add::{
 use crate::error::CliError;
 use crate::util::{create_config_manager, find_connection};
 
+/// Applies `--postpend-*` to the connection's output filter.
+///
+/// An empty `--postpend-command` removes the filter outright; a non-empty one
+/// replaces the command and keeps the filter enabled unless
+/// `--postpend-enabled false` says otherwise. `--postpend-enabled` on its own
+/// toggles a filter that is already configured, which is the point of the
+/// `enabled` flag existing separately from the command.
+fn apply_output_filter(connection: &mut rustconn_core::models::Connection, params: &UpdateParams) {
+    use rustconn_core::models::PostpendCommand;
+
+    if let Some(command) = params.postpend_command {
+        if command.trim().is_empty() {
+            connection.postpend = None;
+            println!("  Output filter: removed");
+        } else {
+            connection.postpend = Some(PostpendCommand {
+                command: command.to_string(),
+                args: params.postpend_arg.to_vec(),
+                enabled: params.postpend_enabled.unwrap_or(true),
+            });
+            println!("  Output filter: {command}");
+        }
+        return;
+    }
+
+    let Some(filter) = connection.postpend.as_mut() else {
+        if params.postpend_enabled.is_some() || !params.postpend_arg.is_empty() {
+            tracing::warn!(
+                "--postpend-enabled/--postpend-arg need a filter; set one with --postpend-command"
+            );
+        }
+        return;
+    };
+
+    if !params.postpend_arg.is_empty() {
+        filter.args = params.postpend_arg.to_vec();
+    }
+    if let Some(enabled) = params.postpend_enabled {
+        filter.enabled = enabled;
+        println!(
+            "  Output filter: {}",
+            if enabled { "enabled" } else { "disabled" }
+        );
+    }
+}
+
+/// Applies `--elevated-*` to an SSH connection's privilege-escalation settings.
+///
+/// `--elevated-enabled false` keeps the patterns and the delay so the feature can
+/// be switched back on without retyping them; that is why the config is not
+/// dropped here.
+fn apply_elevated_credentials(
+    connection: &mut rustconn_core::models::Connection,
+    params: &UpdateParams,
+) {
+    use rustconn_core::models::ElevatedCredentials;
+
+    if params.elevated_enabled.is_none()
+        && params.elevated_prompt.is_empty()
+        && params.elevated_delay.is_none()
+    {
+        return;
+    }
+
+    let rustconn_core::models::ProtocolConfig::Ssh(ref mut ssh) = connection.protocol_config else {
+        tracing::warn!("--elevated-* options are only applicable to SSH connections");
+        return;
+    };
+
+    let elevated = ssh
+        .elevated
+        .get_or_insert_with(ElevatedCredentials::default);
+    if let Some(enabled) = params.elevated_enabled {
+        elevated.enabled = enabled;
+    }
+    if !params.elevated_prompt.is_empty() {
+        elevated.custom_prompts = params.elevated_prompt.to_vec();
+    }
+    if let Some(delay) = params.elevated_delay {
+        elevated.delay_ms = delay;
+    }
+
+    println!(
+        "  Elevated credentials: {}{}",
+        if elevated.enabled {
+            "enabled"
+        } else {
+            "disabled"
+        },
+        if elevated.custom_prompts.is_empty() {
+            String::new()
+        } else {
+            format!(" ({} custom pattern(s))", elevated.custom_prompts.len())
+        }
+    );
+}
+
 /// Parameters for the `update` command
 #[expect(
     clippy::struct_excessive_bools,
@@ -129,6 +226,14 @@ pub(super) struct UpdateParams<'a> {
     pub web_toolbar: Option<bool>,
     pub private_mode: bool,
     pub zoom_level: Option<f64>,
+    // Output filter (postpend command) — terminal protocols
+    pub postpend_command: Option<&'a str>,
+    pub postpend_arg: &'a [String],
+    pub postpend_enabled: Option<bool>,
+    // Elevated credentials (sudo/su/doas injection) — SSH
+    pub elevated_enabled: Option<bool>,
+    pub elevated_prompt: &'a [String],
+    pub elevated_delay: Option<u32>,
 }
 
 /// Update connection command handler
@@ -446,6 +551,9 @@ pub(super) fn cmd_update(
             }
         }
     }
+
+    apply_output_filter(connection, &params);
+    apply_elevated_credentials(connection, &params);
 
     // Apply SSH wave-2 fields: x11, agent forwarding, compression, startup/proxy command,
     // custom options, port forwards

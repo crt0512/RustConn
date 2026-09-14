@@ -18,8 +18,8 @@ use libadwaita as adw;
 use rustconn_core::cluster::Cluster;
 use rustconn_core::export::{
     AnsibleExporter, AsbruExporter, CsvExportField, CsvExportOptions, CsvExporter, ExportFormat,
-    ExportOptions, ExportResult, ExportTarget, MobaXtermExporter, NativeExport, RemminaExporter,
-    RoyalTsExporter, SecureCrtExporter, SshConfigExporter,
+    ExportOptions, ExportResult, ExportTarget, MobaXtermExporter, NativeExport, RdpFileExporter,
+    RemminaExporter, RoyalTsExporter, SecureCrtExporter, SshConfigExporter,
 };
 use rustconn_core::models::{
     Connection, ConnectionGroup, ConnectionTemplate, SmartFolder, Snippet,
@@ -253,6 +253,7 @@ impl ExportDialog {
             &i18n("Asbru-CM"),
             &i18n("CSV (*.csv)"),
             &i18n("MobaXterm (.mxtsessions)"),
+            &i18n("RDP Files (.rdp)"),
             &i18n("Remmina"),
             &i18n("Royal TS (.rtsz)"),
             &i18n("SecureCRT (.ini)"),
@@ -294,9 +295,13 @@ impl ExportDialog {
         // Output path section using PreferencesGroup
         let output_group = adw::PreferencesGroup::builder()
             .title(i18n("Output Location"))
+            // One source line, and not a `\`-continuation: xgettext runs with
+            // `--language=C`, which keeps the indentation after a continuation
+            // where Rust strips it. This string spent its whole life in the POT
+            // with 17 stray spaces in the middle, so no catalogue could match it
+            // and it rendered in English in every locale.
             .description(i18n(
-                "Remmina exports to a directory (one file per connection).\n\
-                 Other formats export to a single file.",
+                "Remmina, SecureCRT and RDP Files export to a directory (one file per connection).\nOther formats export to a single file.",
             ))
             .build();
 
@@ -611,6 +616,11 @@ impl ExportDialog {
     }
 
     /// Maps a format dropdown index to an `ExportFormat`
+    ///
+    /// Must stay in step with the `StringList` built in `build_ui`: Native first,
+    /// the rest alphabetically. The pairing is checked by
+    /// `every_export_format_is_reachable_from_the_dropdown`, which is what stops
+    /// a format from being added to the enum and never appearing in the dialog.
     fn format_from_index(index: u32) -> ExportFormat {
         match index {
             0 => ExportFormat::Native,
@@ -618,10 +628,11 @@ impl ExportDialog {
             2 => ExportFormat::Asbru,
             3 => ExportFormat::Csv,
             4 => ExportFormat::MobaXterm,
-            5 => ExportFormat::Remmina,
-            6 => ExportFormat::RoyalTs,
-            7 => ExportFormat::SecureCrt,
-            8 => ExportFormat::SshConfig,
+            5 => ExportFormat::RdpFile,
+            6 => ExportFormat::Remmina,
+            7 => ExportFormat::RoyalTs,
+            8 => ExportFormat::SecureCrt,
+            9 => ExportFormat::SshConfig,
             _ => ExportFormat::Native,
         }
     }
@@ -711,6 +722,12 @@ impl ExportDialog {
             }
             ExportFormat::SecureCrt => {
                 let exporter = SecureCrtExporter;
+                exporter
+                    .export(connections, groups, options)
+                    .map_err(|e| e.to_string())
+            }
+            ExportFormat::RdpFile => {
+                let exporter = RdpFileExporter;
                 exporter
                     .export(connections, groups, options)
                     .map_err(|e| e.to_string())
@@ -890,6 +907,11 @@ impl ExportDialog {
                         // Should not reach here (exports to directory)
                         filter.add_pattern("*.ini");
                         filter.set_name(Some(&i18n("SecureCRT Sessions (*.ini)")));
+                    }
+                    ExportFormat::RdpFile => {
+                        // Should not reach here (exports to directory)
+                        filter.add_pattern("*.rdp");
+                        filter.set_name(Some(&i18n("RDP Files (*.rdp)")));
                     }
                 }
 
@@ -1182,5 +1204,55 @@ impl ExportDialog {
         // Spawn non-blocking so xdg-open doesn't block the GTK main loop.
         // The JoinHandle is intentionally dropped — we fire-and-forget.
         let _handle = open::that_in_background(&dir_to_open);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The dropdown is a hand-written `StringList` and `format_from_index` is a
+    /// hand-written match, so a format added to `ExportFormat` reaches the enum,
+    /// `ExportFormat::all()` and the exporter registry while remaining invisible
+    /// in the dialog. That is exactly how `.rdp` shipped unreachable. Walking the
+    /// index range and comparing the set to `all()` catches it.
+    #[test]
+    fn every_export_format_is_reachable_from_the_dropdown() {
+        let all = ExportFormat::all();
+        let reachable: Vec<ExportFormat> = (0..u32::try_from(all.len()).unwrap())
+            .map(ExportDialog::format_from_index)
+            .collect();
+
+        for format in all {
+            assert!(
+                reachable.contains(format),
+                "{format:?} cannot be selected in the export dialog: add it to the \
+                 format StringList and to format_from_index"
+            );
+        }
+
+        // Each index maps to a distinct format, so no label silently exports as
+        // something else.
+        let mut seen = reachable.clone();
+        seen.sort_by_key(|f| format!("{f:?}"));
+        seen.dedup();
+        assert_eq!(
+            seen.len(),
+            all.len(),
+            "two dropdown indices map to the same format: {reachable:?}"
+        );
+    }
+
+    /// A format whose output is a directory must not be offered a save-file
+    /// chooser, and vice versa. Pinned because the `.rdp` exporter briefly wrote a
+    /// file for a one-connection selection and a directory otherwise, which the
+    /// chooser cannot represent.
+    #[test]
+    fn directory_formats_are_the_multi_file_ones() {
+        assert!(ExportFormat::RdpFile.exports_to_directory());
+        assert!(ExportFormat::Remmina.exports_to_directory());
+        assert!(ExportFormat::SecureCrt.exports_to_directory());
+        assert!(!ExportFormat::Native.exports_to_directory());
+        assert!(!ExportFormat::Csv.exports_to_directory());
     }
 }

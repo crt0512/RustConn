@@ -432,14 +432,13 @@ Run commands automatically before connecting or after disconnecting.
 
 ### Output Filter (Postpend Command)
 
-Pipe terminal output through an external command before displaying it. The filter receives raw terminal bytes on stdin and writes processed output to stdout, which then appears in the terminal widget. This is useful for syntax highlighting, bandwidth metering, or log colorization.
+Pipe terminal output through an external command before displaying it. This is useful for syntax highlighting, bandwidth metering, or log colorization.
 
 **Use cases:**
 
 - **ChromaTerm** — highlight keywords in SSH output (errors, warnings, IP addresses) with colors
-- **pv** — meter bandwidth of data flowing through the session
 - **ccze** — colorize log output (syslog, Apache, etc.)
-- **lnav** — structured log viewing
+- **pv** — meter bandwidth of data flowing through the session
 - Custom filters for grep-like highlighting or redaction
 
 **Setup:**
@@ -453,7 +452,22 @@ Pipe terminal output through an external command before displaying it. The filte
 
 **How it works:**
 
-When the connection starts, RustConn spawns the filter command and pipes the PTY output through it. The filter process inherits the terminal's environment and runs for the life of the session. If the filter exits or fails to start, the session continues with unfiltered output (a warning is logged).
+The session is started as a shell pipeline — `<session command> | <filter>` — so the
+filter reads the session's output on its own stdin and writes to the terminal. Only
+the output is redirected: in a POSIX pipeline the filter's stdin is the pipe, so the
+session keeps the terminal for input and typing, `Ctrl+C` and full-screen programs
+behave as usual.
+
+Both the command and its arguments are passed as single, quoted words. Nothing in
+them is interpreted by the shell, so a value that came in with an imported
+connection cannot smuggle a second command. A leading `~/` is the one exception: it
+is expanded to your home directory before quoting, because a filter's config file
+is normally given that way.
+
+If the filter is not installed — not on `PATH`, or an absolute path that does not
+exist — the session starts **unfiltered** and a warning is logged. That check runs
+before the session is spawned, on purpose: a pipeline into a missing command would
+start and then lose every byte the session wrote.
 
 **Example — ChromaTerm setup:**
 
@@ -477,19 +491,28 @@ rules:
 **CLI:**
 
 ```bash
-# Enable output filter with chromaterm
-rustconn-cli update "server" --postpend-enabled --postpend-command chromaterm
+# Set the output filter (enables it at the same time)
+rustconn-cli update "server" --postpend-command chromaterm
 
-# Disable output filter
+# With arguments — repeat the flag, one argument each
+rustconn-cli update "server" --postpend-command chromaterm \
+    --postpend-arg --config --postpend-arg ~/.chromaterm.yml
+
+# Turn the configured filter off without forgetting it, and back on
 rustconn-cli update "server" --postpend-enabled false
+rustconn-cli update "server" --postpend-enabled
+
+# Remove the filter entirely
+rustconn-cli update "server" --postpend-command ""
 ```
 
 **Notes:**
 
 - The filter applies to terminal-based protocols only (SSH, Telnet, Serial, Kubernetes, MOSH, Zero Trust). RDP, VNC, SPICE, and Web connections do not have terminal output.
 - The filter command must be installed and on PATH, or specified as an absolute path.
-- Arguments are space-separated. For complex arguments with spaces, quote them in the UI field.
-- The filter's stderr is discarded by default. If you need to debug filter issues, check that the command works in a regular terminal first.
+- Arguments are space-separated in the UI field, and one per `--postpend-arg` on the command line. An argument containing a space needs the command line, since the UI field splits on whitespace.
+- **stderr is not filtered.** The session's error output and the filter's own error output both go straight to the terminal, so a filter that complains is visible rather than silent. It also means errors are not colorized.
+- The pipeline's exit status is the *filter's*, not the session's, because POSIX `sh` offers no portable way to recover it. A filtered session that fails therefore looks like a clean exit to auto-reconnect, which will not retry it. Turn the filter off while diagnosing a connection that drops.
 
 ### Custom Properties
 
@@ -858,7 +881,9 @@ transparently.
 
 #### Elevated Credentials (sudo/su Injection)
 
-Automatically handles privilege-escalation prompts (sudo, su, doas, enable) during SSH sessions. When the remote system prompts for a password, RustConn's expect engine recognizes the prompt pattern and injects the configured password automatically.
+Answers privilege-escalation prompts (sudo, su, doas, Cisco-style `enable`) during an
+SSH session with **this connection's password**. RustConn's expect engine recognizes
+the prompt and types the credential for you.
 
 **Use cases:**
 
@@ -869,38 +894,65 @@ Automatically handles privilege-escalation prompts (sudo, su, doas, enable) duri
 
 **Setup:**
 
-1. Edit an SSH connection → **Protocol** tab
+1. Edit an SSH connection → **SSH** options
 2. Scroll to **Elevated Credentials**
-3. Enable the feature with the toggle
-4. Choose the password source:
-   - **Use connection password** — reuses the SSH login password
-   - **Use separate password** — prompts for or retrieves a distinct password from your vault
-5. Optionally customize the **Prompt Patterns** (comma-separated regexes that match the system's password prompts)
-6. Set an optional **Delay** (milliseconds to wait after detecting a prompt before injecting — useful for slow network gear)
-7. Click **Save**
+3. Enable **Inject Password at Escalation Prompts**
+4. Set an optional **Delay** (0–5000 ms to wait after the prompt appears before answering — raise it for network equipment that prints its prompt before it is ready to read)
+5. Optionally add **Custom Prompt Patterns**, one regex per line, to replace the built-in set
+6. Click **Save**
 
 **Default prompt patterns:**
 
 ```
-[Pp]assword:?\s*$
-\[sudo\] password for \S+:\s*$
-Password for \S+@\S+:\s*$
-doas \(\S+@\S+\) password:\s*$
-[Ee]nable [Pp]assword:\s*$
+^\[sudo\] password for [^:]+:\s*$
+^[Pp]assword:\s*$
+^doas \([^)]+\) password:\s*$
+^[Ee]nable [Pp]assword:\s*$
 ```
 
-These cover sudo, su, doas, and Cisco-style enable prompts. Add your own patterns if the remote system uses a non-standard prompt (e.g., `Enter passphrase:` for encrypted containers).
+These cover sudo, su, doas and Cisco-style enable prompts. Add your own if the remote
+system uses a non-standard one, and **anchor it** — see the security note below.
 
-**Security note:** The injected password is handled via RustConn's expect engine — it is sent directly to the PTY and never echoed or logged. The password source follows the same vault/keyring path as the connection password, so it benefits from the same protection.
+The patterns field is one regex per line rather than a comma-separated list because a
+regex may legitimately contain a comma (`\w{1,3}`), and splitting on it would cut such
+a pattern in half.
+
+**Security notes:**
+
+- The password is never stored a second time. The generated rules answer with the
+  `${password}` placeholder, so the credential is read from the same vault/keyring
+  path as the login password, resolved only because a rule asks for it, and scrubbed
+  from memory when the session ends.
+- **The built-in patterns are anchored to the whole line, and that is load-bearing.**
+  An unanchored `Password:` also matches OpenSSH's own `user@host's password:` — and
+  behind a jump host that prompt can belong to the *bastion*, so an unanchored pattern
+  is a route for handing one host's credential to another. A custom pattern gives up
+  that protection: anchor it with `^` and `$`.
+- Only the **active prompt line** is answered — the last line with anything on it.
+  A sudo prompt that is still visible further up the screen cannot re-trigger
+  injection, which is what makes it safe for these rules to fire more than once per
+  session.
+- What remains: a program on the remote host can print something that looks like a
+  sudo prompt and be answered. Prefer `sudoers` `NOPASSWD` for trusted commands, and
+  enable this only on hosts you trust.
+
+**A sudo password that differs from the login password** is not a field here. Store it
+as a connection-local secret variable and reference it from a hand-written Expect rule
+in the **Automation** tab (`${my_sudo_password}`) — that route already stores, resolves
+and scrubs a second secret.
 
 **CLI:**
 
 ```bash
-# Enable elevated credentials with connection password
+# Enable, with the built-in patterns
 rustconn-cli update "server" --elevated-enabled
 
-# Enable with separate password (will prompt)
-rustconn-cli update "server" --elevated-enabled --elevated-separate-password
+# Custom patterns (repeat the flag) and a longer delay for network gear
+rustconn-cli update "switch" --elevated-enabled \
+    --elevated-prompt '^Enable [Pp]assword:\s*$' --elevated-delay 500
+
+# Turn it off, keeping the patterns and delay
+rustconn-cli update "server" --elevated-enabled false
 ```
 
 #### Multipath TCP (MPTCP)
@@ -1068,6 +1120,9 @@ Enables FIDO2/WebAuthn passkey redirection from local hardware security keys (Yu
 **To enable:** Connection Dialog → RDP → Features → **FIDO2 Passkey Redirection**
 
 This adds the FreeRDP `/fido` flag to the session launch. The embedded IronRDP client does not currently support FIDO2 redirection — use External client mode for this feature.
+
+**CLI:** not exposed. `.rdp` export does not carry it either: the flag is a FreeRDP
+option, not a field in the Microsoft `.rdp` format.
 
 #### Dynamic Resolution on Resize
 
@@ -3192,7 +3247,7 @@ Options: Export selected only.
 | Royal TS | All | Never | Yes | XML `.rtsz` archive |
 | MobaXterm | SSH, RDP, VNC, Telnet | Never | Yes | INI-based `.mxtsessions` |
 | SecureCRT | SSH, Telnet, RDP, VNC | Never | Yes | Directory of `.ini` files |
-| RDP File | RDP only | Never | No | Standard Microsoft `.rdp` format |
+| RDP File | RDP only | Never | No | Directory of standard Microsoft `.rdp` files, one per connection |
 | RustConn Native | All | Never (source only) | Yes | Full-fidelity backup of connections |
 
 ### CSV Import/Export

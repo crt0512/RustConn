@@ -815,48 +815,67 @@ pub enum SshAuthMethod {
     SecurityKey,
 }
 
-/// Elevated/privilege escalation credentials for automatic SUDO password injection.
+/// Elevated/privilege escalation credentials for automatic sudo password injection.
 ///
-/// When enabled, automatically sends the password when a privilege escalation
-/// prompt (sudo, su, doas) is detected in the terminal output.
+/// When enabled, the connection's password is sent automatically once a
+/// privilege-escalation prompt (sudo, su, doas, a Cisco-style `enable`) appears
+/// on the active prompt line. The mechanism is the ordinary expect engine:
+/// [`crate::automation::elevated_credentials_rules`] turns this configuration
+/// into [`crate::automation::ExpectRule`]s whose response is the `${password}`
+/// placeholder, so the credential is resolved and scrubbed on exactly the same
+/// path a hand-written rule takes.
 ///
-/// # Security Warning
+/// # Security
 ///
-/// SUDO password injection sends the password to the terminal when a matching
-/// prompt is detected. This has security implications:
+/// Injection answers whatever matches, so the patterns decide what the password
+/// can be handed to. Two properties keep that bounded:
 ///
-/// 1. **Prompt spoofing**: A malicious program on the remote host could print
-///    a fake SUDO prompt to capture the password.
+/// 1. **The defaults are anchored** with `^` and `$`. That is not cosmetic: the
+///    unanchored `\w+'s password:` matches inside OpenSSH's own
+///    `user@host's password:`, and an unanchored `Password:` matches it too, so
+///    either one would type the elevated password at the *login* prompt — and
+///    behind a jump host that prompt can be the bastion's, which is the leak the
+///    issue #191 guard exists to prevent.
+/// 2. **Only the active prompt line is matched**, because these rules are not
+///    one-shot; a stale sudo prompt left higher up the screen cannot re-trigger
+///    them.
 ///
-/// 2. **Timing attacks**: The delay between prompt and password might be
-///    observable.
+/// A custom pattern gives up the first property. Anchor it.
 ///
-/// Mitigations:
-/// - Use SSH agent forwarding instead of password-based SUDO when possible
-/// - Configure `sudoers` with `NOPASSWD` for trusted commands
-/// - Use this feature only on trusted hosts
+/// Remaining exposure, unchanged by any of the above: a program on the remote
+/// host can print something that looks like a sudo prompt and be answered.
+/// Prefer `sudoers` `NOPASSWD` for trusted commands, and enable this only on
+/// hosts you trust.
+///
+/// # A distinct elevated password
+///
+/// There is deliberately no second credential slot here. A sudo password that
+/// differs from the login password goes in a connection-local secret variable
+/// (issue #317) referenced from a hand-written expect rule — that route already
+/// stores, resolves and scrubs a second secret, where a new field on this struct
+/// would need the same work repeated in every keyring backend.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ElevatedCredentials {
-    /// Enable automatic SUDO password injection.
+    /// Enable automatic sudo password injection.
     #[serde(default)]
     pub enabled: bool,
 
-    /// Use a separate password for elevated access.
-    /// When false or password is empty, uses the connection's primary password.
-    #[serde(default)]
-    pub use_separate_password: bool,
-
     /// Custom prompts to detect (regex patterns).
-    /// When empty, uses the default patterns: sudo, su, doas prompts.
+    /// When empty, uses the default patterns: sudo, su, doas and enable prompts.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub custom_prompts: Vec<String>,
 
-    /// Delay before sending password in milliseconds.
-    /// Gives the remote side time to set up secure input.
+    /// Delay before sending the password, in milliseconds.
+    ///
+    /// Network equipment often prints its prompt before it is ready to read the
+    /// answer, and swallows a reply that arrives too early. `0` sends
+    /// immediately.
     #[serde(default = "default_sudo_delay")]
     pub delay_ms: u32,
 }
 
+/// Enough for a local `sudo` to finish switching the tty to no-echo, short
+/// enough not to be felt. Network gear usually needs several hundred ms more.
 const fn default_sudo_delay() -> u32 {
     100
 }
@@ -865,7 +884,6 @@ impl Default for ElevatedCredentials {
     fn default() -> Self {
         Self {
             enabled: false,
-            use_separate_password: false,
             custom_prompts: Vec::new(),
             delay_ms: default_sudo_delay(),
         }
@@ -873,14 +891,22 @@ impl Default for ElevatedCredentials {
 }
 
 impl ElevatedCredentials {
-    /// Returns the default SUDO prompt patterns.
+    /// Returns the default privilege-escalation prompt patterns.
+    ///
+    /// Every pattern is anchored to the whole line. See the type's security
+    /// notes for why: the unanchored forms also match OpenSSH's login prompt.
     #[must_use]
     pub fn default_prompts() -> Vec<String> {
         vec![
-            r"\[sudo\] password for \w+:".to_string(),
-            r"Password:".to_string(),
-            r"doas \(".to_string(),
-            r"\w+'s password:".to_string(), // su prompt
+            // sudo, including the localised `for` forms that keep the brackets.
+            r"^\[sudo\] password for [^:]+:\s*$".to_string(),
+            // su on most systems, and `sudo -S` with a bare prompt. Anchored, so
+            // `user@host's password:` does not match.
+            r"^[Pp]assword:\s*$".to_string(),
+            // doas prints `doas (user@host) password:`.
+            r"^doas \([^)]+\) password:\s*$".to_string(),
+            // Cisco-style enable prompt on network equipment.
+            r"^[Ee]nable [Pp]assword:\s*$".to_string(),
         ]
     }
 

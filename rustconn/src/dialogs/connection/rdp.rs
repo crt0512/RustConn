@@ -429,8 +429,10 @@ pub(super) fn create_rdp_options() -> (
 
     // FIDO2/WebAuthn device redirection
     let rdp_fido2_check = adw::SwitchRow::builder()
-        .title(i18n("FIDO2/WebAuthn Redirection"))
-        .subtitle(i18n("Use local security keys in remote session (FreeRDP 3.x, external mode only)"))
+        .title(i18n("FIDO2 Passkey Redirection"))
+        .subtitle(i18n(
+            "Use local security keys in the remote session (External client, FreeRDP 3.x)",
+        ))
         .active(false)
         .build();
     features_group.add(&rdp_fido2_check);

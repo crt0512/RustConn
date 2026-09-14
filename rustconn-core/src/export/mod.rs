@@ -120,9 +120,17 @@ impl ExportFormat {
     }
 
     /// Returns true if this format exports to a directory (multiple files)
+    ///
+    /// `.rdp` is one of them because the format has no container: a `.rdp` file
+    /// describes exactly one host, so a selection of several has to become
+    /// several files. Whether the selection happens to hold one connection cannot
+    /// decide this — the UI picks a file chooser or a folder chooser from this
+    /// answer before it knows what is selected, and a single-connection export
+    /// that wrote a *file* where the user had chosen a folder would fail on the
+    /// existing directory.
     #[must_use]
     pub const fn exports_to_directory(&self) -> bool {
-        matches!(self, Self::Remmina | Self::SecureCrt)
+        matches!(self, Self::Remmina | Self::SecureCrt | Self::RdpFile)
     }
 }
 

@@ -11,7 +11,8 @@ mod tasks;
 mod templates;
 
 pub use expect::{
-    CompiledRule, ExpectEngine, ExpectError, ExpectResult, ExpectRule, elevated_credentials_rules,
+    CompiledRule, ELEVATED_RESPONSE_TEMPLATE, ExpectEngine, ExpectError, ExpectResult, ExpectRule,
+    elevated_credentials_rules,
 };
 pub use key_sequence::{KeyElement, KeySequence, KeySequenceError, KeySequenceResult, SpecialKey};
 pub use tasks::{

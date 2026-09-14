@@ -91,7 +91,7 @@ pub(super) struct ConnectionDialogData<'a> {
     pub ssh_keep_alive_interval: &'a adw::SpinRow,
     pub ssh_keep_alive_count_max: &'a adw::SpinRow,
     pub ssh_elevated_switch: &'a adw::SwitchRow,
-    pub ssh_elevated_prompts_entry: &'a adw::EntryRow,
+    pub ssh_elevated_prompts_view: &'a TextView,
     pub ssh_elevated_delay_spin: &'a adw::SpinRow,
     pub ssh_port_forwards: &'a Rc<RefCell<Vec<rustconn_core::models::PortForward>>>,
     pub rdp_client_mode_dropdown: &'a DropDown,
@@ -951,10 +951,7 @@ impl ConnectionDialogData<'_> {
 
         // Parse args from space-separated string
         let args_text = self.postpend_args_entry.text().to_string();
-        let args: Vec<String> = args_text
-            .split_whitespace()
-            .map(str::to_string)
-            .collect();
+        let args: Vec<String> = args_text.split_whitespace().map(str::to_string).collect();
 
         Some(rustconn_core::models::PostpendCommand {
             command,
@@ -1836,33 +1833,33 @@ impl ConnectionDialogData<'_> {
     }
 
     /// Builds elevated credentials from the SSH privilege escalation settings.
+    ///
+    /// Patterns are newline-separated, not comma-separated: a regex may contain a
+    /// comma — `\w{1,3}` is the ordinary case — and splitting on it would cut such
+    /// a pattern into two unusable halves.
     fn build_elevated_credentials(&self) -> Option<rustconn_core::models::ElevatedCredentials> {
         if !self.ssh_elevated_switch.is_active() {
             return None;
         }
 
         let custom_prompts = {
-            let text = self.ssh_elevated_prompts_entry.text();
-            if text.trim().is_empty() {
-                Vec::new()
-            } else {
-                text.split(',')
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect()
-            }
+            let buffer = self.ssh_elevated_prompts_view.buffer();
+            let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+            text.lines()
+                .map(|line| line.trim().to_string())
+                .filter(|line| !line.is_empty())
+                .collect()
         };
 
         #[expect(
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss,
-            reason = "value range fits the target type and is non-negative by construction in this code path"
+            reason = "the adjustment clamps the spin row to 0..=5000, so the value is a small non-negative integer"
         )]
         let delay_ms = self.ssh_elevated_delay_spin.value() as u32;
 
         Some(rustconn_core::models::ElevatedCredentials {
             enabled: true,
-            use_separate_password: false, // TODO: add UI for separate password
             custom_prompts,
             delay_ms,
         })

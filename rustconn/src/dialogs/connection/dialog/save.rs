@@ -82,7 +82,7 @@ impl ConnectionDialog {
         ssh_keep_alive_interval: &adw::SpinRow,
         ssh_keep_alive_count_max: &adw::SpinRow,
         ssh_elevated_switch: &adw::SwitchRow,
-        ssh_elevated_prompts_entry: &adw::EntryRow,
+        ssh_elevated_prompts_view: &TextView,
         ssh_elevated_delay_spin: &adw::SpinRow,
         ssh_port_forwards: &Rc<RefCell<Vec<rustconn_core::models::PortForward>>>,
         rdp_client_mode_dropdown: &DropDown,
@@ -222,6 +222,9 @@ impl ConnectionDialog {
         post_disconnect_command_entry: &Entry,
         post_disconnect_timeout_spin: &SpinButton,
         post_disconnect_last_only_switch: &adw::SwitchRow,
+        postpend_enabled_switch: &adw::SwitchRow,
+        postpend_command_entry: &Entry,
+        postpend_args_entry: &Entry,
         custom_properties: &Rc<RefCell<Vec<CustomProperty>>>,
         wol_enabled_check: &CheckButton,
         wol_mac_entry: &Entry,
@@ -297,7 +300,7 @@ impl ConnectionDialog {
         let ssh_keep_alive_interval = ssh_keep_alive_interval.clone();
         let ssh_keep_alive_count_max = ssh_keep_alive_count_max.clone();
         let ssh_elevated_switch = ssh_elevated_switch.clone();
-        let ssh_elevated_prompts_entry = ssh_elevated_prompts_entry.clone();
+        let ssh_elevated_prompts_view = ssh_elevated_prompts_view.clone();
         let ssh_elevated_delay_spin = ssh_elevated_delay_spin.clone();
         let ssh_port_forwards = ssh_port_forwards.clone();
         let rdp_client_mode_dropdown = rdp_client_mode_dropdown.clone();
@@ -445,6 +448,9 @@ impl ConnectionDialog {
         let post_disconnect_command_entry = post_disconnect_command_entry.clone();
         let post_disconnect_timeout_spin = post_disconnect_timeout_spin.clone();
         let post_disconnect_last_only_switch = post_disconnect_last_only_switch.clone();
+        let postpend_enabled_switch = postpend_enabled_switch.clone();
+        let postpend_command_entry = postpend_command_entry.clone();
+        let postpend_args_entry = postpend_args_entry.clone();
         let custom_properties = custom_properties.clone();
         let wol_enabled_check = wol_enabled_check.clone();
         let wol_mac_entry = wol_mac_entry.clone();
@@ -526,7 +532,7 @@ impl ConnectionDialog {
                 ssh_keep_alive_interval: &ssh_keep_alive_interval,
                 ssh_keep_alive_count_max: &ssh_keep_alive_count_max,
                 ssh_elevated_switch: &ssh_elevated_switch,
-                ssh_elevated_prompts_entry: &ssh_elevated_prompts_entry,
+                ssh_elevated_prompts_view: &ssh_elevated_prompts_view,
                 ssh_elevated_delay_spin: &ssh_elevated_delay_spin,
                 ssh_port_forwards: &ssh_port_forwards,
                 rdp_client_mode_dropdown: &rdp_client_mode_dropdown,
@@ -674,6 +680,9 @@ impl ConnectionDialog {
                 post_disconnect_command_entry: &post_disconnect_command_entry,
                 post_disconnect_timeout_spin: &post_disconnect_timeout_spin,
                 post_disconnect_last_only_switch: &post_disconnect_last_only_switch,
+                postpend_enabled_switch: &postpend_enabled_switch,
+                postpend_command_entry: &postpend_command_entry,
+                postpend_args_entry: &postpend_args_entry,
                 custom_properties: &collected_custom_properties,
                 wol_enabled_check: &wol_enabled_check,
                 wol_mac_entry: &wol_mac_entry,

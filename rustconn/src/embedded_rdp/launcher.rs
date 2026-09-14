@@ -855,7 +855,9 @@ mod tests {
         assert!(is_sdl_freerdp_binary("SDL-FREERDP3")); // case-insensitive
 
         // macOS full paths
-        assert!(is_sdl_freerdp_binary("/Applications/SDL-freerdp.app/Contents/MacOS/sdl-freerdp"));
+        assert!(is_sdl_freerdp_binary(
+            "/Applications/SDL-freerdp.app/Contents/MacOS/sdl-freerdp"
+        ));
         assert!(is_sdl_freerdp_binary("/usr/local/bin/sdl-freerdp3"));
 
         // Non-SDL variants must not match

@@ -175,7 +175,7 @@ pub struct ConnectionDialog {
     ssh_keep_alive_interval: adw::SpinRow,
     ssh_keep_alive_count_max: adw::SpinRow,
     ssh_elevated_switch: adw::SwitchRow,
-    ssh_elevated_prompts_entry: adw::EntryRow,
+    ssh_elevated_prompts_view: gtk4::TextView,
     ssh_elevated_delay_spin: adw::SpinRow,
     ssh_port_forwards: Rc<RefCell<Vec<rustconn_core::models::PortForward>>>,
     ssh_port_forwards_list: gtk4::ListBox,

@@ -299,6 +299,16 @@ pub struct TerminalNotebook {
     /// displaying. They are `Rc` so the delivery loop can clone the list and
     /// release its borrow before calling anything.
     output_observers: Rc<RefCell<HashMap<Uuid, Vec<Rc<dyn Fn(&[u8])>>>>>,
+    /// Output filter (postpend command) argv for sessions that configured one.
+    ///
+    /// Registered by the protocol launcher before it spawns, and read by
+    /// [`Self::spawn_command_with_cleanup`], which wraps the session command in a
+    /// shell pipeline. It is a per-session map rather than a spawn parameter
+    /// because the notebook holds no connections: the launcher has the
+    /// `PostpendCommand`, the spawn does not, and every terminal protocol shares
+    /// one spawn. Kept across a reconnect on purpose, so the filter comes back
+    /// with the session; removed when the tab closes.
+    output_filters: Rc<RefCell<HashMap<Uuid, Vec<String>>>>,
     /// Sessions whose terminal already forwards `commit` to its relay.
     ///
     /// The handler resolves the relay through [`Self::pty_relays`] on every
@@ -496,6 +506,7 @@ impl TerminalNotebook {
             cursor_row_base: Rc::new(RefCell::new(HashMap::new())),
             pty_relays: Rc::new(RefCell::new(HashMap::new())),
             output_observers: Rc::new(RefCell::new(HashMap::new())),
+            output_filters: Rc::new(RefCell::new(HashMap::new())),
             commit_forwarded: Rc::new(RefCell::new(HashSet::new())),
             pty_size_timers: Rc::new(RefCell::new(HashMap::new())),
             cluster_sessions: Rc::new(RefCell::new(HashMap::new())),
@@ -559,6 +570,7 @@ impl TerminalNotebook {
         let cursor_row_base_on_close = Rc::clone(&self.cursor_row_base);
         let pty_relays_on_close = Rc::clone(&self.pty_relays);
         let output_observers_on_close = Rc::clone(&self.output_observers);
+        let output_filters_on_close = Rc::clone(&self.output_filters);
         let commit_forwarded_on_close = Rc::clone(&self.commit_forwarded);
         let pty_size_timers_on_close = Rc::clone(&self.pty_size_timers);
 
@@ -693,6 +705,7 @@ impl TerminalNotebook {
                 }
                 drop(pty_relays_on_close.borrow_mut().remove(&session_id));
                 output_observers_on_close.borrow_mut().remove(&session_id);
+                output_filters_on_close.borrow_mut().remove(&session_id);
                 commit_forwarded_on_close.borrow_mut().remove(&session_id);
                 auto_reconnect_on_close.borrow_mut().remove(&session_id);
                 // The widget goes with the tab, so the handlers die with it —
@@ -884,9 +897,25 @@ impl TerminalNotebook {
 
         let env_vec = build_child_env(envv, ssh_agent_socket);
         let env_refs: Vec<&str> = env_vec.iter().map(|e| e.as_str()).collect();
+        // Diagnostics keep naming the session's own command, not `sh`, so a
+        // "command not found" message still names the thing the user configured.
         let command_name = (*argv.first().unwrap_or(&"")).to_owned();
         let size = grid_size(&terminal);
 
+        // An output filter turns the command into a shell pipeline. Built here
+        // rather than in each launcher because this is the one point every
+        // terminal protocol passes through.
+        let filtered = self.wrap_in_output_filter(session_id, argv);
+        let spawn_argv: Vec<&str> = match filtered.as_deref() {
+            Some(script) => vec!["sh", "-c", script],
+            None => argv.to_vec(),
+        };
+
+        // The session's own argv, not `spawn_argv`: with a filter the latter is
+        // the whole `sh -c` script with the session command quoted inside it, so
+        // logging it would put the same content in the log twice as much noise.
+        // Which filter was chosen is already logged, by name, in
+        // `set_output_filter`.
         tracing::debug!(
             command = %command_name,
             %session_id,
@@ -895,10 +924,11 @@ impl TerminalNotebook {
             env_count = env_refs.len(),
             rows = size.0,
             cols = size.1,
+            filtered = filtered.is_some(),
             "Spawning session command"
         );
 
-        let child = match pty_spawn::spawn_on_pty(argv, &env_refs, working_directory, size) {
+        let child = match pty_spawn::spawn_on_pty(&spawn_argv, &env_refs, working_directory, size) {
             Ok(child) => child,
             Err(e) => {
                 tracing::error!(
@@ -944,6 +974,68 @@ impl TerminalNotebook {
         watch_child_exit(&terminal, child.pid, cleanup_paths);
 
         true
+    }
+
+    /// Registers, or clears, the output filter a session's command is piped through.
+    ///
+    /// Call before spawning. A filter whose executable cannot be found is
+    /// refused here rather than at spawn time: the session then starts unfiltered,
+    /// which is the documented fallback, where a pipeline to a missing command
+    /// would start and immediately lose every byte the session wrote.
+    pub fn set_output_filter(
+        &self,
+        session_id: Uuid,
+        postpend: Option<&rustconn_core::models::PostpendCommand>,
+    ) {
+        let Some(argv) = postpend.and_then(rustconn_core::models::PostpendCommand::filter_argv)
+        else {
+            self.output_filters.borrow_mut().remove(&session_id);
+            return;
+        };
+
+        // `argv[0]` is guaranteed non-empty by `filter_argv`.
+        let program = argv[0].clone();
+        if !std::path::Path::new(&program).is_absolute()
+            && rustconn_core::which::find_in_path(&program).is_none()
+        {
+            tracing::warn!(
+                %session_id,
+                filter = %program,
+                "Output filter is not installed or not on PATH; session output is unfiltered"
+            );
+            self.output_filters.borrow_mut().remove(&session_id);
+            return;
+        }
+        if std::path::Path::new(&program).is_absolute() && !std::path::Path::new(&program).is_file()
+        {
+            tracing::warn!(
+                %session_id,
+                filter = %program,
+                "Output filter path does not exist; session output is unfiltered"
+            );
+            self.output_filters.borrow_mut().remove(&session_id);
+            return;
+        }
+
+        tracing::info!(%session_id, filter = %program, "Session output will be piped through a filter");
+        self.output_filters.borrow_mut().insert(session_id, argv);
+    }
+
+    /// Returns the `sh -c` script for a filtered session, or `None` when unfiltered.
+    ///
+    /// ponytail: the pipeline's exit status is the *filter's*, not the session's,
+    /// because POSIX `sh` has no portable `PIPESTATUS`. A filtered session that
+    /// fails therefore looks like a clean exit to the reconnect heuristics. Worth
+    /// revisiting only if a filter turns out to be common enough that the lost
+    /// status matters.
+    fn wrap_in_output_filter(&self, session_id: Uuid, argv: &[&str]) -> Option<String> {
+        let filters = self.output_filters.borrow();
+        let filter = filters.get(&session_id)?;
+        let filter_refs: Vec<&str> = filter.iter().map(String::as_str).collect();
+        Some(rustconn_core::shell_escape::pipe_argv_through(
+            argv,
+            &filter_refs,
+        ))
     }
 
     /// Feeds a session's PTY output to its terminal and to its observers.
