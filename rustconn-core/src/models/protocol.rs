@@ -870,9 +870,23 @@ pub struct ElevatedCredentials {
     /// Network equipment often prints its prompt before it is ready to read the
     /// answer, and swallows a reply that arrives too early. `0` sends
     /// immediately.
+    ///
+    /// Read through [`ElevatedCredentials::effective_delay_ms`] rather than
+    /// directly: the field is whatever was stored, which for a hand-edited or
+    /// imported config can be far past what the UI allows.
     #[serde(default = "default_sudo_delay")]
     pub delay_ms: u32,
 }
+
+/// The longest delay that may be configured before sending a credential, in ms.
+///
+/// The same ceiling the SSH options dialog offers, enforced here as well because
+/// the dialog is not the only way a value arrives: a shared or hand-edited config
+/// deserializes straight into this struct. The ceiling is a security property, not
+/// a UI nicety — the delayed send is what makes a prompt able to disappear before
+/// the response lands, so a five-minute delay would be a five-minute window in
+/// which the password can be typed into whatever took the prompt's place.
+pub const MAX_ELEVATED_DELAY_MS: u32 = 5_000;
 
 /// Enough for a local `sudo` to finish switching the tty to no-echo, short
 /// enough not to be felt. Network gear usually needs several hundred ms more.
@@ -917,6 +931,20 @@ impl ElevatedCredentials {
             Self::default_prompts()
         } else {
             self.custom_prompts.clone()
+        }
+    }
+
+    /// Returns the delay to actually use, clamped to [`MAX_ELEVATED_DELAY_MS`].
+    ///
+    /// Clamped rather than rejected: a config with an out-of-range delay is still
+    /// a usable config, and refusing to build the rule at all would turn a value
+    /// nobody may have typed on purpose into silently missing sudo injection.
+    #[must_use]
+    pub const fn effective_delay_ms(&self) -> u32 {
+        if MAX_ELEVATED_DELAY_MS < self.delay_ms {
+            MAX_ELEVATED_DELAY_MS
+        } else {
+            self.delay_ms
         }
     }
 }

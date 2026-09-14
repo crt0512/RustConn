@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-14 17:15+0300\n"
+"POT-Creation-Date: 2026-09-14 18:17+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: Mykola Zubkov <zubkov139@ukr.net>\n"
 "Language-Team: Ukrainian\n"
@@ -3093,7 +3093,10 @@ msgstr ""
 msgid ""
 "One anchored regex per line, for example ^Secret code:\\s*$. Leave empty to "
 "use the built-in sudo, su, doas and enable patterns."
-msgstr "Один регулярний вираз на рядок, прив'язаний до цілого рядка, наприклад ^Secret code:\\s*$. Лиши порожнім, щоб узяти вбудовані взірці для sudo, su, doas і enable."
+msgstr ""
+"Один регулярний вираз на рядок, прив'язаний до цілого рядка, наприклад "
+"^Secret code:\\s*$. Лиши порожнім, щоб узяти вбудовані взірці для sudo, su, "
+"doas і enable."
 
 #: rustconn/src/dialogs/connection/ssh.rs:231
 msgid "Custom Prompt Patterns"
@@ -4387,7 +4390,10 @@ msgid ""
 "Remmina, SecureCRT and RDP Files export to a directory (one file per "
 "connection).\n"
 "Other formats export to a single file."
-msgstr "Remmina, SecureCRT і файли RDP експортуються в каталог (один файл на з'єднання).\nІнші формати експортуються в один файл."
+msgstr ""
+"Remmina, SecureCRT і файли RDP експортуються в каталог (один файл на "
+"з'єднання).\n"
+"Інші формати експортуються в один файл."
 
 #: rustconn/src/dialogs/export.rs:310
 msgid "Select output file or directory…"
@@ -9588,13 +9594,13 @@ msgid "Save files from remote clipboard"
 msgstr "Збережи файли з віддаленого буфера"
 
 #: rustconn/src/embedded_rdp/mod.rs:761 rustconn/src/embedded_vnc/ui.rs:145
-#: rustconn/src/terminal/mod.rs:1301
+#: rustconn/src/terminal/mod.rs:1305
 #: rustconn/src/terminal/session_lifecycle.rs:350
 msgid "Reconnect"
 msgstr "Перепід'єднай"
 
 #: rustconn/src/embedded_rdp/mod.rs:763 rustconn/src/embedded_vnc/ui.rs:147
-#: rustconn/src/terminal/mod.rs:1303
+#: rustconn/src/terminal/mod.rs:1307
 #: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Reconnect to this session"
 msgstr "Перез'єднайся із цим сеансом"
@@ -10548,19 +10554,23 @@ msgstr "Огляд вкладок (Ctrl+Shift+O)"
 msgid "Welcome"
 msgstr "Ласкаво просимо"
 
-#: rustconn/src/terminal/mod.rs:1295
+#: rustconn/src/terminal/mod.rs:1009
+msgid "Output filter '{}' is not installed; session output is not filtered"
+msgstr "Фільтр виведення «{}» не встановлено; виведення сеансу не фільтрується"
+
+#: rustconn/src/terminal/mod.rs:1299
 msgid "Command not found: {}"
 msgstr "Команду не знайдено: {}"
 
-#: rustconn/src/terminal/mod.rs:1297
+#: rustconn/src/terminal/mod.rs:1301
 msgid "Failed to start '{}'"
 msgstr "Не вдалося запустити «{}»"
 
-#: rustconn/src/terminal/mod.rs:1319
+#: rustconn/src/terminal/mod.rs:1323
 msgid "'{}' is not installed"
 msgstr "«{}» не встановлено"
 
-#: rustconn/src/terminal/mod.rs:1322
+#: rustconn/src/terminal/mod.rs:1326
 msgid "Failed to start '{}': {}"
 msgstr "Не вдалося запустити «{}»: {}"
 
@@ -11972,39 +11982,39 @@ msgstr "Переміщено {} складників."
 msgid "Failed to move {} item(s):"
 msgstr "Не вдалося перемістити {} складників:"
 
-#: rustconn/src/window/protocols.rs:732
+#: rustconn/src/window/protocols.rs:737
 msgid "Could not launch external viewer ‘{}’: {}"
 msgstr "Не вдалося запустити зовнішній переглядач ‘{}’: {}"
 
-#: rustconn/src/window/protocols.rs:1195 rustconn/src/window/rdp_vnc.rs:1380
+#: rustconn/src/window/protocols.rs:1200 rustconn/src/window/rdp_vnc.rs:1380
 msgid "No VNC viewer found. Install TigerVNC or Remmina."
 msgstr "Переглядач VNC не знайдено. Встанови TigerVNC або Remmina."
 
-#: rustconn/src/window/protocols.rs:1526
+#: rustconn/src/window/protocols.rs:1531
 msgid "No SPICE viewer found. Install virt-viewer."
 msgstr "Переглядач SPICE не знайдено. Встанови virt-viewer."
 
-#: rustconn/src/window/protocols.rs:1706 rustconn/src/window/protocols.rs:2212
+#: rustconn/src/window/protocols.rs:1718 rustconn/src/window/protocols.rs:2224
 msgid "Invalid variable: {}"
 msgstr "Хибна змінниця: {}"
 
-#: rustconn/src/window/protocols.rs:2132
+#: rustconn/src/window/protocols.rs:2144
 msgid "Invalid config: {}"
 msgstr "Хибна конфігурація: {}"
 
-#: rustconn/src/window/protocols.rs:2314
+#: rustconn/src/window/protocols.rs:2326
 msgid "Install picocom for Serial connections"
 msgstr "Встанови picocom для Serial-з'єднків"
 
-#: rustconn/src/window/protocols.rs:2497
+#: rustconn/src/window/protocols.rs:2509
 msgid "Install kubectl for Kubernetes connections"
 msgstr "Встанови kubectl для Kubernetes-з'єднків"
 
-#: rustconn/src/window/protocols.rs:2515
+#: rustconn/src/window/protocols.rs:2527
 msgid "Configure pod and container for Kubernetes"
 msgstr "Налаштуй pod і контейнер для Kubernetes"
 
-#: rustconn/src/window/protocols.rs:2762
+#: rustconn/src/window/protocols.rs:2774
 msgid "Install mosh for MOSH connections"
 msgstr "Встанови mosh для MOSH-з'єднків"
 

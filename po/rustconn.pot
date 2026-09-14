@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.21.12\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-14 17:15+0300\n"
+"POT-Creation-Date: 2026-09-14 18:17+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -9285,13 +9285,13 @@ msgid "Save files from remote clipboard"
 msgstr ""
 
 #: rustconn/src/embedded_rdp/mod.rs:761 rustconn/src/embedded_vnc/ui.rs:145
-#: rustconn/src/terminal/mod.rs:1301
+#: rustconn/src/terminal/mod.rs:1305
 #: rustconn/src/terminal/session_lifecycle.rs:350
 msgid "Reconnect"
 msgstr ""
 
 #: rustconn/src/embedded_rdp/mod.rs:763 rustconn/src/embedded_vnc/ui.rs:147
-#: rustconn/src/terminal/mod.rs:1303
+#: rustconn/src/terminal/mod.rs:1307
 #: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Reconnect to this session"
 msgstr ""
@@ -10237,19 +10237,23 @@ msgstr ""
 msgid "Welcome"
 msgstr ""
 
-#: rustconn/src/terminal/mod.rs:1295
+#: rustconn/src/terminal/mod.rs:1009
+msgid "Output filter '{}' is not installed; session output is not filtered"
+msgstr ""
+
+#: rustconn/src/terminal/mod.rs:1299
 msgid "Command not found: {}"
 msgstr ""
 
-#: rustconn/src/terminal/mod.rs:1297
+#: rustconn/src/terminal/mod.rs:1301
 msgid "Failed to start '{}'"
 msgstr ""
 
-#: rustconn/src/terminal/mod.rs:1319
+#: rustconn/src/terminal/mod.rs:1323
 msgid "'{}' is not installed"
 msgstr ""
 
-#: rustconn/src/terminal/mod.rs:1322
+#: rustconn/src/terminal/mod.rs:1326
 msgid "Failed to start '{}': {}"
 msgstr ""
 
@@ -11573,39 +11577,39 @@ msgstr ""
 msgid "Failed to move {} item(s):"
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:732
+#: rustconn/src/window/protocols.rs:737
 msgid "Could not launch external viewer ‘{}’: {}"
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:1195 rustconn/src/window/rdp_vnc.rs:1380
+#: rustconn/src/window/protocols.rs:1200 rustconn/src/window/rdp_vnc.rs:1380
 msgid "No VNC viewer found. Install TigerVNC or Remmina."
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:1526
+#: rustconn/src/window/protocols.rs:1531
 msgid "No SPICE viewer found. Install virt-viewer."
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:1706 rustconn/src/window/protocols.rs:2212
+#: rustconn/src/window/protocols.rs:1718 rustconn/src/window/protocols.rs:2224
 msgid "Invalid variable: {}"
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:2132
+#: rustconn/src/window/protocols.rs:2144
 msgid "Invalid config: {}"
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:2314
+#: rustconn/src/window/protocols.rs:2326
 msgid "Install picocom for Serial connections"
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:2497
+#: rustconn/src/window/protocols.rs:2509
 msgid "Install kubectl for Kubernetes connections"
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:2515
+#: rustconn/src/window/protocols.rs:2527
 msgid "Configure pod and container for Kubernetes"
 msgstr ""
 
-#: rustconn/src/window/protocols.rs:2762
+#: rustconn/src/window/protocols.rs:2774
 msgid "Install mosh for MOSH connections"
 msgstr ""
 

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-14 17:15+0300\n"
+"POT-Creation-Date: 2026-09-14 18:17+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: RustConn Team\n"
 "Language-Team: French\n"
@@ -3108,7 +3108,10 @@ msgstr ""
 msgid ""
 "One anchored regex per line, for example ^Secret code:\\s*$. Leave empty to "
 "use the built-in sudo, su, doas and enable patterns."
-msgstr "Une expression régulière par ligne, ancrée sur la ligne entière, par exemple ^Secret code:\\s*$. Laissez vide pour les motifs intégrés de sudo, su, doas et enable."
+msgstr ""
+"Une expression régulière par ligne, ancrée sur la ligne entière, par exemple "
+"^Secret code:\\s*$. Laissez vide pour les motifs intégrés de sudo, su, doas "
+"et enable."
 
 #: rustconn/src/dialogs/connection/ssh.rs:231
 msgid "Custom Prompt Patterns"
@@ -4414,7 +4417,10 @@ msgid ""
 "Remmina, SecureCRT and RDP Files export to a directory (one file per "
 "connection).\n"
 "Other formats export to a single file."
-msgstr "Remmina, SecureCRT et les fichiers RDP sont exportés dans un répertoire (un fichier par connexion).\nLes autres formats sont exportés dans un seul fichier."
+msgstr ""
+"Remmina, SecureCRT et les fichiers RDP sont exportés dans un répertoire (un "
+"fichier par connexion).\n"
+"Les autres formats sont exportés dans un seul fichier."
 
 #: rustconn/src/dialogs/export.rs:310
 msgid "Select output file or directory…"
@@ -9693,13 +9699,13 @@ msgid "Save files from remote clipboard"
 msgstr "Enregistrer les fichiers du presse-papiers distant"
 
 #: rustconn/src/embedded_rdp/mod.rs:761 rustconn/src/embedded_vnc/ui.rs:145
-#: rustconn/src/terminal/mod.rs:1301
+#: rustconn/src/terminal/mod.rs:1305
 #: rustconn/src/terminal/session_lifecycle.rs:350
 msgid "Reconnect"
 msgstr "Reconnecter"
 
 #: rustconn/src/embedded_rdp/mod.rs:763 rustconn/src/embedded_vnc/ui.rs:147
-#: rustconn/src/terminal/mod.rs:1303
+#: rustconn/src/terminal/mod.rs:1307
 #: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Reconnect to this session"
 msgstr "Se reconnecter à cette session"
@@ -10657,19 +10663,23 @@ msgstr "Aperçu des onglets (Ctrl+Shift+O)"
 msgid "Welcome"
 msgstr "Bienvenue"
 
-#: rustconn/src/terminal/mod.rs:1295
+#: rustconn/src/terminal/mod.rs:1009
+msgid "Output filter '{}' is not installed; session output is not filtered"
+msgstr "Le filtre de sortie « {} » n’est pas installé ; la sortie de la session n’est pas filtrée"
+
+#: rustconn/src/terminal/mod.rs:1299
 msgid "Command not found: {}"
 msgstr "Commande introuvable : {}"
 
-#: rustconn/src/terminal/mod.rs:1297
+#: rustconn/src/terminal/mod.rs:1301
 msgid "Failed to start '{}'"
 msgstr "Impossible de démarrer « {} »"
 
-#: rustconn/src/terminal/mod.rs:1319
+#: rustconn/src/terminal/mod.rs:1323
 msgid "'{}' is not installed"
 msgstr "« {} » n’est pas installé"
 
-#: rustconn/src/terminal/mod.rs:1322
+#: rustconn/src/terminal/mod.rs:1326
 msgid "Failed to start '{}': {}"
 msgstr "Impossible de démarrer « {} » : {}"
 
@@ -12107,39 +12117,39 @@ msgstr "{} élément(s) déplacé(s)."
 msgid "Failed to move {} item(s):"
 msgstr "Échec du déplacement de {} élément(s) :"
 
-#: rustconn/src/window/protocols.rs:732
+#: rustconn/src/window/protocols.rs:737
 msgid "Could not launch external viewer ‘{}’: {}"
 msgstr "Impossible de lancer le visualiseur externe ‘{}’ : {}"
 
-#: rustconn/src/window/protocols.rs:1195 rustconn/src/window/rdp_vnc.rs:1380
+#: rustconn/src/window/protocols.rs:1200 rustconn/src/window/rdp_vnc.rs:1380
 msgid "No VNC viewer found. Install TigerVNC or Remmina."
 msgstr "Aucun visualiseur VNC trouvé. Installez TigerVNC ou Remmina."
 
-#: rustconn/src/window/protocols.rs:1526
+#: rustconn/src/window/protocols.rs:1531
 msgid "No SPICE viewer found. Install virt-viewer."
 msgstr "Aucun visualiseur SPICE trouvé. Installez virt-viewer."
 
-#: rustconn/src/window/protocols.rs:1706 rustconn/src/window/protocols.rs:2212
+#: rustconn/src/window/protocols.rs:1718 rustconn/src/window/protocols.rs:2224
 msgid "Invalid variable: {}"
 msgstr "Variable invalide : {}"
 
-#: rustconn/src/window/protocols.rs:2132
+#: rustconn/src/window/protocols.rs:2144
 msgid "Invalid config: {}"
 msgstr "Configuration non valide : {}"
 
-#: rustconn/src/window/protocols.rs:2314
+#: rustconn/src/window/protocols.rs:2326
 msgid "Install picocom for Serial connections"
 msgstr "Installez picocom pour les connexions série"
 
-#: rustconn/src/window/protocols.rs:2497
+#: rustconn/src/window/protocols.rs:2509
 msgid "Install kubectl for Kubernetes connections"
 msgstr "Installez kubectl pour les connexions Kubernetes"
 
-#: rustconn/src/window/protocols.rs:2515
+#: rustconn/src/window/protocols.rs:2527
 msgid "Configure pod and container for Kubernetes"
 msgstr "Configurez le pod et le conteneur pour Kubernetes"
 
-#: rustconn/src/window/protocols.rs:2762
+#: rustconn/src/window/protocols.rs:2774
 msgid "Install mosh for MOSH connections"
 msgstr "Installez mosh pour les connexions MOSH"
 

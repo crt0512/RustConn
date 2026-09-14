@@ -593,7 +593,7 @@ pub fn elevated_credentials_rules(
             let rule = ExpectRule::new(&prompt, ELEVATED_RESPONSE_TEMPLATE)
                 .with_priority(ELEVATED_PRIORITY)
                 .with_one_shot(false)
-                .with_delay(elevated.delay_ms);
+                .with_delay(elevated.effective_delay_ms());
             match rule.validate_pattern() {
                 Ok(()) => Some(rule),
                 Err(error) => {
@@ -989,6 +989,46 @@ mod tests {
             assert_eq!(rules.len(), 1);
             assert_eq!(rules[0].pattern, r"^Secret code:\s*$");
             assert_eq!(rules[0].delay_ms, None, "0 ms means send immediately");
+        }
+
+        /// The UI clamps to 5000 ms, but the dialog is not the only way a value
+        /// arrives: a shared or hand-edited config deserializes straight into the
+        /// struct. A longer delay is a longer window in which the prompt can leave
+        /// before the response lands, so the ceiling is enforced on the model.
+        #[test]
+        fn an_out_of_range_delay_is_clamped_not_honoured() {
+            use crate::models::MAX_ELEVATED_DELAY_MS;
+
+            let config = ElevatedCredentials {
+                enabled: true,
+                custom_prompts: Vec::new(),
+                delay_ms: 600_000,
+            };
+            assert_eq!(config.effective_delay_ms(), MAX_ELEVATED_DELAY_MS);
+
+            let rules = elevated_credentials_rules(&config);
+            assert!(!rules.is_empty());
+            for rule in &rules {
+                assert_eq!(rule.delay_ms, Some(MAX_ELEVATED_DELAY_MS));
+            }
+
+            // A value inside the range is passed through untouched.
+            let ok = ElevatedCredentials {
+                enabled: true,
+                custom_prompts: Vec::new(),
+                delay_ms: 250,
+            };
+            assert_eq!(ok.effective_delay_ms(), 250);
+            assert_eq!(
+                ElevatedCredentials {
+                    enabled: true,
+                    custom_prompts: Vec::new(),
+                    delay_ms: MAX_ELEVATED_DELAY_MS,
+                }
+                .effective_delay_ms(),
+                MAX_ELEVATED_DELAY_MS,
+                "the ceiling itself is allowed"
+            );
         }
 
         #[test]

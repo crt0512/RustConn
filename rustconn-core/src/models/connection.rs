@@ -1187,6 +1187,67 @@ mod tests {
         }
     }
 
+    /// The `~/` expansion an output filter's config path relies on. Previously
+    /// untested, including the two cases it deliberately refuses.
+    mod tilde {
+        use super::super::expand_leading_tilde;
+
+        /// `$HOME` is process-global, so these assertions are grouped into one
+        /// test rather than racing each other across parallel test threads.
+        #[test]
+        fn a_leading_tilde_expands_and_nothing_else_does() {
+            // A read of the real environment, never a write: whatever HOME is, the
+            // expected value is expressed relative to it.
+            let home = std::env::var("HOME").unwrap_or_default();
+            assert!(
+                !home.is_empty(),
+                "HOME must be set for this test to mean anything"
+            );
+
+            assert_eq!(expand_leading_tilde("~/ct.yml"), format!("{home}/ct.yml"));
+            assert_eq!(expand_leading_tilde("~"), home);
+
+            // Another account's home needs the password database; refused.
+            assert_eq!(expand_leading_tilde("~root/x"), "~root/x");
+            // Only a *leading* tilde is a home reference.
+            assert_eq!(
+                expand_leading_tilde("--config=~/ct.yml"),
+                "--config=~/ct.yml"
+            );
+            assert_eq!(expand_leading_tilde("/abs/path"), "/abs/path");
+            assert_eq!(expand_leading_tilde("chromaterm"), "chromaterm");
+            assert_eq!(expand_leading_tilde(""), "");
+        }
+    }
+
+    /// A disabled or blank filter is indistinguishable from no filter, and a
+    /// non-empty `argv[0]` is the invariant the spawn path indexes on.
+    #[test]
+    fn filter_argv_refuses_disabled_and_blank_commands() {
+        let disabled = PostpendCommand {
+            command: "ccze".to_string(),
+            args: vec![],
+            enabled: false,
+        };
+        assert_eq!(disabled.filter_argv(), None);
+
+        let blank = PostpendCommand {
+            command: "   ".to_string(),
+            args: vec![],
+            enabled: true,
+        };
+        assert_eq!(blank.filter_argv(), None, "a blank command is not a filter");
+
+        let real = PostpendCommand {
+            command: "  ccze  ".to_string(),
+            args: vec!["-A".to_string()],
+            enabled: true,
+        };
+        let argv = real.filter_argv().expect("an enabled filter yields argv");
+        assert_eq!(argv, vec!["ccze".to_string(), "-A".to_string()]);
+        assert!(!argv[0].is_empty(), "argv[0] must never be empty");
+    }
+
     #[test]
     fn a_plain_ssh_connection_expects_a_password_prompt() {
         // Nothing configured: SshAuthMethod defaults to Password, and there is

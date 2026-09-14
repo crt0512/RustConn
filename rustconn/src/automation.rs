@@ -5,7 +5,7 @@
 //! Pattern matching logic is delegated to `ExpectEngine` from `rustconn-core`.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -17,6 +17,38 @@ use vte4::prelude::*;
 use vte4::{Format, Terminal};
 use zeroize::{Zeroize, Zeroizing};
 
+/// How many times one credential-carrying rule may answer in a single session.
+///
+/// `sudo` itself allows three tries before it gives up, and `pam_faillock`
+/// commonly locks an account at three failures, so a rule that has already fed
+/// the password three times is either done or feeding a credential that does not
+/// work. Continuing past this cannot help and can lock the account out. The cap
+/// applies only to rules that resolved `${password}` — a hand-written repeating
+/// rule that answers a pager or a menu has no credential to spend and is left
+/// unbounded.
+const MAX_CREDENTIAL_FIRES: u32 = 3;
+
+/// What a rule last answered, so it cannot answer the same prompt twice.
+struct AnsweredPrompt {
+    /// The active prompt line this rule answered, trimmed.
+    ///
+    /// `None` once that prompt has left the active line — the latch is open
+    /// again, while `count` deliberately survives. That split is the whole point:
+    /// the latch is per prompt occurrence, the tally is per session, so a genuine
+    /// retry is allowed but an unbounded loop of them is not.
+    ///
+    /// The latch clears as soon as the active line reads as anything else, which
+    /// is what still lets a genuine retry through: `sudo` prints
+    /// `Sorry, try again.` before its next prompt, so the active line
+    /// demonstrably changed in between. Without the latch a non-one-shot rule
+    /// re-fires on the very next redraw, because the prompt it just answered is
+    /// still the last non-empty line — a scroll, a status-bar repaint or a clock
+    /// tick is enough.
+    line: Option<String>,
+    /// How many times this rule has fired in this session.
+    count: u32,
+}
+
 /// Shared state for automation engine
 struct AutomationState {
     /// The expect engine that handles pattern matching and priority sorting
@@ -27,6 +59,14 @@ struct AutomationState {
     last_content: Zeroizing<String>,
     /// Counter for polling cycles
     poll_count: u32,
+    /// Rules whose response resolved `${password}`, so they carry a credential.
+    ///
+    /// Kept beside the engine rather than on [`ExpectRule`] because it is a
+    /// property of *this* resolution, not of the persisted rule: the same stored
+    /// rule carries a secret only when a variable actually resolved into it.
+    credential_rules: HashSet<Uuid>,
+    /// Per-rule latch and fire tally, keyed by rule id.
+    answered: HashMap<Uuid, AnsweredPrompt>,
 }
 
 impl Drop for AutomationState {
@@ -47,6 +87,11 @@ pub(crate) struct PreparedExpectRule {
     timeout_ms: Option<u32>,
     one_shot: bool,
     delay_ms: Option<u32>,
+    /// Whether the template referenced `${password}` before substitution.
+    ///
+    /// Recorded from the template rather than sniffed from the resolved text,
+    /// which cannot be inspected without reading the credential back out.
+    carries_credential: bool,
 }
 
 impl PreparedExpectRule {
@@ -74,6 +119,11 @@ struct PendingResponse {
     response: Zeroizing<String>,
     one_shot: bool,
     delay_ms: Option<u32>,
+    /// The trimmed prompt line that justified this response.
+    ///
+    /// Not a secret — it is the prompt, not the answer — and it is what a delayed
+    /// send re-checks the grid against before writing.
+    expect_line: String,
 }
 
 /// Manages automation for a terminal session
@@ -136,6 +186,14 @@ impl AutomationSession {
             created_at.insert(rule.id, now);
         }
 
+        // Collected before `into_expect_rule` consumes the prepared rules: the
+        // flag does not survive into `ExpectRule`, which is the persisted type.
+        let credential_rules: HashSet<Uuid> = rules
+            .iter()
+            .filter(|rule| rule.carries_credential)
+            .map(|rule| rule.id)
+            .collect();
+
         // Move resolved responses into the core engine only after all setup
         // bookkeeping succeeds. Abandoned prepared rules zeroize on drop.
         let rules = rules
@@ -155,6 +213,8 @@ impl AutomationSession {
             created_at,
             last_content: Zeroizing::new(String::new()),
             poll_count: 0,
+            credential_rules,
+            answered: HashMap::new(),
         }));
 
         // Start polling timer to check terminal content. The source ID is kept
@@ -221,6 +281,60 @@ impl AutomationSession {
         result
     }
 
+    /// Reads the terminal's whole visible grid as text.
+    ///
+    /// Scrubbed on drop: a terminal echoes what was typed into it, so the grid
+    /// can hold a credential a moment after one was sent.
+    fn visible_text(terminal: &Terminal) -> Zeroizing<String> {
+        let row_count = terminal.row_count();
+        Zeroizing::new(
+            if let (Some(text), _) = terminal.text_range_format(
+                Format::Text,
+                0,             // start row
+                0,             // start col
+                row_count - 1, // end row (last visible row)
+                -1,            // end col (-1 = end of line)
+            ) {
+                text.to_string()
+            } else {
+                String::new()
+            },
+        )
+    }
+
+    /// Index of the active prompt line: the last line with anything on it.
+    ///
+    /// A forward scan, because `str::lines` is not a double-ended iterator.
+    /// Returns `None` for an empty or all-blank grid, which fails closed — no
+    /// rule fires rather than every rule firing against nothing.
+    fn active_line_index(content: &str) -> Option<usize> {
+        let mut active = None;
+        for (index, line) in content.lines().enumerate() {
+            if !line.trim().is_empty() {
+                active = Some(index);
+            }
+        }
+        active
+    }
+
+    /// The text of the active prompt line, trimmed.
+    fn active_line_text(content: &str) -> Option<&str> {
+        let index = Self::active_line_index(content)?;
+        content.lines().nth(index).map(str::trim)
+    }
+
+    /// Whether a rule that matched line `index` may fire.
+    ///
+    /// A rule that can fire repeatedly is restricted to the active prompt line,
+    /// because the whole visible grid is rescanned on every change and a prompt
+    /// that has already been answered stays on screen. Without this a non-one-shot
+    /// sudo rule re-fires on the next screen update and types the password as a
+    /// shell command. One-shot rules keep scanning everything: they are removed
+    /// the first time they match, so they cannot repeat.
+    fn should_fire(one_shot: bool, index: usize, active_line: Option<usize>) -> bool {
+        one_shot || active_line == Some(index)
+    }
+
     fn check_terminal_content(terminal: &Terminal, state: &Rc<RefCell<AutomationState>>) {
         let mut state_ref = state.borrow_mut();
 
@@ -256,23 +370,7 @@ impl AutomationSession {
             return;
         }
 
-        // Get terminal dimensions
-        let row_count = terminal.row_count();
-
-        // Read content using text_range_format for the entire visible area
-        let content = Zeroizing::new(
-            if let (Some(text), _) = terminal.text_range_format(
-                Format::Text,
-                0,             // start row
-                0,             // start col
-                row_count - 1, // end row (last visible row)
-                -1,            // end col (-1 = end of line)
-            ) {
-                text.to_string()
-            } else {
-                String::new()
-            },
-        );
+        let content = Self::visible_text(terminal);
 
         // Check if content changed
         let content_changed = content != state_ref.last_content;
@@ -296,18 +394,20 @@ impl AutomationSession {
 
         state_ref.last_content = content.clone();
 
-        // The active prompt line: the last line with anything on it. A rule that
-        // can fire repeatedly is matched against this line alone, because the
-        // whole visible grid is rescanned on every change and a prompt that has
-        // already been answered stays on screen. Without this, a non-one-shot
-        // sudo rule re-fires on the next screen update and types the password as
-        // a shell command. One-shot rules keep scanning everything: they are
-        // removed the first time they match, so they cannot repeat.
-        // A forward scan, because `str::lines` is not a double-ended iterator.
-        let mut active_line: Option<usize> = None;
-        for (index, line) in content.lines().enumerate() {
-            if !line.trim().is_empty() {
-                active_line = Some(index);
+        let active_line = Self::active_line_index(&content);
+        // Owned, because the latch below is updated while `content` is still
+        // borrowed by the match loop.
+        let active_text: Option<String> =
+            Self::active_line_text(&content).map(std::string::ToString::to_string);
+
+        // Open the latch of any rule whose answered prompt is no longer the
+        // active line: that prompt went away, so the next one is a new occurrence
+        // and answering it again is correct. This is what keeps a genuine `sudo`
+        // retry working while a redraw of the same prompt stays blocked. The fire
+        // tally is left alone — see `AnsweredPrompt::line`.
+        for answered in state_ref.answered.values_mut() {
+            if answered.line.as_deref() != active_text.as_deref() {
+                answered.line = None;
             }
         }
 
@@ -329,7 +429,31 @@ impl AutomationSession {
                     continue;
                 }
 
-                if !rule.one_shot && active_line != Some(index) {
+                if !Self::should_fire(rule.one_shot, index, active_line) {
+                    continue;
+                }
+
+                // The latch: this rule already answered the prompt that is still
+                // the active line, so this is a redraw and not a new prompt.
+                if let Some(answered) = state_ref.answered.get(&rule.id)
+                    && answered.line.is_some()
+                {
+                    continue;
+                }
+
+                // Spending a credential is capped; see `MAX_CREDENTIAL_FIRES`.
+                let carries_credential = state_ref.credential_rules.contains(&rule.id);
+                if carries_credential
+                    && let Some(answered) = state_ref.answered.get(&rule.id)
+                    && MAX_CREDENTIAL_FIRES <= answered.count
+                {
+                    tracing::warn!(
+                        rule_id = %rule.id,
+                        fires = answered.count,
+                        cap = MAX_CREDENTIAL_FIRES,
+                        "Rule has already answered its cap of credential prompts; refusing \
+                         further injection so the account is not locked out"
+                    );
                     continue;
                 }
 
@@ -353,11 +477,29 @@ impl AutomationSession {
                     response.len()
                 );
 
+                let rule_id = rule.id;
+                let one_shot = rule.one_shot;
+                let delay_ms = rule.delay_ms;
+                // The line that justified this response. A delayed send re-reads
+                // the grid and refuses if this is no longer the active line.
+                let expect_line = line.trim().to_string();
+
+                // Close the latch and count the fire before the response leaves,
+                // so a rule cannot be re-armed by a redraw that lands while a
+                // delay timer is still pending.
+                let answered = state_ref.answered.entry(rule_id).or_insert(AnsweredPrompt {
+                    line: None,
+                    count: 0,
+                });
+                answered.line = Some(expect_line.clone());
+                answered.count = answered.count.saturating_add(1);
+
                 matches.push(PendingResponse {
-                    rule_id: rule.id,
+                    rule_id,
                     response,
-                    one_shot: rule.one_shot,
-                    delay_ms: rule.delay_ms,
+                    one_shot,
+                    delay_ms,
+                    expect_line,
                 });
             }
         }
@@ -387,12 +529,34 @@ impl AutomationSession {
                     // drops the response instead of writing to a dead widget.
                     let terminal_weak = terminal.downgrade();
                     let response = pending.response;
+                    let expect_line = pending.expect_line;
+                    let rule_id = pending.rule_id;
                     glib::timeout_add_local_once(
                         Duration::from_millis(u64::from(delay_ms)),
                         move || {
-                            if let Some(terminal) = terminal_weak.upgrade() {
-                                terminal.feed_child(response.as_bytes());
+                            let Some(terminal) = terminal_weak.upgrade() else {
+                                return;
+                            };
+                            // The grid is re-read here on purpose. Up to five
+                            // seconds can pass, and the prompt that justified
+                            // this response may be gone: the user answered it by
+                            // hand, `sudo` timed out, the command finished. The
+                            // response would then be typed into whatever now
+                            // reads stdin — for a credential that means a shell
+                            // command line, the scrollback and the shell's
+                            // history. Matching the active line against the line
+                            // that fired is what keeps the delay from becoming
+                            // the very leak the active-line rule prevents.
+                            let content = Self::visible_text(&terminal);
+                            if Self::active_line_text(&content) != Some(expect_line.as_str()) {
+                                tracing::warn!(
+                                    %rule_id,
+                                    "Prompt left the active line during the configured delay; \
+                                     dropping the response instead of typing it blind"
+                                );
+                                return;
                             }
+                            terminal.feed_child(response.as_bytes());
                         },
                     );
                 }
@@ -439,6 +603,11 @@ pub(crate) fn prepare_rules_from_config(
         // an embedded newline) would be silently rewritten before it was sent.
         let template = Zeroizing::new(AutomationSession::process_escapes(&rule.response));
 
+        // Read from the template, before substitution: afterwards the credential
+        // is indistinguishable from any other resolved text without reading it
+        // back out. Same token `automation_variables` gates the vault lookup on.
+        let carries_credential = template.contains("${password}");
+
         // Substitute ${VAR} references in the response text.
         let resolved_response = match var_manager.substitute_for_terminal_input(
             &template,
@@ -481,6 +650,7 @@ pub(crate) fn prepare_rules_from_config(
             timeout_ms: rule.timeout_ms,
             one_shot: rule.one_shot,
             delay_ms: rule.delay_ms,
+            carries_credential,
         });
     }
 
@@ -508,6 +678,64 @@ mod tests {
             .with_timeout(30_000)
     }
 
+    /// The active-prompt-line rule, which used to be asserted only in prose
+    /// because `check_terminal_content` needs a live `vte4::Terminal`. These two
+    /// helpers are the whole mechanism, so testing them tests the guard.
+    mod active_line {
+        use super::super::AutomationSession;
+
+        #[test]
+        fn the_active_line_is_the_last_line_with_anything_on_it() {
+            let grid = "$ sudo -v\n[sudo] password for u:\n\n\n";
+            assert_eq!(AutomationSession::active_line_index(grid), Some(1));
+            assert_eq!(
+                AutomationSession::active_line_text(grid),
+                Some("[sudo] password for u:")
+            );
+        }
+
+        #[test]
+        fn whitespace_only_lines_do_not_count_as_active() {
+            assert_eq!(
+                AutomationSession::active_line_index("a\n   \n\t\n"),
+                Some(0)
+            );
+        }
+
+        /// Fails closed: nothing to answer rather than everything matching.
+        #[test]
+        fn an_empty_grid_has_no_active_line() {
+            assert_eq!(AutomationSession::active_line_index(""), None);
+            assert_eq!(AutomationSession::active_line_index("\n  \n\t"), None);
+            assert_eq!(AutomationSession::active_line_text("   "), None);
+        }
+
+        /// A one-shot rule scans the whole grid; a repeating one is pinned to the
+        /// active line, which is what stops a sudo rule re-firing on a redraw.
+        #[test]
+        fn only_a_one_shot_rule_may_fire_off_the_active_line() {
+            assert!(AutomationSession::should_fire(true, 0, Some(5)));
+            assert!(!AutomationSession::should_fire(false, 0, Some(5)));
+            assert!(AutomationSession::should_fire(false, 5, Some(5)));
+        }
+
+        /// With no active line a repeating rule cannot fire at all.
+        #[test]
+        fn a_repeating_rule_never_fires_without_an_active_line() {
+            assert!(!AutomationSession::should_fire(false, 0, None));
+        }
+
+        /// A prompt under a tmux/screen status bar is not the last non-empty line,
+        /// so injection does not happen. Documented as the accepted trade-off: the
+        /// guard fails closed, which is the right direction for a credential.
+        #[test]
+        fn a_status_bar_below_the_prompt_keeps_a_repeating_rule_from_firing() {
+            let grid = "[sudo] password for u:\n[0] 0:bash*  \"host\" 12:00\n";
+            assert_eq!(AutomationSession::active_line_index(grid), Some(1));
+            assert!(!AutomationSession::should_fire(false, 0, Some(1)));
+        }
+    }
+
     /// Issue #257: the stock template used to answer the prompt with a bare
     /// newline because nothing defined `${password}`.
     #[test]
@@ -517,6 +745,25 @@ mod tests {
 
         assert_eq!(prepared.len(), 1);
         assert_eq!(prepared[0].response.as_str(), "hunter2\n");
+    }
+
+    /// Only a rule that referenced `${password}` is treated as spending a
+    /// credential, so the fire cap does not apply to an ordinary repeating rule.
+    #[test]
+    fn only_a_password_template_is_marked_as_carrying_a_credential() {
+        let manager = manager_with("password", "hunter2");
+        let prepared = prepare_rules_from_config(&[sudo_rule("${password}\n")], &manager);
+        assert!(prepared[0].carries_credential);
+
+        let manager = manager_with("answer", "yes");
+        let prepared = prepare_rules_from_config(&[sudo_rule("${answer}\n")], &manager);
+        assert!(
+            !prepared[0].carries_credential,
+            "a rule answering with an ordinary variable spends no credential"
+        );
+
+        let prepared = prepare_rules_from_config(&[sudo_rule("q\n")], &VariableManager::new());
+        assert!(!prepared[0].carries_credential);
     }
 
     /// A password made entirely of the characters `substitute_for_command`

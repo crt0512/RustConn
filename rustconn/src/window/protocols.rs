@@ -62,7 +62,12 @@ pub(super) fn resolve_automation_for_connection(
 /// Appended rather than prepended; ordering inside the engine is by priority, and
 /// the generated rules carry a higher one.
 fn append_elevated_rules(conn: &rustconn_core::Connection, automation: &mut AutomationConfig) {
-    let rustconn_core::ProtocolConfig::Ssh(ssh) = &conn.protocol_config else {
+    // SFTP shares `SshConfig`, so the flag can be saved on an SFTP connection and
+    // has to be honoured there too; matching `Ssh` alone made the switch look
+    // enabled while nothing was ever injected.
+    let (rustconn_core::ProtocolConfig::Ssh(ssh) | rustconn_core::ProtocolConfig::Sftp(ssh)) =
+        &conn.protocol_config
+    else {
         return;
     };
     let Some(elevated) = ssh.elevated.as_ref().filter(|e| e.enabled) else {
@@ -1675,6 +1680,13 @@ pub fn reconnect_generic_vte_in_place(
             .unwrap_or_default();
         notebook.set_highlight_rules(session_id, &global_rules, &conn.highlight_rules);
     }
+
+    // Re-register the output filter, for the same reason the SSH reconnect path
+    // does: the map survives a reconnect (it is keyed by session and cleared only
+    // when the tab closes), so without this a filter edited between connect and
+    // reconnect is honoured for SSH and silently ignored for every protocol that
+    // reconnects through here.
+    notebook.set_output_filter(session_id, conn.postpend.as_ref());
 
     // Record connection start in history
     if let Ok(mut state_mut) = state.try_borrow_mut() {

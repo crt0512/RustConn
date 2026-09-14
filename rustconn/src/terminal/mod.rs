@@ -995,24 +995,20 @@ impl TerminalNotebook {
 
         // `argv[0]` is guaranteed non-empty by `filter_argv`.
         let program = argv[0].clone();
-        if !std::path::Path::new(&program).is_absolute()
-            && rustconn_core::which::find_in_path(&program).is_none()
-        {
+        if !filter_program_is_runnable(&program) {
             tracing::warn!(
                 %session_id,
                 filter = %program,
-                "Output filter is not installed or not on PATH; session output is unfiltered"
+                "Output filter is not installed or not executable; session output is unfiltered"
             );
-            self.output_filters.borrow_mut().remove(&session_id);
-            return;
-        }
-        if std::path::Path::new(&program).is_absolute() && !std::path::Path::new(&program).is_file()
-        {
-            tracing::warn!(
-                %session_id,
-                filter = %program,
-                "Output filter path does not exist; session output is unfiltered"
-            );
+            // A log line is not feedback: the session starts and looks completely
+            // normal, just unfiltered, so nothing tells the user their filter did
+            // not run. A background failure the user can act on is a toast, per
+            // the project's error-feedback rule.
+            crate::toast::show_error_toast_on_active_window(&i18n_f(
+                "Output filter '{}' is not installed; session output is not filtered",
+                &[&program],
+            ));
             self.output_filters.borrow_mut().remove(&session_id);
             return;
         }
@@ -1022,6 +1018,9 @@ impl TerminalNotebook {
     }
 
     /// Returns the `sh -c` script for a filtered session, or `None` when unfiltered.
+    ///
+    /// See [`filter_program_is_runnable`] for why availability is decided before
+    /// this point rather than at spawn time.
     ///
     /// ponytail: the pipeline's exit status is the *filter's*, not the session's,
     /// because POSIX `sh` has no portable `PIPESTATUS`. A filtered session that
@@ -1339,6 +1338,25 @@ impl TerminalNotebook {
 fn grid_size(terminal: &Terminal) -> (u16, u16) {
     let clamp = |value: i64| u16::try_from(value.max(0)).unwrap_or(u16::MAX);
     (clamp(terminal.row_count()), clamp(terminal.column_count()))
+}
+
+/// Whether an output filter's program can actually be executed.
+///
+/// Both shapes a filter can take — a bare command name and an absolute path — go
+/// through the one lookup, because `find_in_path` checks the **executable bit**
+/// and also knows about Flatpak's `/app/bin`, Snap's bundled directories and the
+/// sandboxed CLI download dirs. A leading `~/` has already been expanded by
+/// `PostpendCommand::filter_argv`, so it arrives here absolute.
+///
+/// The absolute-path case used to be checked with `Path::is_file()` alone. That
+/// passes for `/etc/passwd`, which then fails at exec time with the pipeline
+/// already built — losing every byte the session wrote, the exact failure this
+/// gate exists to prevent, and inconsistent with the bare-name case that was
+/// checked properly.
+///
+/// A free function rather than a method so it is testable without a GTK notebook.
+fn filter_program_is_runnable(program: &str) -> bool {
+    rustconn_core::which::find_in_path(program).is_some()
 }
 
 /// Kills a child and collects it, so a failed startup leaves no zombie.
@@ -3091,6 +3109,62 @@ fn cursor_line_text(terminal: &Terminal) -> Option<String> {
             .find(|l| !l.trim().is_empty())
             .map(str::to_owned)
     })
+}
+
+/// The output-filter availability gate.
+///
+/// Extracted into a free function precisely so this can be checked without a GTK
+/// notebook — the absolute-path branch used to accept any existing file.
+#[cfg(test)]
+mod output_filter_gate_tests {
+    use super::filter_program_is_runnable;
+
+    #[test]
+    fn a_bare_command_on_path_is_runnable() {
+        assert!(filter_program_is_runnable("sh"));
+    }
+
+    #[test]
+    fn a_command_that_does_not_exist_is_not_runnable() {
+        assert!(!filter_program_is_runnable(
+            "rustconn-no-such-filter-binary"
+        ));
+        assert!(!filter_program_is_runnable(""));
+    }
+
+    /// The regression this gate was rewritten for: an absolute path that exists
+    /// but is not executable must be refused *before* the pipeline is built.
+    /// Checking `Path::is_file()` alone passed it and then lost every byte of the
+    /// session at exec time.
+    #[test]
+    fn an_existing_but_non_executable_absolute_path_is_refused() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("not-executable");
+        std::fs::write(&path, b"#!/bin/sh\necho hi\n").expect("write");
+
+        assert!(
+            !filter_program_is_runnable(path.to_str().expect("utf-8 path")),
+            "a file without the executable bit is not a runnable filter"
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+            assert!(
+                filter_program_is_runnable(path.to_str().expect("utf-8 path")),
+                "the same path becomes runnable once it is executable"
+            );
+        }
+    }
+
+    #[test]
+    fn a_directory_is_not_a_runnable_filter() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        assert!(!filter_program_is_runnable(
+            dir.path().to_str().expect("utf-8 path")
+        ));
+    }
 }
 
 #[cfg(test)]

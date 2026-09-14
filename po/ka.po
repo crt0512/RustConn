@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.20.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-14 17:15+0300\n"
+"POT-Creation-Date: 2026-09-14 18:17+0300\n"
 "PO-Revision-Date: 2026-08-19 09:53+0200\n"
 "Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
 "Language-Team: Georgian <(nothing)>\n"
@@ -3102,7 +3102,10 @@ msgstr ""
 msgid ""
 "One anchored regex per line, for example ^Secret code:\\s*$. Leave empty to "
 "use the built-in sudo, su, doas and enable patterns."
-msgstr "თითო რეგულარული გამოსახულება ხაზზე, მიბმული მთელ ხაზზე, მაგალითად ^Secret code:\\s*$. დატოვეთ ცარიელი sudo, su, doas და enable-ის ჩაშენებული შაბლონებისთვის."
+msgstr ""
+"თითო რეგულარული გამოსახულება ხაზზე, მიბმული მთელ ხაზზე, მაგალითად ^Secret "
+"code:\\s*$. დატოვეთ ცარიელი sudo, su, doas და enable-ის ჩაშენებული "
+"შაბლონებისთვის."
 
 #: rustconn/src/dialogs/connection/ssh.rs:231
 msgid "Custom Prompt Patterns"
@@ -4401,7 +4404,10 @@ msgid ""
 "Remmina, SecureCRT and RDP Files export to a directory (one file per "
 "connection).\n"
 "Other formats export to a single file."
-msgstr "Remmina, SecureCRT და RDP ფაილები ექსპორტდება კატალოგში (თითო ფაილი შეერთებაზე).\nდანარჩენი ფორმატები ექსპორტდება ერთ ფაილში."
+msgstr ""
+"Remmina, SecureCRT და RDP ფაილები ექსპორტდება კატალოგში (თითო ფაილი "
+"შეერთებაზე).\n"
+"დანარჩენი ფორმატები ექსპორტდება ერთ ფაილში."
 
 #: rustconn/src/dialogs/export.rs:310
 msgid "Select output file or directory…"
@@ -9614,13 +9620,13 @@ msgid "Save files from remote clipboard"
 msgstr "ფაილების შენახვა დაშორებული ბუფერიდან"
 
 #: rustconn/src/embedded_rdp/mod.rs:761 rustconn/src/embedded_vnc/ui.rs:145
-#: rustconn/src/terminal/mod.rs:1301
+#: rustconn/src/terminal/mod.rs:1305
 #: rustconn/src/terminal/session_lifecycle.rs:350
 msgid "Reconnect"
 msgstr "თავიდან დაკავშირება"
 
 #: rustconn/src/embedded_rdp/mod.rs:763 rustconn/src/embedded_vnc/ui.rs:147
-#: rustconn/src/terminal/mod.rs:1303
+#: rustconn/src/terminal/mod.rs:1307
 #: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Reconnect to this session"
 msgstr "თავიდან დაკავშირება ამ სესიასთან"
@@ -10572,19 +10578,23 @@ msgstr "ჩანართის მიმოხილვა (Ctrl+Shift+O)"
 msgid "Welcome"
 msgstr "მოგესალმებით"
 
-#: rustconn/src/terminal/mod.rs:1295
+#: rustconn/src/terminal/mod.rs:1009
+msgid "Output filter '{}' is not installed; session output is not filtered"
+msgstr "გამონატანის ფილტრი '{}' დაყენებული არაა; სესიის გამონატანი არ იფილტრება"
+
+#: rustconn/src/terminal/mod.rs:1299
 msgid "Command not found: {}"
 msgstr "ბრძანება აღმოჩენილი არაა: {}"
 
-#: rustconn/src/terminal/mod.rs:1297
+#: rustconn/src/terminal/mod.rs:1301
 msgid "Failed to start '{}'"
 msgstr "'{}'-ის გაშვების შეცდომა"
 
-#: rustconn/src/terminal/mod.rs:1319
+#: rustconn/src/terminal/mod.rs:1323
 msgid "'{}' is not installed"
 msgstr "'{}' დაყენებული არაა"
 
-#: rustconn/src/terminal/mod.rs:1322
+#: rustconn/src/terminal/mod.rs:1326
 msgid "Failed to start '{}': {}"
 msgstr "'{}'-ის გაშვების შეცდომა: {}"
 
@@ -12010,39 +12020,39 @@ msgstr "გადატანილია {} ელემენტი."
 msgid "Failed to move {} item(s):"
 msgstr "{} ელემენტის გადატანა ჩავარდა:"
 
-#: rustconn/src/window/protocols.rs:732
+#: rustconn/src/window/protocols.rs:737
 msgid "Could not launch external viewer ‘{}’: {}"
 msgstr "ვერ გავუშვი გარე დამთვალიერებელი ‘{}’: {}"
 
-#: rustconn/src/window/protocols.rs:1195 rustconn/src/window/rdp_vnc.rs:1380
+#: rustconn/src/window/protocols.rs:1200 rustconn/src/window/rdp_vnc.rs:1380
 msgid "No VNC viewer found. Install TigerVNC or Remmina."
 msgstr "VNC დამთვალიერებელი აღმოჩენილი არაა. დააყენეთ TigerVNC ან Remmina."
 
-#: rustconn/src/window/protocols.rs:1526
+#: rustconn/src/window/protocols.rs:1531
 msgid "No SPICE viewer found. Install virt-viewer."
 msgstr "SPICE დამთვალიერებელი აღმოჩენილი არაა. დააყენეთ virt-viewer."
 
-#: rustconn/src/window/protocols.rs:1706 rustconn/src/window/protocols.rs:2212
+#: rustconn/src/window/protocols.rs:1718 rustconn/src/window/protocols.rs:2224
 msgid "Invalid variable: {}"
 msgstr "არასწორი ცვლადი: {}"
 
-#: rustconn/src/window/protocols.rs:2132
+#: rustconn/src/window/protocols.rs:2144
 msgid "Invalid config: {}"
 msgstr "არასწორი კონფიგურაცია: {}"
 
-#: rustconn/src/window/protocols.rs:2314
+#: rustconn/src/window/protocols.rs:2326
 msgid "Install picocom for Serial connections"
 msgstr "სერიული კავშირებისთვის დააყენეთ picocom"
 
-#: rustconn/src/window/protocols.rs:2497
+#: rustconn/src/window/protocols.rs:2509
 msgid "Install kubectl for Kubernetes connections"
 msgstr "დააყენეთ kubectl Kubernetes-ის კავშირებისთვის"
 
-#: rustconn/src/window/protocols.rs:2515
+#: rustconn/src/window/protocols.rs:2527
 msgid "Configure pod and container for Kubernetes"
 msgstr "პოდის და კონტეინერის მორგება Kubernetes-ისთვის"
 
-#: rustconn/src/window/protocols.rs:2762
+#: rustconn/src/window/protocols.rs:2774
 msgid "Install mosh for MOSH connections"
 msgstr "დააყენეთ mosh MOSH-ის კავშირებისთვის"
 

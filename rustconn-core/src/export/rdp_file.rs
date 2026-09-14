@@ -75,30 +75,32 @@ impl RdpFileExporter {
 
         let mut output = String::with_capacity(2048);
 
-        // Header comment
+        // Header comment. The name is sanitized like any other value: it lands on
+        // line two, so a line break in it would escape the comment.
         let _ = writeln!(output, "# RustConn RDP Export");
-        let _ = writeln!(output, "# Connection: {}", connection.name);
+        let _ = writeln!(output, "# Connection: {}", rdp_value(&connection.name));
         let _ = writeln!(output);
 
         // Required: full address (host:port)
         if connection.port == 3389 {
-            let _ = writeln!(output, "full address:s:{}", connection.host);
+            let _ = writeln!(output, "full address:s:{}", rdp_value(&connection.host));
         } else {
             let _ = writeln!(
                 output,
                 "full address:s:{}:{}",
-                connection.host, connection.port
+                rdp_value(&connection.host),
+                connection.port
             );
         }
 
         // Username (without domain prefix — domain is separate)
         if let Some(ref username) = connection.username {
-            let _ = writeln!(output, "username:s:{username}");
+            let _ = writeln!(output, "username:s:{}", rdp_value(username));
         }
 
         // Domain
         if let Some(ref domain) = connection.domain {
-            let _ = writeln!(output, "domain:s:{domain}");
+            let _ = writeln!(output, "domain:s:{}", rdp_value(domain));
         }
 
         // RDP-specific settings
@@ -249,7 +251,7 @@ impl RdpFileExporter {
             let drives: Vec<String> = rdp
                 .shared_folders
                 .iter()
-                .map(|f| f.local_path.display().to_string())
+                .map(|f| rdp_value(&f.local_path.display().to_string()))
                 .collect();
             let _ = writeln!(output, "drivestoredirect:s:{}", drives.join(";"));
         }
@@ -267,12 +269,13 @@ impl RdpFileExporter {
         if let Some(ref gateway) = rdp.gateway {
             // Gateway hostname with port if non-default
             if gateway.port == 443 {
-                let _ = writeln!(output, "gatewayhostname:s:{}", gateway.hostname);
+                let _ = writeln!(output, "gatewayhostname:s:{}", rdp_value(&gateway.hostname));
             } else {
                 let _ = writeln!(
                     output,
                     "gatewayhostname:s:{}:{}",
-                    gateway.hostname, gateway.port
+                    rdp_value(&gateway.hostname),
+                    gateway.port
                 );
             }
 
@@ -284,7 +287,7 @@ impl RdpFileExporter {
 
             // Gateway username if different from session
             if let Some(ref gw_user) = gateway.username {
-                let _ = writeln!(output, "gatewayusername:s:{gw_user}");
+                let _ = writeln!(output, "gatewayusername:s:{}", rdp_value(gw_user));
             }
         } else {
             // No gateway
@@ -320,14 +323,14 @@ impl RdpFileExporter {
     fn write_remoteapp_settings(output: &mut String, rdp: &crate::models::RdpConfig) {
         if let Some(ref program) = rdp.remote_app_program {
             let _ = writeln!(output, "remoteapplicationmode:i:1");
-            let _ = writeln!(output, "remoteapplicationprogram:s:{program}");
+            let _ = writeln!(output, "remoteapplicationprogram:s:{}", rdp_value(program));
 
             if let Some(ref args) = rdp.remote_app_args {
-                let _ = writeln!(output, "remoteapplicationcmdline:s:{args}");
+                let _ = writeln!(output, "remoteapplicationcmdline:s:{}", rdp_value(args));
             }
 
             if let Some(ref name) = rdp.remote_app_name {
-                let _ = writeln!(output, "remoteapplicationname:s:{name}");
+                let _ = writeln!(output, "remoteapplicationname:s:{}", rdp_value(name));
             }
         } else {
             let _ = writeln!(output, "remoteapplicationmode:i:0");
@@ -421,6 +424,36 @@ impl ExportTarget for RdpFileExporter {
     fn supports_protocol(&self, protocol: &ProtocolType) -> bool {
         *protocol == ProtocolType::Rdp
     }
+}
+
+/// Makes a value safe to interpolate into a `key:type:value` line.
+///
+/// The `.rdp` format is line-oriented: a value cannot hold a line break, because
+/// the next line is parsed as another `key:type:value` pair. An unfiltered value
+/// therefore lets whatever produced it append keys of its own — a `username` of
+/// `jdoe\nremoteapplicationprogram:s:||cmd` writes a second, honoured key, and
+/// `remoteapplicationprogram` launches a program on the RDP server. The same
+/// trick reaches `drivestoredirect:s:*` (hands over every local drive),
+/// `gatewayhostname` (reroutes the session through someone else's gateway) and
+/// `authentication level:i:0` (drops certificate checking silently). The
+/// connection *name* matters as much as the rest: it is echoed into the
+/// `# Connection:` header, so a newline there escapes the comment on line two of
+/// every file this exporter writes.
+///
+/// A GTK entry will not accept a typed line break, which is why this was not
+/// reachable from the UI — but a hand-edited or shared `.rcn`, another import
+/// format, or `rustconn-cli add --username $'a\nb'` all carry one.
+///
+/// Every control character goes, not just `\r` and `\n`: `\x0b` and `\x0c` are
+/// line breaks to some parsers, and no control character is representable in this
+/// format anyway, so dropping them loses nothing a client could have read. A colon
+/// is deliberately left alone — parsers split on the first two, which is exactly
+/// how `full address:s:host:3390` expresses a port.
+///
+/// Stripping rather than refusing, so one odd connection name cannot abort an
+/// export that is otherwise fine.
+fn rdp_value(value: &str) -> String {
+    value.chars().filter(|c| !c.is_control()).collect()
 }
 
 /// Sanitizes a connection name for use as a filename.
@@ -590,15 +623,140 @@ mod tests {
         assert!(content.contains("remoteapplicationname:s:Notepad"));
     }
 
+    /// No key that could carry a credential may be written.
+    ///
+    /// Asserted on the *keys* rather than as a substring search for "password":
+    /// the connection name is echoed into the header comment, so a plain
+    /// `contains("password")` both passes for the wrong reason (the fixture had no
+    /// password to leak) and fails for the wrong reason (a connection legitimately
+    /// named "password vault"). The name here is chosen to prove the difference.
     #[test]
-    fn test_rdp_export_no_password() {
-        let mut conn = make_rdp_connection("Secure Server", "server.example.com", 3389);
+    fn no_credential_key_is_ever_written() {
+        let mut conn = make_rdp_connection("password vault", "server.example.com", 3389);
         conn.username = Some("admin".to_string());
 
         let content = RdpFileExporter::export_to_rdp_content(&conn).unwrap();
 
-        // Password must never be in the output
-        assert!(!content.to_lowercase().contains("password"));
+        for line in content.lines() {
+            let key = line.split(':').next().unwrap_or("").trim().to_lowercase();
+            assert_ne!(
+                key, "password 51",
+                "the DPAPI password field must not appear"
+            );
+            assert_ne!(key, "password", "no password key may be written");
+            assert_ne!(
+                key, "clearpassword",
+                "no cleartext password key may be written"
+            );
+        }
+        assert!(
+            !content.contains("51:b:"),
+            "the binary/DPAPI value form must not appear: {content}"
+        );
+        // The name still round-trips, which is what makes the assertions above
+        // meaningful rather than accidentally satisfied.
+        assert!(content.contains("# Connection: password vault"));
+    }
+
+    /// A value cannot append a second, honoured key.
+    ///
+    /// `remoteapplicationprogram` launches a program on the RDP server, so a
+    /// newline surviving into the file is remote code execution on the target, not
+    /// a formatting bug. The GUI will not accept a typed newline; a shared `.rcn`
+    /// or `rustconn-cli add --username $'a\nb'` will.
+    #[test]
+    fn a_newline_in_a_value_cannot_append_a_key() {
+        let mut conn = make_rdp_connection("Injected", "server.example.com", 3389);
+        conn.username = Some("jdoe\nremoteapplicationprogram:s:||cmd".to_string());
+        conn.domain = Some("CORP\r\ndrivestoredirect:s:*".to_string());
+
+        let content = RdpFileExporter::export_to_rdp_content(&conn).unwrap();
+
+        // Line-based, because that is what a parser reads: the injected text
+        // surviving *inside* the username value is harmless, since only a value
+        // at the start of a line is a key. Nothing may start a line with it.
+        for line in content.lines() {
+            assert!(
+                !line.starts_with("remoteapplicationprogram:s:||cmd"),
+                "a smuggled RemoteApp key became its own line:\n{content}"
+            );
+            assert!(
+                !line.starts_with("drivestoredirect:s:*"),
+                "a smuggled drive redirection became its own line:\n{content}"
+            );
+        }
+        // One line per key that the connection actually configured.
+        assert_eq!(
+            content
+                .lines()
+                .filter(|l| l.starts_with("username:"))
+                .count(),
+            1
+        );
+        assert_eq!(
+            content.lines().filter(|l| l.starts_with("domain:")).count(),
+            1
+        );
+        // The surviving value stays on one line, with the control characters gone.
+        assert!(content.contains("username:s:jdoeremoteapplicationprogram:s:||cmd"));
+        assert!(content.contains("domain:s:CORPdrivestoredirect:s:*"));
+        // RemoteApp is off, which is what the connection actually configured.
+        assert!(content.contains("remoteapplicationmode:i:0"));
+    }
+
+    /// The connection name lands on line two, inside a comment. A newline there
+    /// would escape the comment and everything after it would be parsed as keys.
+    #[test]
+    fn a_newline_in_the_name_cannot_escape_the_header_comment() {
+        let conn =
+            make_rdp_connection("prod\nauthentication level:i:0", "server.example.com", 3389);
+
+        let content = RdpFileExporter::export_to_rdp_content(&conn).unwrap();
+
+        assert!(
+            !content.contains("\nauthentication level:i:0"),
+            "the name escaped its comment:\n{content}"
+        );
+        // The exporter's own security setting is the only one present.
+        assert_eq!(
+            content
+                .lines()
+                .filter(|l| l.starts_with("authentication level:"))
+                .count(),
+            1
+        );
+        assert!(content.contains("authentication level:i:2"));
+    }
+
+    /// Every control character goes, not only `\r` and `\n`.
+    #[test]
+    fn other_control_characters_are_dropped_too() {
+        assert_eq!(rdp_value("a\u{0b}b\u{0c}c\td"), "abcd");
+        assert_eq!(rdp_value("plain value"), "plain value");
+        // A colon is left alone: it is how a port is expressed.
+        assert_eq!(rdp_value("host:3390"), "host:3390");
+    }
+
+    /// The claim the format's directory handling rests on: one connection is still
+    /// a directory with one file in it, because the chooser is picked before the
+    /// selection is known.
+    #[test]
+    fn a_single_connection_still_exports_as_a_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let connections = vec![make_rdp_connection("only-one", "a.example.com", 3389)];
+        let out = dir.path().join("out");
+        let options = ExportOptions::new(ExportFormat::RdpFile, out.clone());
+
+        let result = RdpFileExporter::new()
+            .export(&connections, &[], &options)
+            .unwrap();
+
+        assert_eq!(result.exported_count, 1);
+        assert!(
+            out.is_dir(),
+            "a single connection must still yield a directory"
+        );
+        assert!(out.join("only-one.rdp").is_file());
     }
 
     #[test]

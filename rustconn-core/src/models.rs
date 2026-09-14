@@ -30,13 +30,14 @@ pub use history::{ConnectionHistoryEntry, ConnectionStatistics, HistorySettings}
 pub use protocol::{
     AwsSsmConfig, AzureBastionConfig, AzureSshConfig, BackspaceSends, BoundaryConfig,
     CloudflareAccessConfig, DeleteSends, ElevatedCredentials, GcpIapConfig, GenericZeroTrustConfig,
-    HoopDevConfig, KubernetesConfig, MoshConfig, MoshPredictMode, OciBastionConfig, PortForward,
-    PortForwardDirection, ProtocolConfig, ProtocolType, RdpAudioMode, RdpClientMode, RdpConfig,
-    RdpDisplayMode, RdpGateway, RdpPerformanceMode, RdpSecurityLayer, Resolution, ScaleOverride,
-    SerialBaudRate, SerialConfig, SerialDataBits, SerialFlowControl, SerialParity, SerialStopBits,
-    SharedFolder, SpiceConfig, SpiceImageCompression, SshAuthMethod, SshConfig, SshKeySource,
-    TailscaleSshConfig, TeleportConfig, TelnetConfig, VncClientMode, VncConfig, VncPerformanceMode,
-    WebBrowserMode, WebConfig, ZeroTrustConfig, ZeroTrustProvider, ZeroTrustProviderConfig,
+    HoopDevConfig, KubernetesConfig, MAX_ELEVATED_DELAY_MS, MoshConfig, MoshPredictMode,
+    OciBastionConfig, PortForward, PortForwardDirection, ProtocolConfig, ProtocolType,
+    RdpAudioMode, RdpClientMode, RdpConfig, RdpDisplayMode, RdpGateway, RdpPerformanceMode,
+    RdpSecurityLayer, Resolution, ScaleOverride, SerialBaudRate, SerialConfig, SerialDataBits,
+    SerialFlowControl, SerialParity, SerialStopBits, SharedFolder, SpiceConfig,
+    SpiceImageCompression, SshAuthMethod, SshConfig, SshKeySource, TailscaleSshConfig,
+    TeleportConfig, TelnetConfig, VncClientMode, VncConfig, VncPerformanceMode, WebBrowserMode,
+    WebConfig, ZeroTrustConfig, ZeroTrustProvider, ZeroTrustProviderConfig,
     build_remote_app_freerdp_args,
 };
 pub use smart_folder::SmartFolder;
