@@ -5,6 +5,12 @@ All notable changes to RustConn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **SDL-FreeRDP did not show the certificate dialog after the stdout/stdin fix (issue #324 follow-up)** — the 0.21.12 fix worked for console-based clients (`xfreerdp3`, `wlfreerdp3`) but not for SDL-based ones (`sdl-freerdp3`, `sdl-freerdp`). SDL-FreeRDP uses its own SDL GUI for certificate prompts instead of printing to stdout, so the watchdog's banner detection could never fire. The launcher now passes `+force-console-callbacks` when launching an SDL variant, which makes it behave like `xfreerdp3`: print the certificate report to stdout, read the answer from stdin (where `/dev/null` makes it decline), and exit with a classifiable error. Thanks to LichiMan for the follow-up report.
+
 ## [0.21.12] - 2026-09-12
 
 ### Fixed
