@@ -71,6 +71,9 @@ pub mod rdpdr;
 
 pub mod quick_actions;
 
+#[cfg(feature = "rdp-embedded")]
+pub mod tofu;
+
 pub use backend::{BackendDetectionResult, RdpBackend, RdpBackendSelector};
 #[cfg(feature = "rdp-embedded")]
 pub use client::{RdpClient, RdpClientState, RdpCommandSender, RdpEventReceiver};
@@ -98,6 +101,8 @@ pub use quick_actions::{
     QUICK_ACTIONS, QuickAction, build_enter_sequence, build_hotkey_sequence, build_open_run_dialog,
     run_command_for,
 };
+#[cfg(feature = "rdp-embedded")]
+pub use tofu::{TofuError, TofuVerdict, fingerprint_certificate, verify_or_store};
 
 /// Check if embedded RDP support is available
 ///

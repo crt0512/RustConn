@@ -1,6 +1,6 @@
 # RustConn User Guide
 
-**Version 0.21.13** | GTK4/libadwaita Connection Manager for Linux
+**Version 0.21.14** | GTK4/libadwaita Connection Manager for Linux
 
 RustConn is a modern connection manager designed for Linux with Wayland-first approach. It supports SSH, RDP, VNC, SPICE, MOSH, SFTP, Telnet, Serial, Kubernetes, Web protocols and Zero Trust integrations through a native GTK4/libadwaita interface.
 
@@ -1090,6 +1090,35 @@ The setting is shown for both client modes, not only External, because an embedd
 Before 0.20.9 there was no such setting. A separate window was sized from a fixed resolution that the editor collected in a hidden row and defaulted to 1920×1080, so on a 4K display the client opened at roughly a quarter of the screen. **A connection that genuinely needs a fixed resolution has to select *Custom resolution* once** — a stored 1920×1080 cannot be told apart from that old default, so it is not assumed.
 
 From the CLI: `--rdp-display-mode fit|fullscreen|custom|multimon` and `--rdp-resolution WIDTHxHEIGHT`.
+
+#### Server Certificate Changes
+
+RDP servers almost always present a self-signed certificate. Like SSH's
+`known_hosts`, RustConn trusts it on first use and remembers its fingerprint; on
+later connections a certificate that no longer matches the stored one is treated
+as something to confirm, not to accept silently. This happens legitimately when a
+server is rebuilt or its RDP certificate is regenerated — and it is also what a
+man-in-the-middle would look like, which is why it asks.
+
+When the certificate has changed, RustConn shows a **Certificate changed** dialog
+naming the new fingerprint and the previously trusted one. Accepting it forgets the
+old certificate and reconnects, so the new one becomes the trusted certificate for
+future connections; cancelling leaves the session unstarted and the stored
+certificate untouched. The dialog appears for both RDP clients: the external
+FreeRDP client — whether a connection opens directly in an external FreeRDP window
+or an embedded session hands over to FreeRDP (a legacy security layer, RemoteApp,
+or a failed IronRDP attempt), with both the console (`xfreerdp3`) and SDL
+(`sdl-freerdp3`) variants — and the built-in embedded IronRDP client. Each client
+keeps its own fingerprint store (FreeRDP its `known_hosts2`, IronRDP a
+`known_hosts`-style file in RustConn's config directory), and accepting a changed
+certificate clears both, so whichever client the reconnect uses records the new
+one.
+
+To skip the check entirely for a connection — accepting any certificate without
+asking — enable **Ignore Certificate** in the connection dialog. That is
+appropriate for a lab or a host you re-image often, but it removes the only signal
+that the server you reached is the one you reached last time, so prefer accepting
+the change through the dialog on hosts that matter.
 
 #### HiDPI Support
 

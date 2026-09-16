@@ -118,7 +118,27 @@ impl RdpClient {
                 connected.store(false, Ordering::SeqCst);
 
                 if let Err(e) = result {
-                    let _ = event_tx.send(RdpClientEvent::Error(e.to_string()));
+                    // A TOFU certificate mismatch is delivered structured so the
+                    // GUI can show both fingerprints and offer to accept, rather
+                    // than parsing it out of a formatted error string.
+                    match e {
+                        RdpClientError::CertificateChanged {
+                            host,
+                            port,
+                            new_fingerprint,
+                            old_fingerprint,
+                        } => {
+                            let _ = event_tx.send(RdpClientEvent::CertificateChanged {
+                                host,
+                                port,
+                                new_fingerprint,
+                                old_fingerprint,
+                            });
+                        }
+                        other => {
+                            let _ = event_tx.send(RdpClientEvent::Error(other.to_string()));
+                        }
+                    }
                 }
                 let _ = event_tx.send(RdpClientEvent::Disconnected);
             });

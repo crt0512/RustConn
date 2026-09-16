@@ -110,6 +110,23 @@ impl Default for SessionControls {
     }
 }
 
+/// The three mutually-exclusive outcomes of a tabless external RDP launch.
+///
+/// Grouped into one struct because they always travel together and a bare list
+/// of three closures on [`RdpLauncher::start`] reads as noise at the call site.
+/// Exactly one fires per launch: an early failure, a changed certificate the
+/// user must decide on, or a session that survived the early window and is handed
+/// to the shared registry.
+pub struct RdpLaunchCallbacks {
+    /// Fired with a user-facing message when the client fails shortly after launch.
+    pub on_early_failure: Box<dyn FnOnce(String) + 'static>,
+    /// Fired with `(host, port, message)` when FreeRDP reports a changed
+    /// certificate; the caller shows a confirmation dialog. (#324)
+    pub on_cert_changed: Box<dyn FnOnce(String, u16, String) + 'static>,
+    /// Fired once the session survives the early window; the caller hands the
+    /// spawned child to the external-session registry here.
+    pub on_connected: Box<dyn FnOnce() + 'static>,
+}
 /// Embedded session tab for RDP/VNC connections
 #[expect(dead_code, reason = "Fields kept for GTK widget lifecycle")]
 pub struct EmbeddedSessionTab {
@@ -307,21 +324,30 @@ impl RdpLauncher {
     /// passed the user's custom arguments through unfiltered, so a stray `/p:`
     /// aborted the launch instead of being dropped.
     ///
-    /// `on_early_failure` is invoked on the main loop with a user-friendly
-    /// message when the client exits with a failure shortly after launch
-    /// (certificate or authentication errors).
+    /// One of [`RdpLaunchCallbacks`] fires on the main loop per launch: an early
+    /// failure with a user-facing message, a changed certificate the user must
+    /// accept or reject, or a surviving session handed to the registry. The
+    /// spawned child stays in `tab`'s handle until one of the first two resolves
+    /// or `on_connected` fires — so the changed-certificate decision (#324) is
+    /// made while this watcher, not the registry's exit-only poll, owns it.
     ///
     /// # Errors
     /// Returns an error if the FreeRDP binary is missing or the process fails to
     /// spawn. Early post-spawn failures are reported asynchronously through
-    /// `on_early_failure` instead, so the GTK main loop is never blocked.
+    /// `callbacks` instead, so the GTK main loop is never blocked.
     pub fn start(
         tab: &EmbeddedSessionTab,
         config: &rustconn_core::protocol::FreeRdpConfig,
-        on_early_failure: impl FnOnce(String) + 'static,
+        callbacks: RdpLaunchCallbacks,
     ) -> Result<(), EmbeddingError> {
         use secrecy::ExposeSecret;
-        use std::process::Command;
+        use std::process::{Command, Stdio};
+
+        let RdpLaunchCallbacks {
+            on_early_failure,
+            on_cert_changed,
+            on_connected,
+        } = callbacks;
 
         let binary = Self::find_freerdp_binary().ok_or_else(|| {
             EmbeddingError::ProcessStartFailed(
@@ -344,7 +370,17 @@ impl RdpLauncher {
 
         // Connection arguments are written to a guarded file so credentials
         // never appear in the FreeRDP process argument vector.
-        let plain_args = rustconn_core::protocol::build_freerdp_args(config);
+        let mut plain_args = rustconn_core::protocol::build_freerdp_args(config);
+
+        // SDL-FreeRDP draws its certificate prompt in its own SDL window and
+        // never prints the "Certificate … has changed!!!" banner to stdout, so
+        // the watcher below would have nothing to read. Force the console
+        // callback so it behaves like xfreerdp3 (prints the report to stdout,
+        // reads the answer from stdin). Shares the detection helper with the
+        // embedded-widget launcher rather than repeating it. (#324)
+        if crate::embedded_rdp::launcher::is_sdl_freerdp_binary(&binary) {
+            plain_args.push("+force-console-callbacks".to_string());
+        }
 
         let password = config
             .password
@@ -364,15 +400,59 @@ impl RdpLauncher {
         let mut cmd = Command::new(&binary);
         cmd.arg(prepared_args.argument());
 
-        // Capture stderr for error detection
-        cmd.stderr(std::process::Stdio::piped());
+        // Never block on a prompt nobody can answer. On a changed certificate
+        // FreeRDP asks "Do you trust the above certificate? (Y/T/N)" and reads
+        // stdin; inherited from a terminal it blocks forever, which is exactly
+        // how #324 presented ("no errors, no warnings, no connection"). With
+        // stdin at `/dev/null` it reads EOF, declines, and exits with a
+        // certificate error the watcher can classify — after the banner has
+        // been captured from stdout below and turned into a GUI dialog. (#324)
+        cmd.stdin(Stdio::null());
+
+        // Capture stderr for error detection.
+        cmd.stderr(Stdio::piped());
+
+        // Capture stdout too: FreeRDP prints the whole certificate report — the
+        // changed-certificate banner and both thumbprints — to stdout with plain
+        // `printf`, while only the `ERRCONNECT_*` codes go to stderr. Reading
+        // stderr alone is why this path never noticed a changed certificate. (#324)
+        cmd.stdout(Stdio::piped());
 
         match cmd.spawn() {
-            Ok(child) => {
+            Ok(mut child) => {
                 prepared_args.retain_for_post_spawn_parse();
+
+                // Drain stdout on a background thread into a shared buffer so the
+                // watcher can spot the changed-certificate banner while the client
+                // is still running (it prints the banner, then waits on stdin).
+                let stdout_lines: crate::embedded_rdp::StdoutLines =
+                    std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+                if let Some(stdout) = child.stdout.take() {
+                    let lines = std::sync::Arc::clone(&stdout_lines);
+                    std::thread::spawn(move || {
+                        use std::io::{BufRead, BufReader};
+                        for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+                            let trimmed = line.trim();
+                            if !trimmed.is_empty()
+                                && let Ok(mut buf) = lines.lock()
+                            {
+                                buf.push(trimmed.to_owned());
+                            }
+                        }
+                    });
+                }
+
                 tab.set_process(child);
                 tab.set_status(&i18n_f("Connecting to {}…", &[host]));
-                Self::watch_early_failure(tab, host, on_early_failure);
+                Self::watch_early_failure(
+                    tab,
+                    host,
+                    config.port,
+                    stdout_lines,
+                    on_early_failure,
+                    on_cert_changed,
+                    on_connected,
+                );
                 Ok(())
             }
             Err(e) => Err(EmbeddingError::ProcessStartFailed(e.to_string())),
@@ -387,17 +467,32 @@ impl RdpLauncher {
     /// than the 2s session monitor in `rdp_vnc.rs`, so an early failure is
     /// always reported here first: the child is taken out of the shared handle,
     /// which makes the session monitor stop without double-closing the tab.
+    ///
+    /// Also watches `stdout_lines` for the changed-certificate banner. FreeRDP
+    /// prints that banner and then waits on stdin, so it never surfaces as an
+    /// exit; the watcher must notice the banner, stop the client, and hand the
+    /// trust decision to a GUI dialog through `on_cert_changed`. This is the
+    /// tabless-path counterpart of the embedded widget's watchdog. (#324)
     fn watch_early_failure(
         tab: &EmbeddedSessionTab,
         host: &str,
-        on_early_failure: impl FnOnce(String) + 'static,
+        port: u16,
+        stdout_lines: crate::embedded_rdp::StdoutLines,
+        on_early_failure: Box<dyn FnOnce(String) + 'static>,
+        on_cert_changed: Box<dyn FnOnce(String, u16, String) + 'static>,
+        on_connected: Box<dyn FnOnce() + 'static>,
     ) {
+        // A changed certificate makes FreeRDP refuse the TLS handshake and print
+        // its banner well inside this window, then wait on stdin; the stdout
+        // check below catches it before the process is handed to the registry.
         const EARLY_FAILURE_TICKS: u32 = 6;
 
         let process = tab.process_handle();
         let controls = tab.controls.clone();
         let host = host.to_string();
         let mut on_failure = Some(on_early_failure);
+        let mut on_cert = Some(on_cert_changed);
+        let mut on_connected = Some(on_connected);
         let mut ticks = 0u32;
 
         glib::timeout_add_local(std::time::Duration::from_millis(250), move || {
@@ -407,6 +502,36 @@ impl RdpLauncher {
                 // Process was taken (user disconnected) — nothing to watch.
                 return glib::ControlFlow::Break;
             };
+
+            // A changed certificate stalls the client on a stdin prompt rather
+            // than exiting, so check the captured stdout before try_wait.
+            let certificate_changed = {
+                let lines = stdout_lines.lock().unwrap_or_else(|e| e.into_inner());
+                crate::embedded_rdp::connection::reports_changed_certificate(&lines.join(" "))
+            };
+            if certificate_changed {
+                tracing::info!(
+                    protocol = "rdp",
+                    %host,
+                    port,
+                    "[FreeRDP] Server certificate changed — stopping the client and asking the user"
+                );
+                let message =
+                    crate::embedded_rdp::connection::certificate_changed_message(&stdout_lines);
+                // Take the child so the session monitor sees an empty handle and
+                // stops without reporting an error over the dialog.
+                if let Some(mut child) = guard.take() {
+                    let _ = child.kill();
+                    std::thread::spawn(move || {
+                        let _ = child.wait();
+                    });
+                }
+                drop(guard);
+                if let Some(callback) = on_cert.take() {
+                    callback(host.clone(), port, message);
+                }
+                return glib::ControlFlow::Break;
+            }
 
             match child.try_wait() {
                 Ok(Some(status)) if !status.success() => {
@@ -436,9 +561,19 @@ impl RdpLauncher {
                     glib::ControlFlow::Break
                 }
                 Ok(None) if ticks >= EARLY_FAILURE_TICKS => {
-                    // Survived the detection window — treat as connected.
+                    // Survived the early window with no changed-certificate
+                    // banner. A changed certificate makes FreeRDP refuse the TLS
+                    // handshake within this window (it prints the banner and
+                    // waits, which the check above catches), so a live process
+                    // here is a real session. Hand ownership to the shared
+                    // registry now — deferred until this point precisely so the
+                    // watcher, not the registry, owns the child while the
+                    // certificate decision is still open.
                     drop(guard);
                     controls.set_status(&i18n_f("Connected to {}", &[&host]));
+                    if let Some(callback) = on_connected.take() {
+                        callback();
+                    }
                     glib::ControlFlow::Break
                 }
                 Ok(None) => glib::ControlFlow::Continue,

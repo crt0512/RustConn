@@ -39,7 +39,10 @@ pub mod ui;
 mod autotype;
 pub(crate) mod cert;
 mod clipboard;
-mod connection;
+// `pub(crate)` so the tabless external launcher (`crate::embedded`) can reuse the
+// changed-certificate detection and dialog-body helpers instead of duplicating
+// the banner patterns and thumbprint parsing. (#324)
+pub(crate) mod connection;
 mod drawing;
 mod ephemeral_args;
 pub mod file_dnd;

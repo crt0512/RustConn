@@ -73,6 +73,28 @@ pub enum EmbeddedClientError {
     #[error("TLS error: {0}")]
     TlsError(String),
 
+    /// The server presented a TLS certificate whose fingerprint differs from
+    /// the one recorded on a previous connection (TOFU mismatch).
+    ///
+    /// Raised by the embedded IronRDP client after the TLS upgrade when the
+    /// server's certificate fingerprint no longer matches the stored value.
+    /// Carried structured (not a formatted string) so the GUI can present the
+    /// old and new fingerprints and let the user accept the change.
+    #[error(
+        "Server certificate for {host}:{port} has changed \
+         (stored {old_fingerprint}, presented {new_fingerprint})"
+    )]
+    CertificateChanged {
+        /// Target hostname the connection was made to.
+        host: String,
+        /// Target port.
+        port: u16,
+        /// SHA-256 fingerprint the server presented this time.
+        new_fingerprint: String,
+        /// SHA-256 fingerprint recorded on a previous connection.
+        old_fingerprint: String,
+    },
+
     // === SPICE-specific ===
     /// USB redirection error
     #[error("USB redirection error: {0}")]
