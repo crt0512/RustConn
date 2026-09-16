@@ -896,13 +896,6 @@ fn start_external_rdp_session(
     history_entry_id: Option<Uuid>,
     ssh_tunnel: Option<rustconn_core::ssh_tunnel::SshTunnel>,
 ) {
-    // Issue #209: an external xfreerdp session gets no notebook tab. The tab is
-    // still constructed because `RdpLauncher::start` spawns through it, but it is
-    // never added to the notebook; the spawned child is handed to the shared
-    // registry instead of a per-tab timer.
-    let (tab, _is_embedded) = EmbeddedSessionTab::new(connection_id, conn_name, "rdp", true);
-    let session_id = tab.id();
-
     // Everything the external client is told now travels as a field of the
     // shared config. The security layer, TLS level and RemoteApp arguments used
     // to be pushed into `extra_args` here; the shared builder emits them from
@@ -945,14 +938,58 @@ fn start_external_rdp_session(
         fido2_enabled: rdp_config.fido2_enabled,
     };
 
-    // Early-failure callback. With no tab, this rarely fires: the spawned child
-    // is handed to the registry synchronously after `RdpLauncher::start`
-    // returns, so the tab-based watcher usually finds an empty handle on its
-    // first tick. Kept for the spawn/first-tick race — it reports the error and
-    // records the failure (the registry has not been given the child yet).
+    // A tunnelled session's SshTunnel must outlive every launch attempt: a
+    // changed-certificate retry (#324) creates a fresh session and reuses the
+    // same local endpoint, so the tunnel is shared across attempts rather than
+    // consumed by the first one.
+    let shared_tunnel = Rc::new(RefCell::new(ssh_tunnel));
+
+    spawn_external_rdp_attempt(
+        state.clone(),
+        notebook.clone(),
+        sidebar.clone(),
+        connection_id,
+        conn_name.to_string(),
+        launch_config,
+        history_entry_id,
+        shared_tunnel,
+    );
+}
+
+/// Spawns one external FreeRDP attempt for a tabless session and wires its three
+/// outcomes.
+///
+/// Issue #209: the tab is constructed only so `RdpLauncher::start` has a process
+/// handle to spawn through; it is never added to the notebook. On a surviving
+/// connection the child moves to the shared registry, whose poll timer reaps it
+/// and records the end when the viewer window closes.
+///
+/// Issue #324: FreeRDP prints its changed-certificate banner to stdout and then
+/// waits on stdin, so it never surfaces as an exit. The launcher's watcher spots
+/// the banner and calls back here; this shows a confirmation dialog, and on
+/// acceptance forgets the stored certificate and retries — the same trust flow
+/// the embedded widget already offers, now available to the external client.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "parameters mirror the launch config and shared state threaded through the certificate-retry loop"
+)]
+fn spawn_external_rdp_attempt(
+    state: SharedAppState,
+    notebook: SharedNotebook,
+    sidebar: SharedSidebar,
+    connection_id: Uuid,
+    conn_name: String,
+    launch_config: rustconn_core::protocol::FreeRdpConfig,
+    history_entry_id: Option<Uuid>,
+    shared_tunnel: Rc<RefCell<Option<rustconn_core::ssh_tunnel::SshTunnel>>>,
+) {
+    let (tab, _is_embedded) = EmbeddedSessionTab::new(connection_id, &conn_name, "rdp", true);
+    let session_id = tab.id();
+
+    // Early-failure callback: report the error and record the failed attempt.
     let on_early_failure = {
         let state = state.clone();
-        let conn_name = conn_name.to_string();
+        let conn_name = conn_name.clone();
         move |error: String| {
             tracing::error!(%error, connection = %conn_name, "RDP session failed shortly after start");
             crate::toast::show_error_toast_on_active_window(&error);
@@ -964,10 +1001,88 @@ fn start_external_rdp_session(
         }
     };
 
+    // Changed-certificate callback: confirm with the user, then forget the old
+    // certificate and retry so FreeRDP's TOFU store accepts the new one. (#324)
+    let on_cert_changed = {
+        let state = state.clone();
+        let notebook = notebook.clone();
+        let sidebar = sidebar.clone();
+        let conn_name = conn_name.clone();
+        let launch_config = launch_config.clone();
+        let shared_tunnel = shared_tunnel.clone();
+        move |host: String, port: u16, message: String| {
+            let Some(window) = notebook
+                .widget()
+                .ancestor(gtk4::Window::static_type())
+                .and_then(|w| w.downcast::<gtk4::Window>().ok())
+            else {
+                tracing::warn!(%host, port, "No window to host the certificate dialog");
+                return;
+            };
+            crate::alert::show_confirm(
+                &window,
+                &crate::i18n::i18n("Certificate changed"),
+                &message,
+                &crate::i18n::i18n("Accept new certificate"),
+                false,
+                move |accepted| {
+                    if !accepted {
+                        return;
+                    }
+                    crate::embedded_rdp::cert::remove_known_certificate(&host, port);
+                    spawn_external_rdp_attempt(
+                        state.clone(),
+                        notebook.clone(),
+                        sidebar.clone(),
+                        connection_id,
+                        conn_name.clone(),
+                        launch_config.clone(),
+                        history_entry_id,
+                        shared_tunnel.clone(),
+                    );
+                },
+            );
+        }
+    };
+
+    // Connected callback: hand the surviving child to the shared registry. The
+    // handoff is deferred to this point (issue #209 + #324) so the launcher's
+    // watcher owns the process while the certificate decision is still open;
+    // the registry's exit-only poll takes over liveness from here.
+    let on_connected = {
+        let notebook = notebook.clone();
+        let process = tab.process_handle();
+        let shared_tunnel = shared_tunnel.clone();
+        move || {
+            let child = process.borrow_mut().take();
+            if let Some(registry) = super::external_session_registry() {
+                // A tunnelled tabless RDP session keeps its SshTunnel in the
+                // notebook map keyed by this session id; with no tab-close event
+                // it is reclaimed at app exit.
+                if let Some(tunnel) = shared_tunnel.borrow_mut().take() {
+                    notebook.store_ssh_tunnel(session_id, tunnel);
+                }
+                registry.register(session_id, connection_id, child, history_entry_id);
+            } else {
+                tracing::error!(
+                    %connection_id,
+                    "External session registry unavailable; terminating untracked RDP viewer"
+                );
+                if let Some(child) = child {
+                    crate::embedded_rdp::launcher::cleanup_child_without_blocking(child);
+                }
+            }
+        }
+    };
+
     // Start RDP connection using xfreerdp. Spawn errors are returned
-    // synchronously (R1.6: no tab + error toast); on success the spawned child
-    // is moved into the shared registry.
-    if let Err(e) = RdpLauncher::start(&tab, &launch_config, on_early_failure) {
+    // synchronously (R1.6: no tab + error toast).
+    let callbacks = crate::embedded::RdpLaunchCallbacks {
+        on_early_failure: Box::new(on_early_failure),
+        on_cert_changed: Box::new(on_cert_changed),
+        on_connected: Box::new(on_connected),
+    };
+    if let Err(e) = RdpLauncher::start(&tab, &launch_config, callbacks) {
         tracing::error!(%e, connection = %conn_name, "Failed to start RDP session");
         sidebar.update_connection_status(&connection_id.to_string(), "failed");
         crate::toast::show_error_toast_on_active_window(&e.to_string());
@@ -977,32 +1092,6 @@ fn start_external_rdp_session(
             state_mut.record_connection_failed(entry_id, &e.to_string());
         }
         return;
-    }
-
-    // Take ownership of the spawned child from the tab handle and hand it
-    // to the shared registry (issue #209): no notebook tab, the shared
-    // poll timer reaps it and records the end when the window closes. The
-    // registry's on_registered callback drives the sidebar session count
-    // (R2.1); record_connection_start was already done by the caller, so
-    // its entry id is passed straight through.
-    let child = tab.process_handle().borrow_mut().take();
-    if let Some(registry) = super::external_session_registry() {
-        // ponytail: a tunnelled tabless RDP session keeps its
-        // SshTunnel in the notebook map keyed by this session id; with
-        // no tab-close event it is reclaimed at app exit. Move it into
-        // the registry entry if this grows.
-        if let Some(tunnel) = ssh_tunnel {
-            notebook.store_ssh_tunnel(session_id, tunnel);
-        }
-        registry.register(session_id, connection_id, child, history_entry_id);
-    } else {
-        tracing::error!(
-            %connection_id,
-            "External session registry unavailable; terminating untracked RDP viewer"
-        );
-        if let Some(child) = child {
-            crate::embedded_rdp::launcher::cleanup_child_without_blocking(child);
-        }
     }
 
     // Update last_connected

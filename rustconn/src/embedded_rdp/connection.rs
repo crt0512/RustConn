@@ -153,7 +153,11 @@ const CERTIFICATE_CHANGED_BANNERS: [&str; 2] = [
 /// process — so it may only trigger on a banner that unambiguously means the
 /// stored certificate was rejected, never on a warning the client could still
 /// recover from.
-fn reports_changed_certificate(joined: &str) -> bool {
+///
+/// `pub(crate)` because the tabless external path (`embedded::RdpLauncher`) runs
+/// its own watcher and must recognise the same banner rather than growing a
+/// second copy of the pattern list. (#324)
+pub(crate) fn reports_changed_certificate(joined: &str) -> bool {
     CERTIFICATE_CHANGED_BANNERS
         .iter()
         .any(|banner| joined.contains(banner))
@@ -182,7 +186,10 @@ fn certificate_thumbprints(lines: &[String]) -> Option<(String, String)> {
 /// Quotes both thumbprints when FreeRDP reported them: accepting a changed
 /// certificate is a trust decision, and it is not one the user can make without
 /// seeing what they are being asked to trust.
-fn certificate_changed_message(stdout_lines: &StdoutLines) -> String {
+///
+/// `pub(crate)` so the tabless external path can build the identical dialog body
+/// from its own captured stdout. (#324)
+pub(crate) fn certificate_changed_message(stdout_lines: &StdoutLines) -> String {
     let thumbprints = {
         let lines = stdout_lines.lock().unwrap_or_else(|e| e.into_inner());
         certificate_thumbprints(&lines)

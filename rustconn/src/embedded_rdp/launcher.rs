@@ -42,7 +42,7 @@ const CANCELLED_CHILD_POLL_INTERVAL: Duration = Duration::from_millis(10);
 /// stdout. The certificate-change watchdog relies on capturing the
 /// "Certificate … has changed!!!" banner from stdout, so an SDL client must be
 /// forced into console mode via `+force-console-callbacks`.
-fn is_sdl_freerdp_binary(binary: &str) -> bool {
+pub(crate) fn is_sdl_freerdp_binary(binary: &str) -> bool {
     // The binary can be a full path on macOS (/Applications/SDL-freerdp.app/…)
     // or a simple name on Linux. Extract the filename and compare case-insensitively.
     let name = std::path::Path::new(binary)

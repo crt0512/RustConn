@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Tabless external RDP still showed no certificate dialog (issue #324 follow-up)** — the 0.21.12/0.21.13 fixes landed on the embedded widget's FreeRDP path, but a connection whose window mode opens the external client directly (no notebook tab) went through a second, older launcher in `embedded::RdpLauncher` that never got them. That path captured stderr only — where FreeRDP does not print the certificate report — left the client's stdin inherited from the terminal, and had no certificate-change detection at all, so a changed certificate produced exactly the reporter's "no errors, no warnings, no connection". It now matches the embedded path: stdout is captured, stdin is `/dev/null` so the client cannot block on an unanswerable `(Y/T/N)` prompt, an SDL variant is forced into console callbacks, and the launch watcher recognises the changed-certificate banner using the same shared helper as the widget watchdog. On detection it stops the client and raises the confirmation dialog, quoting both fingerprints; accepting it forgets the stored certificate and retries. The spawned process is now handed to the external-session registry only after the connection survives the early window, so the watcher — not the registry's exit-only poll — owns it while the trust decision is open. Thanks to playaz44 for the persistent testing that isolated this second path.
+
 ## [0.21.13] - 2026-09-14
 
 ### Added

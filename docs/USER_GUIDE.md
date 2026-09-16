@@ -1091,6 +1091,33 @@ Before 0.20.9 there was no such setting. A separate window was sized from a fixe
 
 From the CLI: `--rdp-display-mode fit|fullscreen|custom|multimon` and `--rdp-resolution WIDTHxHEIGHT`.
 
+#### Server Certificate Changes
+
+RDP servers almost always present a self-signed certificate. Like SSH's
+`known_hosts`, RustConn trusts it on first use and remembers its fingerprint; on
+later connections a certificate that no longer matches the stored one is treated
+as something to confirm, not to accept silently. This happens legitimately when a
+server is rebuilt or its RDP certificate is regenerated — and it is also what a
+man-in-the-middle would look like, which is why it asks.
+
+When the certificate has changed, RustConn shows a **Certificate changed** dialog
+naming the new fingerprint and the previously trusted one. Accepting it forgets the
+old certificate and reconnects, so the new one becomes the trusted certificate for
+future connections; cancelling leaves the session unstarted and the stored
+certificate untouched. The dialog appears for sessions served by the FreeRDP client
+— both when a connection opens directly in an external FreeRDP window and when an
+embedded session hands over to FreeRDP (a legacy security layer, RemoteApp, or a
+failed IronRDP attempt) — and with both the console (`xfreerdp3`) and SDL
+(`sdl-freerdp3`) variants. The built-in IronRDP client does not verify the server
+certificate at all, so a fully embedded session neither stores a fingerprint nor
+raises this dialog.
+
+To skip the check entirely for a connection — accepting any certificate without
+asking — enable **Ignore Certificate** in the connection dialog. That is
+appropriate for a lab or a host you re-image often, but it removes the only signal
+that the server you reached is the one you reached last time, so prefer accepting
+the change through the dialog on hosts that matter.
+
 #### HiDPI Support
 
 On HiDPI/4K displays the embedded RDP/VNC session's remote resolution is governed by the **Display Scale** setting in the connection dialog:
