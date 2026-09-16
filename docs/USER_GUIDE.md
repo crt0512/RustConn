@@ -1104,13 +1104,15 @@ When the certificate has changed, RustConn shows a **Certificate changed** dialo
 naming the new fingerprint and the previously trusted one. Accepting it forgets the
 old certificate and reconnects, so the new one becomes the trusted certificate for
 future connections; cancelling leaves the session unstarted and the stored
-certificate untouched. The dialog appears for sessions served by the FreeRDP client
-— both when a connection opens directly in an external FreeRDP window and when an
-embedded session hands over to FreeRDP (a legacy security layer, RemoteApp, or a
-failed IronRDP attempt) — and with both the console (`xfreerdp3`) and SDL
-(`sdl-freerdp3`) variants. The built-in IronRDP client does not verify the server
-certificate at all, so a fully embedded session neither stores a fingerprint nor
-raises this dialog.
+certificate untouched. The dialog appears for both RDP clients: the external
+FreeRDP client — whether a connection opens directly in an external FreeRDP window
+or an embedded session hands over to FreeRDP (a legacy security layer, RemoteApp,
+or a failed IronRDP attempt), with both the console (`xfreerdp3`) and SDL
+(`sdl-freerdp3`) variants — and the built-in embedded IronRDP client. Each client
+keeps its own fingerprint store (FreeRDP its `known_hosts2`, IronRDP a
+`known_hosts`-style file in RustConn's config directory), and accepting a changed
+certificate clears both, so whichever client the reconnect uses records the new
+one.
 
 To skip the check entirely for a connection — accepting any certificate without
 asking — enable **Ignore Certificate** in the connection dialog. That is

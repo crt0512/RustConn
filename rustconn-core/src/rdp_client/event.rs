@@ -587,6 +587,24 @@ pub enum RdpClientEvent {
     /// Error occurred
     Error(String),
 
+    /// The server's TLS certificate changed since a previous connection (TOFU).
+    ///
+    /// Delivered structured rather than folded into [`Self::Error`] so the GUI
+    /// can show both fingerprints and offer to accept the new certificate,
+    /// instead of parsing an error string. The session does not continue after
+    /// this event; the client thread ends and the GUI decides whether to
+    /// reconnect.
+    CertificateChanged {
+        /// Target hostname the connection was made to.
+        host: String,
+        /// Target port.
+        port: u16,
+        /// SHA-256 fingerprint the server presented this time.
+        new_fingerprint: String,
+        /// SHA-256 fingerprint recorded on a previous connection.
+        old_fingerprint: String,
+    },
+
     /// Server sent a warning/info message
     ServerMessage(String),
 

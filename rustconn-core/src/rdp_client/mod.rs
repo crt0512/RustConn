@@ -71,6 +71,9 @@ pub mod rdpdr;
 
 pub mod quick_actions;
 
+#[cfg(feature = "rdp-embedded")]
+pub mod tofu;
+
 pub use backend::{BackendDetectionResult, RdpBackend, RdpBackendSelector};
 #[cfg(feature = "rdp-embedded")]
 pub use client::{RdpClient, RdpClientState, RdpCommandSender, RdpEventReceiver};
@@ -86,6 +89,8 @@ pub use event::{
 pub use failure::{
     RdpFailureClass, classify_rdp_failure, is_authentication_failure, is_license_exchange_failure,
 };
+#[cfg(feature = "rdp-embedded")]
+pub use tofu::{TofuError, TofuVerdict, fingerprint_certificate, verify_or_store};
 pub use gateway::{
     GatewayAuthMethod, GatewayConfig, GatewayError, GatewayState, resolve_gateway_user,
 };

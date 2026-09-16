@@ -766,10 +766,33 @@ fn start_embedded_rdp_session(
             false,
             move |accepted| {
                 if accepted {
+                    // The same dialog serves both the external FreeRDP client and
+                    // the embedded IronRDP client, which keep separate TOFU
+                    // stores. Forget the host in both so whichever path the
+                    // reconnect takes accepts and re-records the new certificate.
+                    // Both calls are idempotent no-ops when the host is absent.
                     crate::embedded_rdp::cert::remove_known_certificate(&host, port);
+                    #[cfg(feature = "rdp-embedded")]
+                    match rustconn_core::rdp_client::tofu::forget(&host, port) {
+                        Ok(_) => {}
+                        Err(e) => tracing::warn!(
+                            %host,
+                            port,
+                            %e,
+                            "Could not forget the stored IronRDP certificate"
+                        ),
+                    }
                     if let Err(e) = widget.reconnect() {
                         tracing::error!(%e, "RDP reconnect after cert accept failed");
                     }
+                } else {
+                    // Declining leaves the certificate untrusted. The embedded
+                    // IronRDP path keeps its widget in Connecting while the dialog
+                    // is open (it must, so an accepted reconnect can reuse the
+                    // tab), so an explicit disconnect is needed here or the tab
+                    // would sit in Connecting forever. This is a no-op for a
+                    // session that already ended, e.g. the FreeRDP path.
+                    widget.disconnect();
                 }
             },
         );

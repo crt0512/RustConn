@@ -46,6 +46,101 @@ fn map_connector_error(context: &str, display: &str, kind_debug: &str) -> RdpCli
     }
 }
 
+/// Applies the trust-on-first-use certificate check to the presented certificate.
+///
+/// IronRDP performs no CA validation, so this is the only place the server
+/// certificate is checked. When `config.ignore_certificate` is set the check is
+/// skipped entirely (equivalent to xfreerdp `/cert:ignore`). Otherwise the
+/// certificate's SHA-256 fingerprint is compared against RustConn's own TOFU
+/// store: a first sighting is recorded and accepted, a matching fingerprint is
+/// accepted, and a changed fingerprint aborts the connection with
+/// [`RdpClientError::CertificateChanged`] so the GUI can ask the user.
+///
+/// A store I/O failure is logged and treated as acceptance rather than a hard
+/// stop: the previous behaviour accepted every certificate unconditionally, so
+/// failing open here is no weaker than that while the common path still gets the
+/// TOFU guarantee.
+fn verify_server_certificate(
+    config: &RdpClientConfig,
+    cert: &x509_cert::Certificate,
+) -> Result<(), RdpClientError> {
+    use x509_cert::der::Encode as _;
+
+    if config.ignore_certificate {
+        tracing::warn!(
+            protocol = "rdp",
+            host = %config.host,
+            port = config.port,
+            "Server certificate not checked (ignore_certificate is set)"
+        );
+        return Ok(());
+    }
+
+    let der = match cert.to_der() {
+        Ok(der) => der,
+        Err(e) => {
+            tracing::warn!(
+                protocol = "rdp",
+                host = %config.host,
+                port = config.port,
+                error = %e,
+                "Could not re-encode the server certificate for the TOFU check — accepting"
+            );
+            return Ok(());
+        }
+    };
+
+    let fingerprint = crate::rdp_client::tofu::fingerprint_certificate(&der);
+
+    match crate::rdp_client::tofu::verify_or_store(&config.host, config.port, &fingerprint) {
+        Ok(crate::rdp_client::tofu::TofuVerdict::FirstUse) => {
+            tracing::info!(
+                protocol = "rdp",
+                host = %config.host,
+                port = config.port,
+                %fingerprint,
+                "First connection to this host — server certificate fingerprint recorded"
+            );
+            Ok(())
+        }
+        Ok(crate::rdp_client::tofu::TofuVerdict::Match) => {
+            tracing::debug!(
+                protocol = "rdp",
+                host = %config.host,
+                port = config.port,
+                "Server certificate fingerprint matches the stored value"
+            );
+            Ok(())
+        }
+        Ok(crate::rdp_client::tofu::TofuVerdict::Changed { stored }) => {
+            tracing::warn!(
+                protocol = "rdp",
+                host = %config.host,
+                port = config.port,
+                new_fingerprint = %fingerprint,
+                old_fingerprint = %stored,
+                "Server certificate has changed since the last connection"
+            );
+            Err(RdpClientError::CertificateChanged {
+                host: config.host.clone(),
+                port: config.port,
+                new_fingerprint: fingerprint,
+                old_fingerprint: stored,
+            })
+        }
+        Err(e) => {
+            tracing::warn!(
+                protocol = "rdp",
+                host = %config.host,
+                port = config.port,
+                error = %e,
+                "TOFU certificate store unavailable — accepting the certificate"
+            );
+            Ok(())
+        }
+    }
+}
+
 /// Transport layer: either a direct TCP connection or a gateway tunnel.
 enum GatewayOrTcp {
     Tcp(TcpStream),
@@ -565,13 +660,13 @@ pub(super) async fn establish_connection(
             "TLS upgrade complete, proceeding to NLA/capabilities"
         );
 
-        tracing::warn!(
-            protocol = "rdp",
-            host = %config.host,
-            port = %config.port,
-            "TLS certificate not validated (no CA verification). \
-             This is standard for RDP self-signed certificates."
-        );
+        // Trust-on-first-use certificate check. IronRDP does not validate the
+        // certificate against a CA store (RDP servers are overwhelmingly
+        // self-signed), so RustConn applies the same model SSH uses for host
+        // keys: record the fingerprint the first time a host is seen and reject
+        // a later connection whose fingerprint has changed. `ignore_certificate`
+        // opts out entirely, matching xfreerdp `/cert:ignore`.
+        verify_server_certificate(config, &server_cert)?;
 
         // Extract server public key from certificate
         let server_public_key = ironrdp_tls::extract_tls_server_public_key(&server_cert)

@@ -1211,6 +1211,7 @@ dependencies = [
  "const-oid 0.9.6",
  "der_derive",
  "flagset",
+ "pem-rfc7468 0.7.0",
  "zeroize",
 ]
 
@@ -1221,7 +1222,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a878c850e9e421b20262e9b41f9c860e4785fa07541c266b62ff9d1ef998a80a"
 dependencies = [
  "const-oid 0.10.2",
- "pem-rfc7468",
+ "pem-rfc7468 1.0.0",
  "zeroize",
 ]
 
@@ -1406,7 +1407,7 @@ dependencies = [
  "group",
  "hkdf 0.13.0",
  "hybrid-array",
- "pem-rfc7468",
+ "pem-rfc7468 1.0.0",
  "pkcs8",
  "rand_core 0.10.1",
  "sec1",
@@ -4053,6 +4054,15 @@ dependencies = [
 
 [[package]]
 name = "pem-rfc7468"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412"
+dependencies = [
+ "base64ct",
+]
+
+[[package]]
+name = "pem-rfc7468"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6305423e0e7738146434843d1694d621cce767262b2a86910beab705e4493d9"
@@ -4902,6 +4912,7 @@ dependencies = [
  "unicode-segmentation",
  "uuid",
  "vnc-rs",
+ "x509-cert",
  "zeroize",
  "zip",
  "zune-jpeg",

@@ -116,6 +116,10 @@ ironrdp = { version = "0.17", features = ["connector", "session", "graphics", "p
 ironrdp-input = { version = "0.7", optional = true }
 ironrdp-tokio = { version = "0.10", features = ["reqwest"], optional = true }
 ironrdp-tls = { version = "0.2", features = ["native-tls"], optional = true }
+# `ironrdp_tls::upgrade` returns the server certificate as an `x509_cert::Certificate`;
+# we re-encode it to DER to compute the TOFU fingerprint. Same version already in the
+# tree via ironrdp-tls, kept as a direct dep so the type is nameable here.
+x509-cert = { version = "0.2", optional = true }
 # GFX pipeline (MS-RDPEGFX) with H.264/AVC decoding via OpenH264 dlopen
 ironrdp-egfx = { version = "0.3", features = ["openh264-libloading"], optional = true }
 # RD Gateway (MS-TSGU) — HTTPS tunneling for RDP through corporate gateways
@@ -154,6 +158,7 @@ rdp-embedded = [
     "dep:ironrdp-tokio",
     "dep:ironrdp-tls",
     "dep:native-tls",
+    "dep:x509-cert",
 ]
 # gfx-h264 enables EGFX pipeline with H.264/AVC decoding (requires rdp-embedded)
 gfx-h264 = ["dep:ironrdp-egfx", "rdp-embedded"]

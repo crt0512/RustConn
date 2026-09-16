@@ -203,6 +203,24 @@ pub(crate) fn certificate_changed_message(stdout_lines: &StdoutLines) -> String 
     }
 }
 
+/// Builds the dialog body for a TOFU certificate change reported by the embedded
+/// IronRDP client.
+///
+/// The IronRDP path delivers both SHA-256 fingerprints structured (unlike the
+/// FreeRDP path, which scrapes them from stdout), so both are always shown. The
+/// wording matches [`certificate_changed_message`] so the two clients present an
+/// identical "Certificate changed" dialog. (#324)
+#[cfg(feature = "rdp-embedded")]
+pub(crate) fn certificate_changed_dialog_body(
+    new_fingerprint: &str,
+    old_fingerprint: &str,
+) -> String {
+    i18n_f(
+        "Server certificate has changed since the last connection.\n\nNew fingerprint: {}\nPreviously trusted: {}",
+        &[&new_fingerprint, &old_fingerprint],
+    )
+}
+
 /// Joins everything the client has printed so far, across both streams.
 ///
 /// FreeRDP splits its diagnostics: `WLog` writes the `ERRCONNECT_*` codes to
@@ -1020,6 +1038,12 @@ impl super::EmbeddedRdpWidget {
             client_config.mptcp = true;
         }
 
+        // Carry the "Ignore Certificate" toggle through to the embedded client.
+        // When set, the TOFU check is skipped and any certificate is accepted
+        // silently (equivalent to xfreerdp /cert:ignore); when unset, the client
+        // records the fingerprint on first use and refuses a changed one.
+        client_config.ignore_certificate = config.ignore_certificate;
+
         // When GFX pipeline previously failed (e.g. decode errors, no first
         // frame), retry with Legacy graphics mode — this skips the EGFX DVC
         // registration entirely and forces RemoteFX/bitmap path. (Issue #218)
@@ -1369,6 +1393,9 @@ impl super::EmbeddedRdpWidget {
                 // client_ref.borrow_mut() which conflicts with the immutable
                 // borrow held by the event polling loop (#57)
                 let mut deferred_error: Option<String> = None;
+                // Deferred TOFU certificate-change notification, handled the same
+                // way and for the same borrow reason as `deferred_error`.
+                let mut deferred_cert_changed: Option<(String, u16, String, String)> = None;
 
                 // Borrowed view of the frame state the extracted handlers need.
                 // Built once per tick; every field is a reference to a variable
@@ -1584,6 +1611,23 @@ impl super::EmbeddedRdpWidget {
                                 // while client_ref.borrow() is held by this loop
                                 jiggler.stop();
                                 deferred_error = Some(msg);
+                                needs_redraw = true;
+                                should_break = true;
+                                break;
+                            }
+                            RdpClientEvent::CertificateChanged {
+                                host,
+                                port,
+                                new_fingerprint,
+                                old_fingerprint,
+                            } => {
+                                // A TOFU mismatch is not an ordinary error: the
+                                // GUI must ask the user whether to trust the new
+                                // certificate, not show a toast. Deferred for the
+                                // same borrow reason as `deferred_error`.
+                                jiggler.stop();
+                                deferred_cert_changed =
+                                    Some((host, port, new_fingerprint, old_fingerprint));
                                 needs_redraw = true;
                                 should_break = true;
                                 break;
@@ -1998,6 +2042,58 @@ impl super::EmbeddedRdpWidget {
                         generation,
                     };
                     Self::handle_ironrdp_error(error_msg, &ctx);
+                }
+
+                // Handle a deferred TOFU certificate change AFTER the
+                // client_ref.borrow() is dropped, so the client can be torn down
+                // and the consent dialog shown without a nested borrow.
+                if let Some((host, port, new_fingerprint, old_fingerprint)) =
+                    deferred_cert_changed.take()
+                {
+                    // Ignore a mismatch reported by a stale generation — the
+                    // widget has already moved on to another connection.
+                    if *connection_generation.borrow() == generation {
+                        // Tear down the dead IronRDP client, but do NOT emit an
+                        // Error state. The Error handler closes the tab when the
+                        // session never produced a frame (rdp_vnc.rs), which is
+                        // exactly this case — and the tab is where the reconnect
+                        // has to land after the user accepts the new certificate.
+                        // Closing it here left the accepted session rendering into
+                        // an orphaned DrawingArea with no visible window. Keep the
+                        // widget in Connecting until the trust decision resolves.
+                        *is_embedded.borrow_mut() = false;
+                        *is_ironrdp.borrow_mut() = false;
+                        *ironrdp_tx.borrow_mut() = None;
+                        toolbar.set_visible(false);
+                        if let Some(mut client) = client_ref.borrow_mut().take() {
+                            client.disconnect();
+                        }
+                        *state.borrow_mut() = RdpConnectionState::Connecting;
+
+                        let message = certificate_changed_dialog_body(
+                            &new_fingerprint,
+                            &old_fingerprint,
+                        );
+                        // Take-invoke-restore: the callback synchronously opens a
+                        // modal dialog and, on accept, calls back into
+                        // `reconnect()`, so the RefCell must not stay borrowed.
+                        let ccb = on_cert_changed.borrow_mut().take();
+                        if let Some(ref cb) = ccb {
+                            cb(&host, port, &message);
+                        } else {
+                            tracing::warn!(
+                                protocol = "rdp",
+                                "Server certificate changed but no cert-changed handler is installed"
+                            );
+                        }
+                        *on_cert_changed.borrow_mut() = ccb;
+                    } else {
+                        tracing::debug!(
+                            protocol = "rdp",
+                            generation,
+                            "Ignoring certificate change from stale generation"
+                        );
+                    }
                 }
 
                 if should_break {
