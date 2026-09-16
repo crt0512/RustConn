@@ -2070,10 +2070,8 @@ impl super::EmbeddedRdpWidget {
                         }
                         *state.borrow_mut() = RdpConnectionState::Connecting;
 
-                        let message = certificate_changed_dialog_body(
-                            &new_fingerprint,
-                            &old_fingerprint,
-                        );
+                        let message =
+                            certificate_changed_dialog_body(&new_fingerprint, &old_fingerprint);
                         // Take-invoke-restore: the callback synchronously opens a
                         // modal dialog and, on accept, calls back into
                         // `reconnect()`, so the RefCell must not stay borrowed.

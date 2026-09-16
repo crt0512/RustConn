@@ -89,8 +89,6 @@ pub use event::{
 pub use failure::{
     RdpFailureClass, classify_rdp_failure, is_authentication_failure, is_license_exchange_failure,
 };
-#[cfg(feature = "rdp-embedded")]
-pub use tofu::{TofuError, TofuVerdict, fingerprint_certificate, verify_or_store};
 pub use gateway::{
     GatewayAuthMethod, GatewayConfig, GatewayError, GatewayState, resolve_gateway_user,
 };
@@ -103,6 +101,8 @@ pub use quick_actions::{
     QUICK_ACTIONS, QuickAction, build_enter_sequence, build_hotkey_sequence, build_open_run_dialog,
     run_command_for,
 };
+#[cfg(feature = "rdp-embedded")]
+pub use tofu::{TofuError, TofuVerdict, fingerprint_certificate, verify_or_store};
 
 /// Check if embedded RDP support is available
 ///

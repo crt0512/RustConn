@@ -1,3 +1,24 @@
+rustconn (0.21.14-1) unstable; urgency=medium
+
+  * Version bump to 0.21.14
+  * Added: embedded RDP now verifies the server certificate on a
+    trust-on-first-use basis (issue #324). The embedded IronRDP client used to
+    accept any TLS certificate silently; it now records the SHA-256 fingerprint
+    on first connection and raises the same "Certificate changed" dialog as the
+    FreeRDP path when it changes. A separate known_hosts-style store in
+    RustConn's config directory, kept apart from FreeRDP's known_hosts2. The
+    "Ignore Certificate" toggle still skips the check.
+  * Fixed: the tabless external RDP path showed no certificate dialog (issue
+    #324 follow-up). A connection opening the external client directly went
+    through an older launcher that captured stderr only, inherited stdin, and
+    had no certificate-change detection. It now captures stdout, uses
+    /dev/null for stdin, forces console callbacks on SDL variants, and raises
+    the confirmation dialog on the changed-certificate banner.
+  * Dependencies: clap 4.6.6->4.6.7 and family, clap_complete 4.6.9->4.6.11,
+    cryptoki 0.12.0->0.12.1, ppmd-rust 1.4.1->1.5.0, zlib-rs 0.6.7->0.6.8.
+
+ -- Anton Isaiev <totoshko88@gmail.com>  Wed, 16 Sep 2026 12:00:00 +0200
+
 rustconn (0.21.13-1) unstable; urgency=medium
 
   * Version bump to 0.21.13

@@ -274,7 +274,11 @@ mod tests {
     #[test]
     fn first_use_records_then_matches() {
         let (_dir, path) = tmp_store();
-        assert!(read_fingerprint(&path, "host.example.com", 3389).unwrap().is_none());
+        assert!(
+            read_fingerprint(&path, "host.example.com", 3389)
+                .unwrap()
+                .is_none()
+        );
 
         write_fingerprint(&path, "host.example.com", 3389, "aabb").unwrap();
         assert_eq!(
@@ -303,8 +307,14 @@ mod tests {
         write_fingerprint(&path, "h", 3389, "a").unwrap();
         write_fingerprint(&path, "h", 3390, "b").unwrap();
 
-        assert_eq!(read_fingerprint(&path, "h", 3389).unwrap(), Some("a".to_owned()));
-        assert_eq!(read_fingerprint(&path, "h", 3390).unwrap(), Some("b".to_owned()));
+        assert_eq!(
+            read_fingerprint(&path, "h", 3389).unwrap(),
+            Some("a".to_owned())
+        );
+        assert_eq!(
+            read_fingerprint(&path, "h", 3390).unwrap(),
+            Some("b".to_owned())
+        );
     }
 
     #[test]
@@ -316,7 +326,11 @@ mod tests {
         assert!(forget_at(&path, "drop.example.com", 3389).unwrap());
         assert!(!forget_at(&path, "drop.example.com", 3389).unwrap());
 
-        assert!(read_fingerprint(&path, "drop.example.com", 3389).unwrap().is_none());
+        assert!(
+            read_fingerprint(&path, "drop.example.com", 3389)
+                .unwrap()
+                .is_none()
+        );
         assert_eq!(
             read_fingerprint(&path, "keep.example.com", 3389).unwrap(),
             Some("k".to_owned())

@@ -6,7 +6,7 @@
 #
 
 Name:           rustconn
-Version:        0.21.13
+Version:        0.21.14
 Release:        0
 # rpmlint caps Summary at 79 characters (summary-too-long, badness 200); the
 # protocol list belongs in %description, which has room for all of it. Kept in
@@ -387,6 +387,12 @@ done
 %{_datadir}/icons/hicolor/*/apps/io.github.totoshko88.RustConn.*
 
 %changelog
+* Wed Sep 16 2026 Anton Isaiev <totoshko88@gmail.com> - 0.21.14-0
+- Version bump to 0.21.14
+- Added: embedded RDP verifies the server certificate on a trust-on-first-use basis (issue #324); records the SHA-256 fingerprint on first connection and raises the same "Certificate changed" dialog as the FreeRDP path when it changes, using a separate known_hosts-style store kept apart from FreeRDP's known_hosts2; the "Ignore Certificate" toggle still skips it
+- Fixed: the tabless external RDP path showed no certificate dialog (issue #324 follow-up); it now captures stdout, uses /dev/null for stdin, forces console callbacks on SDL variants, and raises the dialog on the changed-certificate banner
+- Dependencies: clap 4.6.6->4.6.7 and family, clap_complete 4.6.9->4.6.11, cryptoki 0.12.0->0.12.1, ppmd-rust 1.4.1->1.5.0, zlib-rs 0.6.7->0.6.8
+
 * Mon Sep 14 2026 Anton Isaiev <totoshko88@gmail.com> - 0.21.13-0
 - Version bump to 0.21.13
 - Added: export RDP connections to Microsoft .rdp files (mstsc.exe, FreeRDP); one file per connection, no password written, control characters stripped from every value so a newline cannot append a key the client honours

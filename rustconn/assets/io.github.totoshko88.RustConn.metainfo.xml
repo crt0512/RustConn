@@ -140,6 +140,16 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.21.14" date="2026-09-16">
+      <description>
+        <p>Version 0.21.14 - the embedded RDP client now verifies the server certificate:</p>
+        <ul>
+          <li>Added: the embedded RDP client verifies the server certificate on a trust-on-first-use basis; it records the fingerprint on first connection and asks before trusting a changed one, the same way the external client does</li>
+          <li>Added: a "Certificate changed" dialog for embedded sessions, showing the new and previously trusted fingerprints; accepting it trusts the new certificate and reconnects</li>
+          <li>Fixed: a connection that opened the external RDP client directly, without a tab, showed no certificate dialog when the server certificate had changed</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.21.13" date="2026-09-14">
       <description>
         <p>Version 0.21.13 - RDP export, FIDO2, automatic sudo answers, and output filtering, with the credential and injection edges tightened:</p>
