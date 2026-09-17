@@ -5,6 +5,16 @@ All notable changes to RustConn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Improved
+
+- **The snippet dialog builds a `Snippet` from one grouped context instead of ten loose arguments** — `SnippetDialog::build_snippet_from_fields` took the ten form widgets and state cells one by one, which required a `#[expect(clippy::too_many_arguments)]` and forced the save-button closure in `run()` to clone all ten fields separately. They are now grouped into a private `SnippetFormWidgets` struct that owns the build logic (`SnippetFormWidgets::build`), so the closure captures a single clone and the lint suppression is gone. No behaviour change — the same `Snippet` is produced from the same fields.
+
+### Documentation
+
+- **Documented why the GUI binary's argument parser prints to the terminal** — `parse_cli_args`/`print_usage` in `rustconn/src/main.rs` use `println!`/`eprintln!` for `--version`, `--help` and argument errors. A doc comment now records that this is the intended terminal interface of a CLI invocation (output happens before any window opens) and the one sanctioned exception to the M-LOG-STRUCTURED "use tracing" rule, matching the GUI crate's lint table which omits `print_stdout`/`print_stderr`.
+
 ## [0.21.14] - 2026-09-16
 
 ### Added

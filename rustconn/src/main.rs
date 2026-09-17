@@ -133,6 +133,14 @@ pub fn has_cli_startup_override() -> bool {
 /// - `--connect <name-or-uuid>` — connect to a saved connection
 /// - `--help` / `-h` — print usage and exit
 /// - `--version` / `-V` — print version and exit
+///
+/// The `println!`/`eprintln!` calls here (and in [`print_usage`]) are the
+/// intended terminal interface of a CLI invocation: `--version` and `--help`
+/// write to stdout, argument errors to stderr, and the process then exits
+/// before any window opens. This is the one place the M-LOG-STRUCTURED
+/// "use tracing, not println!" rule does not apply — a terminal user expects
+/// output on the terminal, not in a tracing sink. The GUI crate's lint table
+/// deliberately omits `clippy::print_stdout`/`print_stderr` for this reason.
 fn parse_cli_args() -> Option<rustconn_core::config::StartupAction> {
     use rustconn_core::config::StartupAction;
 

@@ -21,21 +21,32 @@ use uuid::Uuid;
 
 use crate::i18n::i18n;
 
-/// Snippet dialog for creating/editing snippets
-pub struct SnippetDialog {
-    dialog: adw::Dialog,
+/// The form widgets and state that a [`Snippet`] is built from.
+///
+/// Grouped into one struct so the builder that turns them into a `Snippet`
+/// takes a single argument instead of ten, and so the save-button closure in
+/// [`SnippetDialog::run`] captures one clone instead of ten. Every field is a
+/// GTK widget or an `Rc`, so `Clone` is cheap (reference-counted).
+#[derive(Clone)]
+struct SnippetFormWidgets {
     name_entry: Entry,
     description_entry: Entry,
     category_entry: Entry,
     tags_entry: Entry,
     command_view: TextView,
-    variables_list: ListBox,
-    save_btn: Button,
     target_row: adw::ComboRow,
     delivery_row: adw::ComboRow,
     confirm_row: adw::SwitchRow,
     editing_id: Rc<RefCell<Option<Uuid>>>,
     variables: Rc<RefCell<Vec<VariableRow>>>,
+}
+
+/// Snippet dialog for creating/editing snippets
+pub struct SnippetDialog {
+    dialog: adw::Dialog,
+    form: SnippetFormWidgets,
+    variables_list: ListBox,
+    save_btn: Button,
     on_save: super::SnippetCallback,
     parent: Option<gtk4::Widget>,
 }
@@ -142,18 +153,20 @@ impl SnippetDialog {
 
         Self {
             dialog,
-            name_entry,
-            description_entry,
-            category_entry,
-            tags_entry,
-            command_view,
+            form: SnippetFormWidgets {
+                name_entry,
+                description_entry,
+                category_entry,
+                tags_entry,
+                command_view,
+                target_row,
+                delivery_row,
+                confirm_row,
+                editing_id: Rc::new(RefCell::new(None)),
+                variables,
+            },
             variables_list,
             save_btn: new_btn,
-            target_row,
-            delivery_row,
-            confirm_row,
-            editing_id: Rc::new(RefCell::new(None)),
-            variables,
             on_save,
             parent: parent_widget,
         }
@@ -404,41 +417,41 @@ impl SnippetDialog {
 
         self.dialog.set_title(&i18n("Edit Snippet"));
         self.save_btn.set_label(&i18n("Save"));
-        *self.editing_id.borrow_mut() = Some(snippet.id);
+        *self.form.editing_id.borrow_mut() = Some(snippet.id);
 
-        self.name_entry.set_text(&snippet.name);
+        self.form.name_entry.set_text(&snippet.name);
         if let Some(ref desc) = snippet.description {
-            self.description_entry.set_text(desc);
+            self.form.description_entry.set_text(desc);
         }
         if let Some(ref cat) = snippet.category {
-            self.category_entry.set_text(cat);
+            self.form.category_entry.set_text(cat);
         }
-        self.tags_entry.set_text(&snippet.tags.join(", "));
+        self.form.tags_entry.set_text(&snippet.tags.join(", "));
 
         // Set target platform: 0=Terminal, 1=Windows, 2=Any
-        self.target_row.set_selected(match snippet.target {
+        self.form.target_row.set_selected(match snippet.target {
             SnippetTarget::Terminal => 0,
             SnippetTarget::Windows => 1,
             SnippetTarget::Any => 2,
         });
 
         // Set delivery method: 0=Auto, 1=Clipboard, 2=Autotype
-        self.delivery_row.set_selected(match snippet.delivery {
+        self.form.delivery_row.set_selected(match snippet.delivery {
             rustconn_core::models::ScriptDelivery::Auto => 0,
             rustconn_core::models::ScriptDelivery::Clipboard => 1,
             rustconn_core::models::ScriptDelivery::Autotype => 2,
         });
 
-        self.confirm_row.set_active(snippet.confirm_before_run);
+        self.form.confirm_row.set_active(snippet.confirm_before_run);
 
         // Set command
-        self.command_view.buffer().set_text(&snippet.command);
+        self.form.command_view.buffer().set_text(&snippet.command);
 
         // Clear and populate variables
         while let Some(row) = self.variables_list.row_at_index(0) {
             self.variables_list.remove(&row);
         }
-        self.variables.borrow_mut().clear();
+        self.form.variables.borrow_mut().clear();
 
         for var in &snippet.variables {
             let row = Self::create_variable_row(
@@ -447,7 +460,7 @@ impl SnippetDialog {
                 var.default_value.as_deref(),
             );
             self.variables_list.append(&row.row);
-            self.variables.borrow_mut().push(row);
+            self.form.variables.borrow_mut().push(row);
         }
     }
 
@@ -460,12 +473,12 @@ impl SnippetDialog {
     /// - `Ok(())` if all required fields are valid
     /// - `Err(String)` with a descriptive error message if validation fails
     pub fn validate(&self) -> Result<(), String> {
-        let name = self.name_entry.text();
+        let name = self.form.name_entry.text();
         if name.trim().is_empty() {
             return Err(i18n("Snippet name is required"));
         }
 
-        let buffer = self.command_view.buffer();
+        let buffer = self.form.command_view.buffer();
         let (start, end) = buffer.bounds();
         let command = buffer.text(&start, &end, false);
         if command.trim().is_empty() {
@@ -481,7 +494,7 @@ impl SnippetDialog {
     pub fn add_variable(&self, name: &str, description: Option<&str>, default_value: Option<&str>) {
         let row = Self::create_variable_row(name, description, default_value);
         self.variables_list.append(&row.row);
-        self.variables.borrow_mut().push(row);
+        self.form.variables.borrow_mut().push(row);
     }
 
     /// Builds a Snippet from the dialog fields
@@ -498,18 +511,7 @@ impl SnippetDialog {
     /// - Preserves the editing ID if editing an existing snippet
     #[must_use]
     pub fn build_snippet(&self) -> Option<Snippet> {
-        Self::build_snippet_from_fields(
-            &self.name_entry,
-            &self.description_entry,
-            &self.category_entry,
-            &self.tags_entry,
-            &self.command_view,
-            &self.variables,
-            &self.editing_id,
-            &self.target_row,
-            &self.delivery_row,
-            &self.confirm_row,
-        )
+        self.form.build()
     }
 
     /// Runs the dialog and calls the callback with the result
@@ -520,53 +522,34 @@ impl SnippetDialog {
         // Store callback
         *self.on_save.borrow_mut() = Some(Box::new(cb));
 
-        // Connect save button directly using stored reference
+        // Connect save button directly using stored reference. The form
+        // widgets travel into the closure as one clone (see SnippetFormWidgets).
         let dialog = self.dialog.clone();
         let on_save = self.on_save.clone();
-        let name_entry = self.name_entry.clone();
-        let description_entry = self.description_entry.clone();
-        let category_entry = self.category_entry.clone();
-        let tags_entry = self.tags_entry.clone();
-        let command_view = self.command_view.clone();
-        let variables = self.variables.clone();
-        let editing_id = self.editing_id.clone();
-        let target_row = self.target_row.clone();
-        let delivery_row = self.delivery_row.clone();
-        let confirm_row = self.confirm_row.clone();
+        let form = self.form.clone();
 
         self.save_btn.connect_clicked(move |_| {
             // Validate
-            let name = name_entry.text();
+            let name = form.name_entry.text();
             if name.trim().is_empty() {
-                name_entry.add_css_class("error");
-                name_entry.grab_focus();
+                form.name_entry.add_css_class("error");
+                form.name_entry.grab_focus();
                 return;
             }
-            name_entry.remove_css_class("error");
+            form.name_entry.remove_css_class("error");
 
-            let buffer = command_view.buffer();
+            let buffer = form.command_view.buffer();
             let (start, end) = buffer.bounds();
             let command = buffer.text(&start, &end, false);
             if command.trim().is_empty() {
-                command_view.add_css_class("error");
-                command_view.grab_focus();
+                form.command_view.add_css_class("error");
+                form.command_view.grab_focus();
                 return;
             }
-            command_view.remove_css_class("error");
+            form.command_view.remove_css_class("error");
 
             // Build snippet
-            let snippet = Self::build_snippet_from_fields(
-                &name_entry,
-                &description_entry,
-                &category_entry,
-                &tags_entry,
-                &command_view,
-                &variables,
-                &editing_id,
-                &target_row,
-                &delivery_row,
-                &confirm_row,
-            );
+            let snippet = form.build();
 
             if let Some(ref cb) = *on_save.borrow() {
                 cb(snippet);
@@ -578,26 +561,28 @@ impl SnippetDialog {
             .present(self.parent.as_ref().map(|w| w as &gtk4::Widget));
     }
 
-    /// Builds a Snippet from the provided field references
+}
+
+impl SnippetFormWidgets {
+    /// Builds a [`Snippet`] from the current form field values.
     ///
-    /// Helper method to avoid code duplication between `run()` closure and `build_snippet()`.
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "function parameters mirror upstream API or struct fields 1:1; bundling into a struct only restates the field list"
-    )]
-    fn build_snippet_from_fields(
-        name_entry: &Entry,
-        description_entry: &Entry,
-        category_entry: &Entry,
-        tags_entry: &Entry,
-        command_view: &TextView,
-        variables: &Rc<RefCell<Vec<VariableRow>>>,
-        editing_id: &Rc<RefCell<Option<Uuid>>>,
-        target_row: &adw::ComboRow,
-        delivery_row: &adw::ComboRow,
-        confirm_row: &adw::SwitchRow,
-    ) -> Option<Snippet> {
+    /// Returns `None` only if a required field is empty; callers validate
+    /// before calling, so in practice it always yields `Some`.
+    fn build(&self) -> Option<Snippet> {
         use rustconn_core::models::{ScriptDelivery, SnippetTarget};
+
+        let Self {
+            name_entry,
+            description_entry,
+            category_entry,
+            tags_entry,
+            command_view,
+            target_row,
+            delivery_row,
+            confirm_row,
+            editing_id,
+            variables,
+        } = self;
 
         let name = name_entry.text().trim().to_string();
         let buffer = command_view.buffer();
@@ -674,7 +659,9 @@ impl SnippetDialog {
 
         Some(snippet)
     }
+}
 
+impl SnippetDialog {
     /// Returns a reference to the underlying dialog
     #[must_use]
     pub const fn dialog(&self) -> &adw::Dialog {
