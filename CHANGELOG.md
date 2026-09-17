@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Import PuTTY and KiTTY sessions from a registry export** — a new "PuTTY (.reg)" import source reads saved sessions from a Windows Registry export of `HKCU\Software\SimonTatham\PuTTY\Sessions` (produced by `reg export`), so a PuTTY or KiTTY setup can be carried to RustConn without retyping every host. Each session becomes a connection: SSH sessions bring across their private key file, agent forwarding, X11 forwarding and compression; Telnet, Raw and Rlogin sessions are imported as Telnet connections (Rlogin keeps port 513); host, port and username are read for all of them. The "Default Settings" template, host-less sessions, and protocols with no RustConn equivalent (Serial and others) are reported as skipped rather than imported wrong. PuTTY never stores a password in its export, so none are imported. RustConn does not read the live registry — only the exported `.reg` file — which keeps the importer cross-platform.
+
 ### Improved
 
 - **Split view divider ratio is restored from a workspace profile** — a workspace already saved the split layout's ratio (for example 30/70), but restoring it always opened the panels at an even 50/50 because `apply_layout` only replayed the split actions and a freshly created split defaults to 0.5. It now writes the saved root `split_ratio` back into the layout model after the splits are created (new `SplitViewBridge::set_root_split_position` / `SplitViewAdapter::set_root_split_position`, reusing the existing `update_split_position` and the divider idle-poll), so the remembered ratio is reapplied. Only the root split's ratio is restored; the balanced sub-panels of a multi-panel grid still open evenly, since a profile records a single fraction.

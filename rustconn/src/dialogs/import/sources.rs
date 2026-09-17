@@ -14,8 +14,8 @@ use rustconn_core::export::NativeExport;
 use rustconn_core::import::{
     AnsibleInventoryImporter, AsbruImporter, CsvImporter, CsvParseOptions, ImportResult,
     ImportSource, ImportWarning, LibvirtDaemonImporter, LibvirtXmlImporter, MobaXtermImporter,
-    RdmImporter, RdpFileImporter, RemminaImporter, RoyalTsImporter, SecureCrtImporter,
-    SshConfigImporter, VirtViewerImporter,
+    PuttyImporter, RdmImporter, RdpFileImporter, RemminaImporter, RoyalTsImporter,
+    SecureCrtImporter, SshConfigImporter, VirtViewerImporter,
 };
 
 use super::ImportDialog;
@@ -105,6 +105,12 @@ impl ImportDialog {
                 "mobaxterm_file",
                 i18n("MobaXterm (.mxtsessions)"),
                 i18n("Import from a MobaXterm session export file"),
+                true,
+            ),
+            (
+                "putty_file",
+                i18n("PuTTY (.reg)"),
+                i18n("Import from a PuTTY/KiTTY registry export file"),
                 true,
             ),
             (
@@ -245,6 +251,7 @@ impl ImportDialog {
             "royalts_file" => i18n("Royal TS"),
             "rdm_file" => i18n("Remote Desktop Manager"),
             "mobaxterm_file" => i18n("MobaXterm"),
+            "putty_file" => i18n("PuTTY"),
             "vv_file" => i18n("Virt-Viewer"),
             "multi_file" => i18n("Multiple Files"),
             "libvirt" => i18n("Libvirt / GNOME Boxes"),
@@ -979,6 +986,95 @@ impl ImportDialog {
         );
     }
 
+    /// Handles importing from a PuTTY / KiTTY registry export (`.reg`) file
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "function parameters mirror upstream API or struct fields 1:1; bundling into a struct only restates the field list"
+    )]
+    pub(super) fn handle_putty_file_import(
+        parent_window: Option<&gtk4::Window>,
+        stack: &Stack,
+        progress_bar: &ProgressBar,
+        progress_label: &Label,
+        result_label: &Label,
+        result_details: &Label,
+        result_cell: &Rc<RefCell<Option<ImportResult>>>,
+        source_name_cell: &Rc<RefCell<String>>,
+        btn: &Button,
+    ) {
+        let file_dialog = gtk4::FileDialog::builder()
+            .title(i18n("Select PuTTY Registry Export File"))
+            .modal(true)
+            .build();
+
+        let filter = gtk4::FileFilter::new();
+        filter.add_pattern("*.reg");
+        filter.set_name(Some(&i18n("PuTTY Registry Export (*.reg)")));
+        let filters = gtk4::gio::ListStore::new::<gtk4::FileFilter>();
+        filters.append(&filter);
+        file_dialog.set_filters(Some(&filters));
+
+        let stack_clone = stack.clone();
+        let progress_bar_clone = progress_bar.clone();
+        let progress_label_clone = progress_label.clone();
+        let result_label_clone = result_label.clone();
+        let result_details_clone = result_details.clone();
+        let result_cell_clone = result_cell.clone();
+        let source_name_cell_clone = source_name_cell.clone();
+        let btn_clone = btn.clone();
+
+        file_dialog.open(
+            parent_window,
+            gtk4::gio::Cancellable::NONE,
+            move |file_result| {
+                if let Ok(file) = file_result {
+                    if let Some(path) = file.path() {
+                        stack_clone.set_visible_child_name("progress");
+                        btn_clone.set_sensitive(false);
+                        progress_bar_clone.set_fraction(0.5);
+                        progress_label_clone
+                            .set_text(&i18n_f("Importing from {}…", &[&path.display().to_string()]));
+
+                        let importer = PuttyImporter::with_paths(vec![path.clone()]);
+                        let result = Self::import_or_error(
+                            importer.import_from_path(&path),
+                            "PuTTY",
+                        );
+
+                        let filename = path.file_name().map_or_else(
+                            || i18n("PuTTY"),
+                            |n| n.to_string_lossy().to_string(),
+                        );
+
+                        source_name_cell_clone.borrow_mut().clone_from(&filename);
+
+                        progress_bar_clone.set_fraction(1.0);
+
+                        let conn_count = result.connections.len();
+                        let group_count = result.groups.len();
+                        let summary = i18n_f(
+                            "Successfully imported {} connection(s) and {} group(s).\nConnections will be added to '{} Import' group.",
+                            &[&conn_count.to_string(), &group_count.to_string(), &filename],
+                        );
+                        result_label_clone.set_text(&summary);
+
+                        let details = Self::format_import_details(&result);
+                        result_details_clone.set_text(&details);
+
+                        *result_cell_clone.borrow_mut() = Some(result);
+                        stack_clone.set_visible_child_name("result");
+                        btn_clone.set_label(&i18n("Done"));
+                        btn_clone.set_sensitive(true);
+                    }
+                } else {
+                    // User cancelled file selection - return to source page
+                    stack_clone.set_visible_child_name("source");
+                    btn_clone.set_sensitive(true);
+                }
+            },
+        );
+    }
+
     /// Handles importing from a libvirt domain XML file
     #[expect(
         clippy::too_many_arguments,
@@ -1592,6 +1688,10 @@ impl ImportDialog {
             "mxtsessions" => {
                 let importer = MobaXtermImporter::new();
                 Self::import_or_error(importer.import_from_path(path), "MobaXterm")
+            }
+            "reg" => {
+                let importer = PuttyImporter::with_paths(vec![path.to_path_buf()]);
+                Self::import_or_error(importer.import_from_path(path), "PuTTY")
             }
             "xml" => {
                 let importer = LibvirtXmlImporter::new();

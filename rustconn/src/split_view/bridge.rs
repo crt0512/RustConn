@@ -1898,7 +1898,7 @@ impl SplitViewBridge {
             .title(i18n("Features"))
             .build();
 
-        let features: [(&str, String); 9] = [
+        let features: [(&str, String); 10] = [
             (
                 "utilities-terminal-symbolic",
                 i18n("Embedded SSH, RDP, VNC, SPICE"),
@@ -1916,6 +1916,10 @@ impl SplitViewBridge {
             (
                 "mail-attachment-symbolic",
                 i18n("Drag & drop files to sessions"),
+            ),
+            (
+                "document-open-symbolic",
+                i18n("Import from PuTTY, mRemoteNG, and more"),
             ),
         ];
 

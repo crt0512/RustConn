@@ -3217,6 +3217,7 @@ Back up your entire RustConn configuration as a single ZIP archive.
 - Royal TS / Royal TSX (`.rtsz`, `.rtsx` — passwords stay in Royal TS, see below)
 - MobaXterm sessions (.mxtsessions)
 - SecureCRT sessions (.ini directory)
+- PuTTY / KiTTY sessions (`.reg` registry export)
 - Remote Desktop Manager (JSON)
 - RDP files (.rdp — Microsoft Remote Desktop)
 - Virt-Viewer (.vv files — SPICE/VNC from libvirt, Proxmox VE)
@@ -3245,6 +3246,7 @@ Double-click source to start import immediately.
 | Royal TS / Royal TSX | — | `.rtsz` (compressed) or `.rtsx` file | SSH, Telnet, RDP, VNC | Folder hierarchy → groups; usernames inherited from folder credentials; passwords cannot be imported (encrypted in the document) |
 | MobaXterm | — | `.mxtsessions` | SSH, RDP, VNC, Telnet, Serial | INI-based sessions |
 | SecureCRT | `~/.vandyke/Config/Sessions/` | Directory or `.ini` | SSH, Telnet, RDP, VNC | Folder hierarchy → groups |
+| PuTTY / KiTTY | — | `.reg` registry export | SSH, Telnet (Raw, Rlogin → Telnet) | Key file, agent/X11 forwarding, compression imported; passwords are not stored in the export |
 | Remote Desktop Manager | — | JSON file | SSH, RDP, VNC, Telnet | Devolutions JSON export; `Group` paths → groups |
 | RDP File | — | `.rdp` file | RDP | Microsoft Remote Desktop format |
 | Virt-Viewer | — | `.vv` file | SPICE, VNC | From libvirt, Proxmox VE, oVirt |
@@ -3356,6 +3358,17 @@ xdg-mime default io.github.totoshko88.RustConn.desktop application/x-virt-viewer
 1. Locate SecureCRT sessions directory (`~/.vandyke/Config/Sessions/` on Linux, or `%APPDATA%\VanDyke\Config\Sessions\` on Windows — copy to Linux)
 2. **File > Import > SecureCRT** → select the `Sessions` directory → Import
 3. Folder hierarchy is preserved as connection groups; SSH keys, usernames, ports, X11/agent forwarding settings are imported
+
+#### From PuTTY / KiTTY
+
+PuTTY (and the compatible KiTTY fork) store sessions in the Windows Registry, not in files, so the import works from a registry export:
+
+1. On Windows, export the sessions key to a file:
+   `reg export "HKCU\Software\SimonTatham\PuTTY\Sessions" putty.reg`
+   Copy `putty.reg` to Linux.
+2. **File > Import > PuTTY** → select the `.reg` file → Import.
+
+Each saved session becomes a connection. SSH sessions carry over their private key file, agent forwarding, X11 forwarding and compression; the host, port and username are imported for every protocol. Telnet, Raw and Rlogin sessions are imported as RustConn Telnet connections (Rlogin keeps its own default port 513). The "Default Settings" template and any session without a host name are skipped, as are Serial and other protocols RustConn does not serve. Passwords are never present in a PuTTY export, so none are imported — enter them on first connect and let RustConn store them in your vault.
 
 #### From Royal TS / Royal TSX
 

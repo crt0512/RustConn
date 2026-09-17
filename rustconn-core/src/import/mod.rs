@@ -48,6 +48,7 @@ mod libvirt_daemon;
 mod mobaxterm;
 mod normalize;
 mod preview;
+mod putty;
 mod rdm;
 mod rdp_file;
 mod remmina;
@@ -72,6 +73,7 @@ pub use normalize::{
     sanitize_imported_value,
 };
 pub use preview::{DuplicateAction, ImportPreview, MergeStrategy, PreviewConnection, PreviewGroup};
+pub use putty::PuttyImporter;
 pub use rdm::RdmImporter;
 pub use rdp_file::RdpFileImporter;
 pub use remmina::RemminaImporter;
