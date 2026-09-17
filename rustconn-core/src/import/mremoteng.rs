@@ -24,6 +24,7 @@ use super::traits::{ImportResult, ImportSource, SkippedEntry, read_import_file};
 use crate::error::ImportError;
 use crate::models::{
     Connection, ConnectionGroup, ProtocolConfig, RdpConfig, SshConfig, TelnetConfig, VncConfig,
+    WebConfig,
 };
 
 const SOURCE_NAME: &str = "mRemoteNG";
@@ -189,6 +190,12 @@ impl MRemoteNgImporter {
         let attr_port: Option<u16> = attr(element, "Port").and_then(|p| p.trim().parse().ok());
         let port_hint = attr_port.or(parsed_port);
 
+        // Web protocols carry their target as a URL in the connection host,
+        // not as a host:port pair — RustConn's Web protocol builds the address
+        // from `host` and does not use the numeric port. `web_host` is `Some`
+        // for HTTP/HTTPS and drives that substitution below.
+        let mut web_host: Option<String> = None;
+
         let (protocol_config, default_port) = match protocol.to_ascii_uppercase().as_str() {
             "SSH1" | "SSH2" | "SSH" => (ProtocolConfig::Ssh(SshConfig::default()), 22u16),
             "RDP" => (Self::build_rdp_config(element), 3389u16),
@@ -197,9 +204,23 @@ impl MRemoteNgImporter {
             // Rlogin and Raw are line protocols RustConn serves through Telnet.
             "RLOGIN" => (ProtocolConfig::Telnet(TelnetConfig::default()), 513u16),
             "RAW" => (ProtocolConfig::Telnet(TelnetConfig::default()), 23u16),
+            "HTTP" | "HTTPS" => {
+                // A web bookmark. Rebuild the address as a URL: keep an explicit
+                // scheme the host already carried, otherwise derive it from the
+                // protocol, and append a non-default port if one was given.
+                let scheme = if protocol.eq_ignore_ascii_case("HTTPS") {
+                    "https"
+                } else {
+                    "http"
+                };
+                let default_web_port = if scheme == "https" { 443 } else { 80 };
+                let url = build_web_url(raw_host.trim(), scheme, attr_port, default_web_port);
+                web_host = Some(url);
+                (ProtocolConfig::Web(WebConfig::default()), default_web_port)
+            }
             other => {
-                // HTTP/HTTPS, ICA (Citrix), IntApp and similar have no direct
-                // RustConn equivalent.
+                // ICA (Citrix), PowerShell, IntApp/Winbox and similar have no
+                // direct RustConn equivalent.
                 result.add_skipped(SkippedEntry::with_location(
                     if name.is_empty() { &host } else { &name },
                     format!("Unsupported protocol: {other}"),
@@ -211,7 +232,8 @@ impl MRemoteNgImporter {
 
         let port = port_hint.unwrap_or(default_port);
         let display_name = if name.is_empty() { host.clone() } else { name };
-        let mut connection = Connection::new(display_name, host, port, protocol_config);
+        let connection_host = web_host.unwrap_or(host);
+        let mut connection = Connection::new(display_name, connection_host, port, protocol_config);
 
         if let Some(user) = attr(element, "Username").filter(|s| !s.trim().is_empty()) {
             connection.username = Some(user.trim().to_string());
@@ -280,6 +302,38 @@ fn attr(element: &BytesStart<'_>, key: &str) -> Option<String> {
             None
         }
     })
+}
+
+/// Builds a browser URL for a web bookmark from an mRemoteNG host value.
+///
+/// If `raw_host` already carries an `http://` or `https://` scheme it is kept
+/// verbatim. Otherwise `scheme` is prepended, and `attr_port` is appended as
+/// `:port` when it is present and not the scheme's default (`default_port`) —
+/// so a plain `intranet` on HTTPS becomes `https://intranet`, while port 8443
+/// becomes `https://intranet:8443`. A host that already contains a port
+/// (`host:8080`) keeps it and no second port is added.
+fn build_web_url(
+    raw_host: &str,
+    scheme: &str,
+    attr_port: Option<u16>,
+    default_port: u16,
+) -> String {
+    let lower = raw_host.to_ascii_lowercase();
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        return raw_host.to_string();
+    }
+
+    let host_has_port = raw_host.rsplit_once(':').is_some_and(|(_, p)| {
+        // Treat a trailing `:<digits>` as an explicit port already in the host.
+        !p.is_empty() && p.chars().all(|c| c.is_ascii_digit())
+    });
+
+    match attr_port {
+        Some(port) if !host_has_port && port != default_port => {
+            format!("{scheme}://{raw_host}:{port}")
+        }
+        _ => format!("{scheme}://{raw_host}"),
+    }
 }
 
 /// Unescapes the five predefined XML entities in an attribute value.
@@ -502,6 +556,57 @@ mod tests {
         let result = MRemoteNgImporter::new().parse_xml(xml, "confCons.xml");
         assert_eq!(result.connections.len(), 1);
         assert_eq!(result.connections[0].domain, Some("CORP".to_string()));
+    }
+
+    #[test]
+    fn http_and_https_become_web_bookmarks() {
+        let xml = r#"<Connections>
+  <Node Name="Intranet" Type="Connection" Hostname="intranet.example.com" Protocol="HTTP" />
+  <Node Name="Secure" Type="Connection" Hostname="portal.example.com" Protocol="HTTPS" />
+</Connections>"#;
+
+        let result = MRemoteNgImporter::new().parse_xml(xml, "confCons.xml");
+        assert_eq!(result.connections.len(), 2);
+        assert!(result.skipped.is_empty());
+
+        let http = result
+            .connections
+            .iter()
+            .find(|c| c.name == "Intranet")
+            .unwrap();
+        let https = result
+            .connections
+            .iter()
+            .find(|c| c.name == "Secure")
+            .unwrap();
+        assert!(matches!(http.protocol_config, ProtocolConfig::Web(_)));
+        assert!(matches!(https.protocol_config, ProtocolConfig::Web(_)));
+        assert_eq!(http.host, "http://intranet.example.com");
+        assert_eq!(https.host, "https://portal.example.com");
+    }
+
+    #[test]
+    fn web_bookmark_keeps_explicit_scheme_and_nondefault_port() {
+        let xml = r#"<Connections>
+  <Node Name="Already" Type="Connection" Hostname="https://app.example.com/dashboard" Protocol="HTTP" />
+  <Node Name="Cockpit" Type="Connection" Hostname="server.example.com" Protocol="HTTPS" Port="9090" />
+</Connections>"#;
+
+        let result = MRemoteNgImporter::new().parse_xml(xml, "confCons.xml");
+        let already = result
+            .connections
+            .iter()
+            .find(|c| c.name == "Already")
+            .unwrap();
+        let cockpit = result
+            .connections
+            .iter()
+            .find(|c| c.name == "Cockpit")
+            .unwrap();
+        // An explicit scheme in the host is preserved verbatim.
+        assert_eq!(already.host, "https://app.example.com/dashboard");
+        // A non-default port is appended to the derived URL.
+        assert_eq!(cockpit.host, "https://server.example.com:9090");
     }
 
     #[test]

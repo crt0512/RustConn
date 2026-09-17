@@ -3248,7 +3248,7 @@ Double-click source to start import immediately.
 | MobaXterm | — | `.mxtsessions` | SSH, RDP, VNC, Telnet, Serial | INI-based sessions |
 | SecureCRT | `~/.vandyke/Config/Sessions/` | Directory or `.ini` | SSH, Telnet, RDP, VNC | Folder hierarchy → groups |
 | PuTTY / KiTTY | — | `.reg` registry export | SSH, Telnet (Raw, Rlogin → Telnet) | Key file, agent/X11 forwarding, compression imported; passwords are not stored in the export |
-| mRemoteNG | — | `confCons.xml` | SSH, RDP, VNC, Telnet (Raw, Rlogin → Telnet) | Container nodes → nested groups; unencrypted documents only; passwords are not imported |
+| mRemoteNG | — | `confCons.xml` | SSH, RDP, VNC, Telnet, Web (Raw, Rlogin → Telnet; HTTP/HTTPS → Web) | Container nodes → nested groups; unencrypted documents only; passwords are not imported |
 | Remote Desktop Manager | — | JSON file | SSH, RDP, VNC, Telnet | Devolutions JSON export; `Group` paths → groups |
 | RDP File | — | `.rdp` file | RDP | Microsoft Remote Desktop format |
 | Virt-Viewer | — | `.vv` file | SPICE, VNC | From libvirt, Proxmox VE, oVirt |
@@ -3379,7 +3379,7 @@ mRemoteNG stores its connection tree in a `confCons.xml` file (on Windows, `%APP
 1. Copy `confCons.xml` to Linux — or use **Tools > Export** in mRemoteNG to write one.
 2. **File > Import > mRemoteNG** → select the file → Import.
 
-Container nodes become nested connection groups, and each connection node becomes a connection with its host, port, username and (for RDP) domain. SSH1/SSH2 import as SSH; RDP, VNC and Telnet keep their protocol; Raw and Rlogin become Telnet connections (Rlogin on port 513). Protocols with no RustConn equivalent (Citrix ICA, HTTP/HTTPS, external apps) and host-less nodes are reported as skipped. Only unencrypted documents are read: a file saved with **full-file encryption** is reported with a message asking you to export it without encryption first, and per-connection encrypted passwords are never decoded — so, as with every other importer, no password is carried across.
+Container nodes become nested connection groups, and each connection node becomes a connection with its host, port, username and (for RDP) domain. SSH1/SSH2 import as SSH; RDP, VNC and Telnet keep their protocol; Raw and Rlogin become Telnet connections (Rlogin on port 513); HTTP and HTTPS become Web bookmarks (the host is turned into a URL, keeping an explicit scheme or a non-default port). Protocols with no RustConn equivalent (Citrix ICA, PowerShell, Winbox, external apps) and host-less nodes are reported as skipped. Only unencrypted documents are read: a file saved with **full-file encryption** is reported with a message asking you to export it without encryption first, and per-connection encrypted passwords are never decoded — so, as with every other importer, no password is carried across.
 
 #### From Royal TS / Royal TSX
 
