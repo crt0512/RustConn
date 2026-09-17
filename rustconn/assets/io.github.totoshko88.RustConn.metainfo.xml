@@ -140,6 +140,18 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.22.0" date="2026-09-18">
+      <description>
+        <p>Version 0.22.0 - import from more managers, and welcome-screen and split-view polish:</p>
+        <ul>
+          <li>Added: import mRemoteNG connections from confCons.xml, with nested groups; SSH, RDP, VNC and Telnet keep their protocol, Raw and Rlogin become Telnet, and HTTP/HTTPS become Web bookmarks. Only unencrypted documents are read and no password is imported</li>
+          <li>Added: import PuTTY and KiTTY sessions from a Windows Registry export, carrying the SSH key file, agent and X11 forwarding and compression across</li>
+          <li>Fixed: a KeePass password set on a group could be saved but not loaded back (issue #327)</li>
+          <li>Improved: the welcome screen no longer lists Import twice, its columns are balanced, and the Import Formats panel lists every supported source</li>
+          <li>Improved: a saved split-view layout restores its divider ratio instead of always reopening at an even split</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.21.14" date="2026-09-16">
       <description>
         <p>Version 0.21.14 - the embedded RDP client now verifies the server certificate:</p>

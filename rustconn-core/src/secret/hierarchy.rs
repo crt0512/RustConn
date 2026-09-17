@@ -158,6 +158,30 @@ impl KeePassHierarchy {
         path_parts.join(&PATH_SEPARATOR.to_string())
     }
 
+    /// Builds a group's KDBX entry path **without** the `RustConn/` root prefix.
+    ///
+    /// This is the name that
+    /// [`KeePassStatus::get_password_from_kdbx_with_key`] and
+    /// [`KeePassStatus::save_password_to_kdbx`] both expect: they add the
+    /// `RustConn/` prefix themselves, so passing the full path from
+    /// [`Self::build_group_entry_path`] would produce a doubled
+    /// `RustConn/RustConn/Groups/...` and the entry would never be found
+    /// (issue #327 — a group password saved correctly could not be loaded back).
+    ///
+    /// Returns `Groups/<hierarchy>`, matching what the save path writes.
+    ///
+    /// [`KeePassStatus::get_password_from_kdbx_with_key`]: super::status::KeePassStatus::get_password_from_kdbx_with_key
+    /// [`KeePassStatus::save_password_to_kdbx`]: super::status::KeePassStatus::save_password_to_kdbx
+    #[must_use]
+    pub fn build_group_entry_name(group: &ConnectionGroup, groups: &[ConnectionGroup]) -> String {
+        let full = Self::build_group_entry_path(group, groups);
+        let root_prefix = format!("{KEEPASS_ROOT_GROUP}{PATH_SEPARATOR}");
+        match full.strip_prefix(&root_prefix) {
+            Some(name) => name.to_string(),
+            None => full,
+        }
+    }
+
     /// Builds a simple lookup key for a group's credentials.
     ///
     /// This is used for backends that don't support hierarchical paths (like libsecret).
@@ -437,6 +461,52 @@ mod tests {
         let conn = create_test_connection("", None);
         let path = KeePassHierarchy::build_entry_path(&conn, &[]);
         assert_eq!(path, "RustConn/192.168.1.1");
+    }
+
+    // Regression tests for issue #327: a group password saved correctly could
+    // not be loaded, because the load path fed the full `RustConn/Groups/…`
+    // into a helper that prepends `RustConn/` again. build_group_entry_name is
+    // the shared key builder both sides must agree on — it returns the name
+    // WITHOUT the root prefix, matching what save writes.
+    #[test]
+    fn build_group_entry_name_drops_root_prefix() {
+        let group = ConnectionGroup::new("Production".to_string());
+        let groups = vec![group.clone()];
+
+        let path = KeePassHierarchy::build_group_entry_path(&group, &groups);
+        let name = KeePassHierarchy::build_group_entry_name(&group, &groups);
+
+        assert_eq!(path, "RustConn/Groups/Production");
+        assert_eq!(name, "Groups/Production");
+        // The name must not still carry the root, or the read helper would look
+        // up RustConn/RustConn/Groups/... — the exact #327 failure.
+        assert!(!name.starts_with("RustConn/"));
+    }
+
+    #[test]
+    fn build_group_entry_name_keeps_nested_hierarchy() {
+        let root = ConnectionGroup::new("Production".to_string());
+        let child = ConnectionGroup::with_parent("Web".to_string(), root.id);
+        let groups = vec![root, child.clone()];
+
+        let name = KeePassHierarchy::build_group_entry_name(&child, &groups);
+        assert_eq!(name, "Groups/Production/Web");
+    }
+
+    #[test]
+    fn build_group_entry_name_prepended_with_root_reproduces_saved_path() {
+        // What save_password_to_kdbx / candidate_entry_paths do: prepend the
+        // root. The round trip must land back on build_group_entry_path, i.e.
+        // the very path save wrote — proving load and save now agree.
+        let group = ConnectionGroup::new("Staging".to_string());
+        let groups = vec![group.clone()];
+
+        let name = KeePassHierarchy::build_group_entry_name(&group, &groups);
+        let read_lookup = format!("{KEEPASS_ROOT_GROUP}{PATH_SEPARATOR}{name}");
+        assert_eq!(
+            read_lookup,
+            KeePassHierarchy::build_group_entry_path(&group, &groups)
+        );
     }
 
     #[test]

@@ -6,7 +6,7 @@
 #
 
 Name:           rustconn
-Version:        0.21.14
+Version:        0.22.0
 Release:        0
 # rpmlint caps Summary at 79 characters (summary-too-long, badness 200); the
 # protocol list belongs in %description, which has room for all of it. Kept in
@@ -387,6 +387,16 @@ done
 %{_datadir}/icons/hicolor/*/apps/io.github.totoshko88.RustConn.*
 
 %changelog
+* Fri Sep 18 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.0-0
+- Version bump to 0.22.0
+- Added: import mRemoteNG connections from confCons.xml (nested groups; SSH/RDP/VNC/Telnet, Raw/Rlogin to Telnet, HTTP/HTTPS to Web; unencrypted only, no password imported; verified against mRemoteNG's own serializer)
+- Added: import PuTTY and KiTTY sessions from a Windows Registry export (.reg); SSH key file, agent/X11 forwarding and compression carried across; the live registry is never read
+- Fixed: KeePass group passwords could be saved but not loaded (issue #327); both group load sites now share a helper symmetric with the save path
+- Improved: the welcome screen no longer lists Import twice and its columns are balanced; the Import Formats panel lists every supported source
+- Improved: split view divider ratio is restored from a workspace profile instead of always reopening at an even 50/50
+- Improved: the snippet dialog builds a Snippet from one grouped context struct instead of ten loose arguments (no behaviour change)
+- Dependencies: cfg-if 1.0.4->1.0.5, redox_users 0.5.2->0.5.3, rustix 1.1.4->1.1.5, syn 3.0.5->3.0.6, unicode-ident 1.0.24->1.0.26, yuv 0.8.18->0.8.19
+
 * Wed Sep 16 2026 Anton Isaiev <totoshko88@gmail.com> - 0.21.14-0
 - Version bump to 0.21.14
 - Added: embedded RDP verifies the server certificate on a trust-on-first-use basis (issue #324); records the SHA-256 fingerprint on first connection and raises the same "Certificate changed" dialog as the FreeRDP path when it changes, using a separate known_hosts-style store kept apart from FreeRDP's known_hosts2; the "Ignore Certificate" toggle still skips it

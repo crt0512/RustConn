@@ -414,10 +414,14 @@ pub fn show_edit_group_dialog(
             format!("group:{}", group_name_for_load.replace('/', "-"))
         };
 
+        // The KDBX entry NAME (no `RustConn/` prefix): the core read/write
+        // helpers add that prefix themselves. Passing the full path here is what
+        // caused issue #327 — the load looked up `RustConn/RustConn/Groups/…` and
+        // never found the password that save wrote at `RustConn/Groups/…`.
         let group_path = if let Some(ref g) = grp {
-            rustconn_core::secret::KeePassHierarchy::build_group_entry_path(g, &groups)
+            rustconn_core::secret::KeePassHierarchy::build_group_entry_name(g, &groups)
         } else {
-            format!("RustConn/Groups/{}", group_name_for_load)
+            format!("Groups/{group_name_for_load}")
         };
 
         let password_entry_clone = password_entry_for_load.clone();
