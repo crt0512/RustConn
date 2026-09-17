@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-17 22:12+0300\n"
+"POT-Creation-Date: 2026-09-17 23:11+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: RustConn Team\n"
 "Language-Team: Uzbek\n"
@@ -89,7 +89,7 @@ msgstr ""
 "kiriting"
 
 #: rustconn/src/app.rs:707 rustconn/src/dialogs/shortcuts.rs:176
-#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1990
+#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1986
 #: rustconn/src/window/ui.rs:111
 msgid "Settings"
 msgstr "Sozlamalar"
@@ -6066,7 +6066,7 @@ msgstr "Tugma bog'lamalari"
 
 #: rustconn/src/dialogs/settings/keybindings_tab.rs:58
 #: rustconn/src/dialogs/shortcuts.rs:155 rustconn/src/dialogs/shortcuts.rs:301
-#: rustconn/src/split_view/bridge.rs:1978
+#: rustconn/src/split_view/bridge.rs:1974
 msgid "Keyboard Shortcuts"
 msgstr "Klaviatura yorliqlari"
 
@@ -8048,7 +8048,7 @@ msgstr "Tezkor ulanish"
 msgid "Move to Group"
 msgstr "Guruhga ko'chirish"
 
-#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1986
+#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1982
 msgid "Search"
 msgstr "Qidirish"
 
@@ -10605,67 +10605,63 @@ msgstr "Buyruq parchalari va klasterlar"
 msgid "Drag & drop files to sessions"
 msgstr "Fayllarni seanslarga sudrab tashlash"
 
-#: rustconn/src/split_view/bridge.rs:1922
-msgid "Import from PuTTY, mRemoteNG, and more"
-msgstr "PuTTY, mRemoteNG va boshqalardan import"
-
-#: rustconn/src/split_view/bridge.rs:1982
+#: rustconn/src/split_view/bridge.rs:1978
 msgid "New connection"
 msgstr "Yangi ulanish"
 
-#: rustconn/src/split_view/bridge.rs:1983
+#: rustconn/src/split_view/bridge.rs:1979
 msgid "Quick connect"
 msgstr "Tezkor ulanish"
 
-#: rustconn/src/split_view/bridge.rs:1984
+#: rustconn/src/split_view/bridge.rs:1980
 msgid "Command palette"
 msgstr "Buyruqlar palitrasi"
 
-#: rustconn/src/split_view/bridge.rs:1985
+#: rustconn/src/split_view/bridge.rs:1981
 msgid "Local shell"
 msgstr "Mahalliy qobiq"
 
-#: rustconn/src/split_view/bridge.rs:1987
+#: rustconn/src/split_view/bridge.rs:1983
 msgid "Split vertical / horizontal"
 msgstr "Vertikal/gorizontal boʻlish"
 
-#: rustconn/src/split_view/bridge.rs:1988
+#: rustconn/src/split_view/bridge.rs:1984
 msgid "Disable shortcuts"
 msgstr "Yorliqlarni o'chirish"
 
-#: rustconn/src/split_view/bridge.rs:1989
+#: rustconn/src/split_view/bridge.rs:1985
 msgid "Import connections"
 msgstr "Ulanishlarni import qilish"
 
-#: rustconn/src/split_view/bridge.rs:2019
+#: rustconn/src/split_view/bridge.rs:2015
 msgid "Quick Access"
 msgstr "Tezkor kirish"
 
-#: rustconn/src/split_view/bridge.rs:2023
+#: rustconn/src/split_view/bridge.rs:2019
 msgid "Fuzzy search & command palette"
 msgstr "Loyqa qidiruv va buyruqlar palitrasi"
 
-#: rustconn/src/split_view/bridge.rs:2024
+#: rustconn/src/split_view/bridge.rs:2020
 msgid "Pin favorites to sidebar"
 msgstr "Sevimlilarni yon panelga mahkamlash"
 
-#: rustconn/src/split_view/bridge.rs:2025
+#: rustconn/src/split_view/bridge.rs:2021
 msgid "Split view for terminals"
 msgstr "Terminallar uchun bo'lingan ko'rinish"
 
-#: rustconn/src/split_view/bridge.rs:2028
+#: rustconn/src/split_view/bridge.rs:2024
 msgid "Tab Overview grid (Ctrl+Shift+O)"
 msgstr "Varaqlar ko'rinishi panjarasi (Ctrl+Shift+O)"
 
-#: rustconn/src/split_view/bridge.rs:2045
+#: rustconn/src/split_view/bridge.rs:2041
 msgid "Import Formats"
 msgstr "Import formatlari"
 
-#: rustconn/src/split_view/bridge.rs:2211
+#: rustconn/src/split_view/bridge.rs:2208
 msgid "All tabs are already displayed in this split view"
 msgstr "Barcha tablar allaqachon ushbu bo'lingan ko'rinishda ko'rsatilgan"
 
-#: rustconn/src/split_view/bridge.rs:2250
+#: rustconn/src/split_view/bridge.rs:2247
 msgid "Select a tab to display"
 msgstr "Ko'rsatish uchun tabni tanlang"
 
@@ -12639,6 +12635,9 @@ msgstr "RustConn"
 #: rustconn/assets/io.github.totoshko88.RustConn.desktop:15
 msgid "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connection;terminal;remote;kubernetes;k8s;serial;sftp;"
 msgstr "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;ulanish;terminal;masofaviy;kubernetes;k8s;serial;sftp;"
+
+#~ msgid "Import from PuTTY, mRemoteNG, and more"
+#~ msgstr "PuTTY, mRemoteNG va boshqalardan import"
 
 #~ msgid "Connect via intermediate server"
 #~ msgstr "Oraliq server orqali ulanish"

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-17 22:12+0300\n"
+"POT-Creation-Date: 2026-09-17 23:11+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: RustConn Team\n"
 "Language-Team: Danish\n"
@@ -89,7 +89,7 @@ msgstr ""
 "Indstillinger"
 
 #: rustconn/src/app.rs:707 rustconn/src/dialogs/shortcuts.rs:176
-#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1990
+#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1986
 #: rustconn/src/window/ui.rs:111
 msgid "Settings"
 msgstr "Indstillinger"
@@ -6020,7 +6020,7 @@ msgstr "Tastaturgenveje"
 
 #: rustconn/src/dialogs/settings/keybindings_tab.rs:58
 #: rustconn/src/dialogs/shortcuts.rs:155 rustconn/src/dialogs/shortcuts.rs:301
-#: rustconn/src/split_view/bridge.rs:1978
+#: rustconn/src/split_view/bridge.rs:1974
 msgid "Keyboard Shortcuts"
 msgstr "Tastaturgenveje"
 
@@ -7991,7 +7991,7 @@ msgstr "Hurtig forbindelse"
 msgid "Move to Group"
 msgstr "Flyt til gruppe"
 
-#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1986
+#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1982
 msgid "Search"
 msgstr "Søg"
 
@@ -10519,67 +10519,63 @@ msgstr "Kommandouddrag og klynger"
 msgid "Drag & drop files to sessions"
 msgstr "Træk og slip filer til sessioner"
 
-#: rustconn/src/split_view/bridge.rs:1922
-msgid "Import from PuTTY, mRemoteNG, and more"
-msgstr "Importér fra PuTTY, mRemoteNG med flere"
-
-#: rustconn/src/split_view/bridge.rs:1982
+#: rustconn/src/split_view/bridge.rs:1978
 msgid "New connection"
 msgstr "Ny forbindelse"
 
-#: rustconn/src/split_view/bridge.rs:1983
+#: rustconn/src/split_view/bridge.rs:1979
 msgid "Quick connect"
 msgstr "Hurtig forbindelse"
 
-#: rustconn/src/split_view/bridge.rs:1984
+#: rustconn/src/split_view/bridge.rs:1980
 msgid "Command palette"
 msgstr "Kommandopalette"
 
-#: rustconn/src/split_view/bridge.rs:1985
+#: rustconn/src/split_view/bridge.rs:1981
 msgid "Local shell"
 msgstr "Lokal shell"
 
-#: rustconn/src/split_view/bridge.rs:1987
+#: rustconn/src/split_view/bridge.rs:1983
 msgid "Split vertical / horizontal"
 msgstr "Opdel lodret/vandret"
 
-#: rustconn/src/split_view/bridge.rs:1988
+#: rustconn/src/split_view/bridge.rs:1984
 msgid "Disable shortcuts"
 msgstr "Deaktiver genveje"
 
-#: rustconn/src/split_view/bridge.rs:1989
+#: rustconn/src/split_view/bridge.rs:1985
 msgid "Import connections"
 msgstr "Importér forbindelser"
 
-#: rustconn/src/split_view/bridge.rs:2019
+#: rustconn/src/split_view/bridge.rs:2015
 msgid "Quick Access"
 msgstr "Hurtig adgang"
 
-#: rustconn/src/split_view/bridge.rs:2023
+#: rustconn/src/split_view/bridge.rs:2019
 msgid "Fuzzy search & command palette"
 msgstr "Fuzzy-søgning og kommandopalette"
 
-#: rustconn/src/split_view/bridge.rs:2024
+#: rustconn/src/split_view/bridge.rs:2020
 msgid "Pin favorites to sidebar"
 msgstr "Fastgør favoritter til sidebjælken"
 
-#: rustconn/src/split_view/bridge.rs:2025
+#: rustconn/src/split_view/bridge.rs:2021
 msgid "Split view for terminals"
 msgstr "Delt visning for terminaler"
 
-#: rustconn/src/split_view/bridge.rs:2028
+#: rustconn/src/split_view/bridge.rs:2024
 msgid "Tab Overview grid (Ctrl+Shift+O)"
 msgstr "Faneoversigtsvisning (Ctrl+Shift+O)"
 
-#: rustconn/src/split_view/bridge.rs:2045
+#: rustconn/src/split_view/bridge.rs:2041
 msgid "Import Formats"
 msgstr "Importformater"
 
-#: rustconn/src/split_view/bridge.rs:2211
+#: rustconn/src/split_view/bridge.rs:2208
 msgid "All tabs are already displayed in this split view"
 msgstr "Alle faner vises allerede i denne opdelte visning"
 
-#: rustconn/src/split_view/bridge.rs:2250
+#: rustconn/src/split_view/bridge.rs:2247
 msgid "Select a tab to display"
 msgstr "Vælg en fane til visning"
 
@@ -12546,6 +12542,9 @@ msgstr "RustConn"
 #: rustconn/assets/io.github.totoshko88.RustConn.desktop:15
 msgid "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connection;terminal;remote;kubernetes;k8s;serial;sftp;"
 msgstr "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connection;terminal;remote;kubernetes;k8s;serial;sftp;"
+
+#~ msgid "Import from PuTTY, mRemoteNG, and more"
+#~ msgstr "Importér fra PuTTY, mRemoteNG med flere"
 
 #~ msgid "Connect via intermediate server"
 #~ msgstr "Forbind via mellemserver"

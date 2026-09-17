@@ -1898,7 +1898,7 @@ impl SplitViewBridge {
             .title(i18n("Features"))
             .build();
 
-        let features: [(&str, String); 10] = [
+        let features: [(&str, String); 9] = [
             (
                 "utilities-terminal-symbolic",
                 i18n("Embedded SSH, RDP, VNC, SPICE"),
@@ -1916,10 +1916,6 @@ impl SplitViewBridge {
             (
                 "mail-attachment-symbolic",
                 i18n("Drag & drop files to sessions"),
-            ),
-            (
-                "document-open-symbolic",
-                i18n("Import from PuTTY, mRemoteNG, and more"),
             ),
         ];
 
@@ -2047,8 +2043,9 @@ impl SplitViewBridge {
             .build();
 
         let formats = [
-            "SSH Config / Ansible / RDP",
-            "Remmina / Asbru-CM / MobaXterm",
+            "SSH Config / Ansible / RDP / CSV",
+            "Remmina / Asbru-CM / MobaXterm / SecureCRT",
+            "PuTTY / KiTTY / mRemoteNG",
             "Royal TS / Remote Desktop Manager",
             "Libvirt XML / Virt-Viewer",
         ];

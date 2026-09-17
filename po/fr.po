@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-17 22:12+0300\n"
+"POT-Creation-Date: 2026-09-17 23:11+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: RustConn Team\n"
 "Language-Team: French\n"
@@ -89,7 +89,7 @@ msgstr ""
 "dans Paramètres"
 
 #: rustconn/src/app.rs:707 rustconn/src/dialogs/shortcuts.rs:176
-#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1990
+#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1986
 #: rustconn/src/window/ui.rs:111
 msgid "Settings"
 msgstr "Paramètres"
@@ -6076,7 +6076,7 @@ msgstr "Raccourcis clavier"
 
 #: rustconn/src/dialogs/settings/keybindings_tab.rs:58
 #: rustconn/src/dialogs/shortcuts.rs:155 rustconn/src/dialogs/shortcuts.rs:301
-#: rustconn/src/split_view/bridge.rs:1978
+#: rustconn/src/split_view/bridge.rs:1974
 msgid "Keyboard Shortcuts"
 msgstr "Raccourcis clavier"
 
@@ -8084,7 +8084,7 @@ msgstr "Connexion rapide"
 msgid "Move to Group"
 msgstr "Déplacer vers le groupe"
 
-#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1986
+#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1982
 msgid "Search"
 msgstr "Rechercher"
 
@@ -10639,67 +10639,63 @@ msgstr "Extraits de commandes et clusters"
 msgid "Drag & drop files to sessions"
 msgstr "Glisser-déposer des fichiers vers les sessions"
 
-#: rustconn/src/split_view/bridge.rs:1922
-msgid "Import from PuTTY, mRemoteNG, and more"
-msgstr "Importer depuis PuTTY, mRemoteNG et plus"
-
-#: rustconn/src/split_view/bridge.rs:1982
+#: rustconn/src/split_view/bridge.rs:1978
 msgid "New connection"
 msgstr "Nouvelle connexion"
 
-#: rustconn/src/split_view/bridge.rs:1983
+#: rustconn/src/split_view/bridge.rs:1979
 msgid "Quick connect"
 msgstr "Connexion rapide"
 
-#: rustconn/src/split_view/bridge.rs:1984
+#: rustconn/src/split_view/bridge.rs:1980
 msgid "Command palette"
 msgstr "Palette de commandes"
 
-#: rustconn/src/split_view/bridge.rs:1985
+#: rustconn/src/split_view/bridge.rs:1981
 msgid "Local shell"
 msgstr "Shell local"
 
-#: rustconn/src/split_view/bridge.rs:1987
+#: rustconn/src/split_view/bridge.rs:1983
 msgid "Split vertical / horizontal"
 msgstr "Diviser vertical / horizontal"
 
-#: rustconn/src/split_view/bridge.rs:1988
+#: rustconn/src/split_view/bridge.rs:1984
 msgid "Disable shortcuts"
 msgstr "Désactiver les raccourcis"
 
-#: rustconn/src/split_view/bridge.rs:1989
+#: rustconn/src/split_view/bridge.rs:1985
 msgid "Import connections"
 msgstr "Importer des connexions"
 
-#: rustconn/src/split_view/bridge.rs:2019
+#: rustconn/src/split_view/bridge.rs:2015
 msgid "Quick Access"
 msgstr "Accès rapide"
 
-#: rustconn/src/split_view/bridge.rs:2023
+#: rustconn/src/split_view/bridge.rs:2019
 msgid "Fuzzy search & command palette"
 msgstr "Recherche floue et palette de commandes"
 
-#: rustconn/src/split_view/bridge.rs:2024
+#: rustconn/src/split_view/bridge.rs:2020
 msgid "Pin favorites to sidebar"
 msgstr "Épingler les favoris dans la barre latérale"
 
-#: rustconn/src/split_view/bridge.rs:2025
+#: rustconn/src/split_view/bridge.rs:2021
 msgid "Split view for terminals"
 msgstr "Vue fractionnée pour les terminaux"
 
-#: rustconn/src/split_view/bridge.rs:2028
+#: rustconn/src/split_view/bridge.rs:2024
 msgid "Tab Overview grid (Ctrl+Shift+O)"
 msgstr "Grille d'aperçu des onglets (Ctrl+Shift+O)"
 
-#: rustconn/src/split_view/bridge.rs:2045
+#: rustconn/src/split_view/bridge.rs:2041
 msgid "Import Formats"
 msgstr "Formats d'importation"
 
-#: rustconn/src/split_view/bridge.rs:2211
+#: rustconn/src/split_view/bridge.rs:2208
 msgid "All tabs are already displayed in this split view"
 msgstr "Tous les onglets sont déjà affichés dans cette vue fractionnée"
 
-#: rustconn/src/split_view/bridge.rs:2250
+#: rustconn/src/split_view/bridge.rs:2247
 msgid "Select a tab to display"
 msgstr "Sélectionner un onglet à afficher"
 
@@ -12692,6 +12688,9 @@ msgstr "RustConn"
 #: rustconn/assets/io.github.totoshko88.RustConn.desktop:15
 msgid "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connection;terminal;remote;kubernetes;k8s;serial;sftp;"
 msgstr "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connexion;terminal;distant;kubernetes;k8s;série;sftp;"
+
+#~ msgid "Import from PuTTY, mRemoteNG, and more"
+#~ msgstr "Importer depuis PuTTY, mRemoteNG et plus"
 
 #~ msgid "Connect via intermediate server"
 #~ msgstr "Se connecter via un serveur intermédiaire"
