@@ -560,7 +560,6 @@ impl SnippetDialog {
         self.dialog
             .present(self.parent.as_ref().map(|w| w as &gtk4::Widget));
     }
-
 }
 
 impl SnippetFormWidgets {
