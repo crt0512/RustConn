@@ -3218,6 +3218,7 @@ Back up your entire RustConn configuration as a single ZIP archive.
 - MobaXterm sessions (.mxtsessions)
 - SecureCRT sessions (.ini directory)
 - PuTTY / KiTTY sessions (`.reg` registry export)
+- mRemoteNG connections (`confCons.xml`)
 - Remote Desktop Manager (JSON)
 - RDP files (.rdp — Microsoft Remote Desktop)
 - Virt-Viewer (.vv files — SPICE/VNC from libvirt, Proxmox VE)
@@ -3247,6 +3248,7 @@ Double-click source to start import immediately.
 | MobaXterm | — | `.mxtsessions` | SSH, RDP, VNC, Telnet, Serial | INI-based sessions |
 | SecureCRT | `~/.vandyke/Config/Sessions/` | Directory or `.ini` | SSH, Telnet, RDP, VNC | Folder hierarchy → groups |
 | PuTTY / KiTTY | — | `.reg` registry export | SSH, Telnet (Raw, Rlogin → Telnet) | Key file, agent/X11 forwarding, compression imported; passwords are not stored in the export |
+| mRemoteNG | — | `confCons.xml` | SSH, RDP, VNC, Telnet (Raw, Rlogin → Telnet) | Container nodes → nested groups; unencrypted documents only; passwords are not imported |
 | Remote Desktop Manager | — | JSON file | SSH, RDP, VNC, Telnet | Devolutions JSON export; `Group` paths → groups |
 | RDP File | — | `.rdp` file | RDP | Microsoft Remote Desktop format |
 | Virt-Viewer | — | `.vv` file | SPICE, VNC | From libvirt, Proxmox VE, oVirt |
@@ -3369,6 +3371,15 @@ PuTTY (and the compatible KiTTY fork) store sessions in the Windows Registry, no
 2. **File > Import > PuTTY** → select the `.reg` file → Import.
 
 Each saved session becomes a connection. SSH sessions carry over their private key file, agent forwarding, X11 forwarding and compression; the host, port and username are imported for every protocol. Telnet, Raw and Rlogin sessions are imported as RustConn Telnet connections (Rlogin keeps its own default port 513). The "Default Settings" template and any session without a host name are skipped, as are Serial and other protocols RustConn does not serve. Passwords are never present in a PuTTY export, so none are imported — enter them on first connect and let RustConn store them in your vault.
+
+#### From mRemoteNG
+
+mRemoteNG stores its connection tree in a `confCons.xml` file (on Windows, `%APPDATA%\mRemoteNG\confCons.xml`):
+
+1. Copy `confCons.xml` to Linux — or use **Tools > Export** in mRemoteNG to write one.
+2. **File > Import > mRemoteNG** → select the file → Import.
+
+Container nodes become nested connection groups, and each connection node becomes a connection with its host, port, username and (for RDP) domain. SSH1/SSH2 import as SSH; RDP, VNC and Telnet keep their protocol; Raw and Rlogin become Telnet connections (Rlogin on port 513). Protocols with no RustConn equivalent (Citrix ICA, HTTP/HTTPS, external apps) and host-less nodes are reported as skipped. Only unencrypted documents are read: a file saved with **full-file encryption** is reported with a message asking you to export it without encryption first, and per-connection encrypted passwords are never decoded — so, as with every other importer, no password is carried across.
 
 #### From Royal TS / Royal TSX
 

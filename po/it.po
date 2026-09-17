@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-17 21:50+0300\n"
+"POT-Creation-Date: 2026-09-17 22:12+0300\n"
 "PO-Revision-Date: 2026-06-14 09:46+0000\n"
 "Last-Translator: Albano Battistella\n"
 "Language-Team: Italian\n"
@@ -4274,7 +4274,7 @@ msgstr "Copia interrotta"
 #: rustconn/src/dialogs/credential_transfer.rs:652
 #: rustconn/src/dialogs/credential_transfer.rs:719
 #: rustconn/src/dialogs/export.rs:1179 rustconn/src/dialogs/history.rs:340
-#: rustconn/src/dialogs/import/sources.rs:701
+#: rustconn/src/dialogs/import/sources.rs:708
 #: rustconn/src/dialogs/portable_passphrase_change.rs:376
 #: rustconn/src/dialogs/recording.rs:804 rustconn/src/dialogs/recording.rs:816
 #: rustconn/src/dialogs/settings/cloud_sync_tab.rs:238
@@ -4336,12 +4336,12 @@ msgid "RustConn Native (.rcn)"
 msgstr "RustConn Native (.rcn)"
 
 #: rustconn/src/dialogs/export.rs:252 rustconn/src/dialogs/import/sources.rs:58
-#: rustconn/src/dialogs/import/sources.rs:514
+#: rustconn/src/dialogs/import/sources.rs:521
 msgid "Ansible Inventory"
 msgstr "Ansible Inventory"
 
 #: rustconn/src/dialogs/export.rs:253 rustconn/src/dialogs/import/sources.rs:70
-#: rustconn/src/dialogs/import/sources.rs:245
+#: rustconn/src/dialogs/import/sources.rs:251
 msgid "Asbru-CM"
 msgstr "Asbru-CM"
 
@@ -4359,8 +4359,8 @@ msgid "RDP Files (.rdp)"
 msgstr "File RDP (.rdp)"
 
 #: rustconn/src/dialogs/export.rs:257
-#: rustconn/src/dialogs/import/sources.rs:130
-#: rustconn/src/dialogs/import/sources.rs:247
+#: rustconn/src/dialogs/import/sources.rs:136
+#: rustconn/src/dialogs/import/sources.rs:253
 msgid "Remmina"
 msgstr "Remmina"
 
@@ -4373,8 +4373,8 @@ msgid "SecureCRT (.ini)"
 msgstr "SecureCRT (.ini)"
 
 #: rustconn/src/dialogs/export.rs:260 rustconn/src/dialogs/export.rs:878
-#: rustconn/src/dialogs/import/sources.rs:142
-#: rustconn/src/dialogs/import/sources.rs:243
+#: rustconn/src/dialogs/import/sources.rs:148
+#: rustconn/src/dialogs/import/sources.rs:249
 msgid "SSH Config"
 msgstr "SSH Config"
 
@@ -4543,7 +4543,7 @@ msgid "Remmina (*.remmina)"
 msgstr "Remmina (*.remmina)"
 
 #: rustconn/src/dialogs/export.rs:892
-#: rustconn/src/dialogs/import/sources.rs:575
+#: rustconn/src/dialogs/import/sources.rs:582
 msgid "RustConn Native (*.rcn)"
 msgstr "RustConn Native (*.rcn)"
 
@@ -4552,7 +4552,7 @@ msgid "Royal TS (*.rtsz)"
 msgstr "Royal TS (*.rtsz)"
 
 #: rustconn/src/dialogs/export.rs:900
-#: rustconn/src/dialogs/import/sources.rs:921
+#: rustconn/src/dialogs/import/sources.rs:928
 msgid "MobaXterm Sessions (*.mxtsessions)"
 msgstr "MobaXterm Sessions (*.mxtsessions)"
 
@@ -4561,7 +4561,7 @@ msgid "SecureCRT Sessions (*.ini)"
 msgstr "Sessioni SecureCRT (*.ini)"
 
 #: rustconn/src/dialogs/export.rs:914
-#: rustconn/src/dialogs/import/sources.rs:1279
+#: rustconn/src/dialogs/import/sources.rs:1375
 msgid "RDP Files (*.rdp)"
 msgstr "File RDP (*.rdp)"
 
@@ -4590,21 +4590,22 @@ msgid "Export complete"
 msgstr "Esportazione completata"
 
 #: rustconn/src/dialogs/export.rs:1166 rustconn/src/dialogs/import/mod.rs:568
-#: rustconn/src/dialogs/import/mod.rs:866
-#: rustconn/src/dialogs/import/sources.rs:346
-#: rustconn/src/dialogs/import/sources.rs:438
-#: rustconn/src/dialogs/import/sources.rs:534
-#: rustconn/src/dialogs/import/sources.rs:639
-#: rustconn/src/dialogs/import/sources.rs:692
-#: rustconn/src/dialogs/import/sources.rs:795
-#: rustconn/src/dialogs/import/sources.rs:886
-#: rustconn/src/dialogs/import/sources.rs:977
-#: rustconn/src/dialogs/import/sources.rs:1066
-#: rustconn/src/dialogs/import/sources.rs:1157
-#: rustconn/src/dialogs/import/sources.rs:1245
-#: rustconn/src/dialogs/import/sources.rs:1331
-#: rustconn/src/dialogs/import/sources.rs:1447
-#: rustconn/src/dialogs/import/sources.rs:1601
+#: rustconn/src/dialogs/import/mod.rs:881
+#: rustconn/src/dialogs/import/sources.rs:353
+#: rustconn/src/dialogs/import/sources.rs:445
+#: rustconn/src/dialogs/import/sources.rs:541
+#: rustconn/src/dialogs/import/sources.rs:646
+#: rustconn/src/dialogs/import/sources.rs:699
+#: rustconn/src/dialogs/import/sources.rs:802
+#: rustconn/src/dialogs/import/sources.rs:893
+#: rustconn/src/dialogs/import/sources.rs:984
+#: rustconn/src/dialogs/import/sources.rs:1073
+#: rustconn/src/dialogs/import/sources.rs:1162
+#: rustconn/src/dialogs/import/sources.rs:1253
+#: rustconn/src/dialogs/import/sources.rs:1341
+#: rustconn/src/dialogs/import/sources.rs:1427
+#: rustconn/src/dialogs/import/sources.rs:1543
+#: rustconn/src/dialogs/import/sources.rs:1697
 #: rustconn/src/dialogs/widgets.rs:491
 msgid "Done"
 msgstr "Fatto"
@@ -4822,18 +4823,19 @@ msgid "Successfully imported {} connection(s) and {} group(s)."
 msgstr "Importate con successo {} connessione/i e {} gruppo/i."
 
 #: rustconn/src/dialogs/import/mod.rs:367
-#: rustconn/src/dialogs/import/sources.rs:336
-#: rustconn/src/dialogs/import/sources.rs:428
-#: rustconn/src/dialogs/import/sources.rs:524
-#: rustconn/src/dialogs/import/sources.rs:629
-#: rustconn/src/dialogs/import/sources.rs:785
-#: rustconn/src/dialogs/import/sources.rs:876
-#: rustconn/src/dialogs/import/sources.rs:967
-#: rustconn/src/dialogs/import/sources.rs:1056
-#: rustconn/src/dialogs/import/sources.rs:1147
-#: rustconn/src/dialogs/import/sources.rs:1235
-#: rustconn/src/dialogs/import/sources.rs:1321
-#: rustconn/src/dialogs/import/sources.rs:1437
+#: rustconn/src/dialogs/import/sources.rs:343
+#: rustconn/src/dialogs/import/sources.rs:435
+#: rustconn/src/dialogs/import/sources.rs:531
+#: rustconn/src/dialogs/import/sources.rs:636
+#: rustconn/src/dialogs/import/sources.rs:792
+#: rustconn/src/dialogs/import/sources.rs:883
+#: rustconn/src/dialogs/import/sources.rs:974
+#: rustconn/src/dialogs/import/sources.rs:1063
+#: rustconn/src/dialogs/import/sources.rs:1152
+#: rustconn/src/dialogs/import/sources.rs:1243
+#: rustconn/src/dialogs/import/sources.rs:1331
+#: rustconn/src/dialogs/import/sources.rs:1417
+#: rustconn/src/dialogs/import/sources.rs:1533
 msgid ""
 "Successfully imported {} connection(s) and {} group(s).\n"
 "Connections will be added to '{} Import' group."
@@ -4903,37 +4905,38 @@ msgstr "Nessuna connessione trovata nella sorgente selezionata."
 
 #: rustconn/src/dialogs/import/mod.rs:541
 #: rustconn/src/dialogs/import/mod.rs:637
-#: rustconn/src/dialogs/import/mod.rs:979
-#: rustconn/src/dialogs/import/mod.rs:997
-#: rustconn/src/dialogs/import/mod.rs:1015
-#: rustconn/src/dialogs/import/mod.rs:1033
-#: rustconn/src/dialogs/import/mod.rs:1051
-#: rustconn/src/dialogs/import/sources.rs:315
-#: rustconn/src/dialogs/import/sources.rs:408
-#: rustconn/src/dialogs/import/sources.rs:504
-#: rustconn/src/dialogs/import/sources.rs:599
-#: rustconn/src/dialogs/import/sources.rs:765
-#: rustconn/src/dialogs/import/sources.rs:854
-#: rustconn/src/dialogs/import/sources.rs:945
-#: rustconn/src/dialogs/import/sources.rs:1036
-#: rustconn/src/dialogs/import/sources.rs:1129
-#: rustconn/src/dialogs/import/sources.rs:1215
-#: rustconn/src/dialogs/import/sources.rs:1303
-#: rustconn/src/dialogs/import/sources.rs:1394
+#: rustconn/src/dialogs/import/mod.rs:994
+#: rustconn/src/dialogs/import/mod.rs:1012
+#: rustconn/src/dialogs/import/mod.rs:1030
+#: rustconn/src/dialogs/import/mod.rs:1048
+#: rustconn/src/dialogs/import/mod.rs:1066
+#: rustconn/src/dialogs/import/sources.rs:322
+#: rustconn/src/dialogs/import/sources.rs:415
+#: rustconn/src/dialogs/import/sources.rs:511
+#: rustconn/src/dialogs/import/sources.rs:606
+#: rustconn/src/dialogs/import/sources.rs:772
+#: rustconn/src/dialogs/import/sources.rs:861
+#: rustconn/src/dialogs/import/sources.rs:952
+#: rustconn/src/dialogs/import/sources.rs:1043
+#: rustconn/src/dialogs/import/sources.rs:1132
+#: rustconn/src/dialogs/import/sources.rs:1225
+#: rustconn/src/dialogs/import/sources.rs:1311
+#: rustconn/src/dialogs/import/sources.rs:1399
+#: rustconn/src/dialogs/import/sources.rs:1490
 msgid "Importing from {}…"
 msgstr "Importazione da {}…"
 
 #: rustconn/src/dialogs/import/mod.rs:558
-#: rustconn/src/dialogs/import/mod.rs:855
-#: rustconn/src/dialogs/import/mod.rs:1073
+#: rustconn/src/dialogs/import/mod.rs:870
+#: rustconn/src/dialogs/import/mod.rs:1088
 msgid "Import complete"
 msgstr "Importazione completata"
 
-#: rustconn/src/dialogs/import/mod.rs:967
+#: rustconn/src/dialogs/import/mod.rs:982
 msgid "Starting import from {}…"
 msgstr "Avvio importazione da {}…"
 
-#: rustconn/src/dialogs/import/mod.rs:1061
+#: rustconn/src/dialogs/import/mod.rs:1076
 msgid "Querying libvirt daemon…"
 msgstr "Interrogazione del demone libvirt…"
 
@@ -4974,8 +4977,8 @@ msgid "Import from a specific Asbru-CM YAML file"
 msgstr "Importa da un file YAML Asbru-CM specifico"
 
 #: rustconn/src/dialogs/import/sources.rs:82
-#: rustconn/src/dialogs/import/sources.rs:261
-#: rustconn/src/dialogs/import/sources.rs:1428
+#: rustconn/src/dialogs/import/sources.rs:268
+#: rustconn/src/dialogs/import/sources.rs:1524
 msgid "CSV"
 msgstr "CSV"
 
@@ -4984,7 +4987,7 @@ msgid "Import connections from a CSV file"
 msgstr "Importa connessioni da un file CSV"
 
 #: rustconn/src/dialogs/import/sources.rs:88
-#: rustconn/src/dialogs/import/sources.rs:257
+#: rustconn/src/dialogs/import/sources.rs:264
 msgid "Libvirt / GNOME Boxes"
 msgstr "Libvirt / GNOME Boxes"
 
@@ -5021,173 +5024,186 @@ msgid "Import from a PuTTY/KiTTY registry export file"
 msgstr "Importa da un file di esportazione del registro di PuTTY/KiTTY"
 
 #: rustconn/src/dialogs/import/sources.rs:118
+msgid "mRemoteNG (confCons.xml)"
+msgstr "mRemoteNG (confCons.xml)"
+
+#: rustconn/src/dialogs/import/sources.rs:119
+msgid "Import from an mRemoteNG connections file"
+msgstr "Importa da un file di connessioni di mRemoteNG"
+
+#: rustconn/src/dialogs/import/sources.rs:124
 msgid "RDP File (.rdp)"
 msgstr "File RDP (.rdp)"
 
-#: rustconn/src/dialogs/import/sources.rs:119
+#: rustconn/src/dialogs/import/sources.rs:125
 msgid "Import RDP connection from a Microsoft .rdp file"
 msgstr "Importa connessione RDP da un file Microsoft .rdp"
 
-#: rustconn/src/dialogs/import/sources.rs:124
+#: rustconn/src/dialogs/import/sources.rs:130
 msgid "Remote Desktop Manager (JSON)"
 msgstr "Remote Desktop Manager (JSON)"
 
-#: rustconn/src/dialogs/import/sources.rs:125
+#: rustconn/src/dialogs/import/sources.rs:131
 msgid "Import from a Remote Desktop Manager JSON export file"
 msgstr "Importa da un file di esportazione JSON Remote Desktop Manager"
 
-#: rustconn/src/dialogs/import/sources.rs:131
+#: rustconn/src/dialogs/import/sources.rs:137
 msgid "Import from Remmina connection files"
 msgstr "Importa dai file di connessione Remmina"
 
-#: rustconn/src/dialogs/import/sources.rs:136
+#: rustconn/src/dialogs/import/sources.rs:142
 msgid "Royal TS (.rtsz, .rtsx)"
 msgstr "Royal TS (.rtsz, .rtsx)"
 
-#: rustconn/src/dialogs/import/sources.rs:137
+#: rustconn/src/dialogs/import/sources.rs:143
 msgid "Import from a Royal TS export file"
 msgstr "Importa da un file di esportazione Royal TS"
 
-#: rustconn/src/dialogs/import/sources.rs:143
+#: rustconn/src/dialogs/import/sources.rs:149
 msgid "Import from ~/.ssh/config"
 msgstr "Importa da ~/.ssh/config"
 
-#: rustconn/src/dialogs/import/sources.rs:148
-#: rustconn/src/dialogs/import/sources.rs:244
-#: rustconn/src/dialogs/import/sources.rs:326
+#: rustconn/src/dialogs/import/sources.rs:154
+#: rustconn/src/dialogs/import/sources.rs:250
+#: rustconn/src/dialogs/import/sources.rs:333
 msgid "SSH Config File"
 msgstr "File SSH Config"
 
-#: rustconn/src/dialogs/import/sources.rs:149
+#: rustconn/src/dialogs/import/sources.rs:155
 msgid "Import from a specific SSH config file"
 msgstr "Importa da un file SSH config specifico"
 
-#: rustconn/src/dialogs/import/sources.rs:154
+#: rustconn/src/dialogs/import/sources.rs:160
 msgid "Virt-Viewer (.vv)"
 msgstr "Virt-Viewer (.vv)"
 
-#: rustconn/src/dialogs/import/sources.rs:155
+#: rustconn/src/dialogs/import/sources.rs:161
 msgid "Import SPICE/VNC connection from a virt-viewer file"
 msgstr "Importa connessione SPICE/VNC da un file virt-viewer"
 
-#: rustconn/src/dialogs/import/sources.rs:160
+#: rustconn/src/dialogs/import/sources.rs:166
 msgid "Multiple Files (batch)"
 msgstr "File multipli (batch)"
 
-#: rustconn/src/dialogs/import/sources.rs:161
+#: rustconn/src/dialogs/import/sources.rs:167
 msgid "Import connections from multiple files at once"
 msgstr "Importa connessioni da più file contemporaneamente"
 
-#: rustconn/src/dialogs/import/sources.rs:223
+#: rustconn/src/dialogs/import/sources.rs:229
 msgid "Available"
 msgstr "Disponibile"
 
-#: rustconn/src/dialogs/import/sources.rs:228
+#: rustconn/src/dialogs/import/sources.rs:234
 msgid "Not Found"
 msgstr "Non trovato"
 
-#: rustconn/src/dialogs/import/sources.rs:246
-#: rustconn/src/dialogs/import/sources.rs:418
+#: rustconn/src/dialogs/import/sources.rs:252
+#: rustconn/src/dialogs/import/sources.rs:425
 msgid "Asbru-CM File"
 msgstr "File Asbru-CM"
 
-#: rustconn/src/dialogs/import/sources.rs:248
+#: rustconn/src/dialogs/import/sources.rs:254
 msgid "Ansible"
 msgstr "Ansible"
 
-#: rustconn/src/dialogs/import/sources.rs:249
+#: rustconn/src/dialogs/import/sources.rs:255
 msgid "Ansible File"
 msgstr "File Ansible"
 
-#: rustconn/src/dialogs/import/sources.rs:250
-#: rustconn/src/dialogs/import/sources.rs:617
+#: rustconn/src/dialogs/import/sources.rs:256
+#: rustconn/src/dialogs/import/sources.rs:624
 msgid "RustConn Native"
 msgstr "RustConn Native"
 
-#: rustconn/src/dialogs/import/sources.rs:251
-#: rustconn/src/dialogs/import/sources.rs:774
+#: rustconn/src/dialogs/import/sources.rs:257
+#: rustconn/src/dialogs/import/sources.rs:781
 msgid "Royal TS"
 msgstr "Royal TS"
 
-#: rustconn/src/dialogs/import/sources.rs:252
+#: rustconn/src/dialogs/import/sources.rs:258
 msgid "Remote Desktop Manager"
 msgstr "Remote Desktop Manager"
 
-#: rustconn/src/dialogs/import/sources.rs:253
-#: rustconn/src/dialogs/import/sources.rs:955
+#: rustconn/src/dialogs/import/sources.rs:259
+#: rustconn/src/dialogs/import/sources.rs:962
 msgid "MobaXterm"
 msgstr "MobaXterm"
 
-#: rustconn/src/dialogs/import/sources.rs:254
-#: rustconn/src/dialogs/import/sources.rs:1045
+#: rustconn/src/dialogs/import/sources.rs:260
+#: rustconn/src/dialogs/import/sources.rs:1052
 msgid "PuTTY"
 msgstr "PuTTY"
 
-#: rustconn/src/dialogs/import/sources.rs:255
-#: rustconn/src/dialogs/import/sources.rs:1224
+#: rustconn/src/dialogs/import/sources.rs:261
+#: rustconn/src/dialogs/import/sources.rs:1141
+msgid "mRemoteNG"
+msgstr "mRemoteNG"
+
+#: rustconn/src/dialogs/import/sources.rs:262
+#: rustconn/src/dialogs/import/sources.rs:1320
 msgid "Virt-Viewer"
 msgstr "Virt-Viewer"
 
-#: rustconn/src/dialogs/import/sources.rs:256
-#: rustconn/src/dialogs/import/sources.rs:1567
+#: rustconn/src/dialogs/import/sources.rs:263
+#: rustconn/src/dialogs/import/sources.rs:1663
 msgid "Multiple Files"
 msgstr "File multipli"
 
-#: rustconn/src/dialogs/import/sources.rs:258
-#: rustconn/src/dialogs/import/sources.rs:1136
+#: rustconn/src/dialogs/import/sources.rs:265
+#: rustconn/src/dialogs/import/sources.rs:1232
 msgid "Libvirt XML"
 msgstr "Libvirt XML"
 
-#: rustconn/src/dialogs/import/sources.rs:259
+#: rustconn/src/dialogs/import/sources.rs:266
 msgid "Libvirt Daemon"
 msgstr "Libvirt Daemon"
 
-#: rustconn/src/dialogs/import/sources.rs:260
-#: rustconn/src/dialogs/import/sources.rs:1310
+#: rustconn/src/dialogs/import/sources.rs:267
+#: rustconn/src/dialogs/import/sources.rs:1406
 msgid "RDP File"
 msgstr "File RDP"
 
-#: rustconn/src/dialogs/import/sources.rs:262
+#: rustconn/src/dialogs/import/sources.rs:269
 #: rustconn/src/dialogs/settings/secrets_tab/detection.rs:715
 msgid "Unknown"
 msgstr "Sconosciuto"
 
-#: rustconn/src/dialogs/import/sources.rs:282
+#: rustconn/src/dialogs/import/sources.rs:289
 msgid "Select SSH Config File"
 msgstr "Seleziona file di configurazione SSH"
 
-#: rustconn/src/dialogs/import/sources.rs:291
+#: rustconn/src/dialogs/import/sources.rs:298
 msgid "SSH config files"
 msgstr "File SSH config"
 
-#: rustconn/src/dialogs/import/sources.rs:376
+#: rustconn/src/dialogs/import/sources.rs:383
 msgid "Select Asbru-CM YAML File"
 msgstr "Seleziona file YAML Asbru-CM"
 
-#: rustconn/src/dialogs/import/sources.rs:384
+#: rustconn/src/dialogs/import/sources.rs:391
 msgid "YAML files"
 msgstr "File YAML"
 
-#: rustconn/src/dialogs/import/sources.rs:468
+#: rustconn/src/dialogs/import/sources.rs:475
 msgid "Select Ansible Inventory File"
 msgstr "Seleziona file inventario Ansible"
 
-#: rustconn/src/dialogs/import/sources.rs:480
+#: rustconn/src/dialogs/import/sources.rs:487
 msgid "Ansible inventory files"
 msgstr "File inventario Ansible"
 
-#: rustconn/src/dialogs/import/sources.rs:568
+#: rustconn/src/dialogs/import/sources.rs:575
 msgid "Select RustConn Native File"
 msgstr "Seleziona file nativo RustConn"
 
-#: rustconn/src/dialogs/import/sources.rs:671
+#: rustconn/src/dialogs/import/sources.rs:678
 #: rustconn/src/dialogs/settings/cloud_sync_tab.rs:38
 #: rustconn/src/window/edit_group.rs:811 rustconn/src/window/edit_group.rs:862
 #: rustconn/src/window/edit_group.rs:1406
 msgid "Cloud Sync"
 msgstr "Sincronizzazione cloud"
 
-#: rustconn/src/dialogs/import/sources.rs:682
+#: rustconn/src/dialogs/import/sources.rs:689
 msgid ""
 "Imported {} connection(s) from Cloud Sync file '{}'\n"
 "Group '{}' will be created in Import mode."
@@ -5195,96 +5211,104 @@ msgstr ""
 "Importate {} connessione/i dal file Cloud Sync '{}'\n"
 "Il gruppo '{}' verrà creato in modalità Importazione."
 
-#: rustconn/src/dialogs/import/sources.rs:697
+#: rustconn/src/dialogs/import/sources.rs:704
 #: rustconn/src/window/connection_dialogs.rs:1160
 msgid "Import Failed"
 msgstr "Importazione fallita"
 
-#: rustconn/src/dialogs/import/sources.rs:698
+#: rustconn/src/dialogs/import/sources.rs:705
 msgid "Error: {}"
 msgstr "Errore: {}"
 
-#: rustconn/src/dialogs/import/sources.rs:734
+#: rustconn/src/dialogs/import/sources.rs:741
 msgid "Select Royal TS File"
 msgstr "Seleziona file Royal TS"
 
-#: rustconn/src/dialogs/import/sources.rs:741
+#: rustconn/src/dialogs/import/sources.rs:748
 msgid "Royal TS files (*.rtsz, *.rtsx)"
 msgstr "File Royal TS (*.rtsz, *.rtsx)"
 
-#: rustconn/src/dialogs/import/sources.rs:824
+#: rustconn/src/dialogs/import/sources.rs:831
 msgid "Select RDM JSON File"
 msgstr "Seleziona file JSON RDM"
 
-#: rustconn/src/dialogs/import/sources.rs:830
+#: rustconn/src/dialogs/import/sources.rs:837
 msgid "JSON files"
 msgstr "File JSON"
 
-#: rustconn/src/dialogs/import/sources.rs:864
+#: rustconn/src/dialogs/import/sources.rs:871
 msgid "RDM JSON"
 msgstr "RDM JSON"
 
-#: rustconn/src/dialogs/import/sources.rs:915
+#: rustconn/src/dialogs/import/sources.rs:922
 msgid "Select MobaXterm Session File"
 msgstr "Seleziona file sessione MobaXterm"
 
-#: rustconn/src/dialogs/import/sources.rs:1006
+#: rustconn/src/dialogs/import/sources.rs:1013
 msgid "Select PuTTY Registry Export File"
 msgstr "Seleziona il file di esportazione del registro di PuTTY"
 
-#: rustconn/src/dialogs/import/sources.rs:1012
+#: rustconn/src/dialogs/import/sources.rs:1019
 msgid "PuTTY Registry Export (*.reg)"
 msgstr "Esportazione registro PuTTY (*.reg)"
 
-#: rustconn/src/dialogs/import/sources.rs:1095
+#: rustconn/src/dialogs/import/sources.rs:1102
+msgid "Select mRemoteNG Connections File"
+msgstr "Seleziona il file di connessioni di mRemoteNG"
+
+#: rustconn/src/dialogs/import/sources.rs:1108
+msgid "mRemoteNG Connections (*.xml)"
+msgstr "Connessioni mRemoteNG (*.xml)"
+
+#: rustconn/src/dialogs/import/sources.rs:1191
 msgid "Select Libvirt Domain XML File"
 msgstr "Seleziona file XML di dominio Libvirt"
 
-#: rustconn/src/dialogs/import/sources.rs:1101
+#: rustconn/src/dialogs/import/sources.rs:1197
 msgid "XML files (*.xml)"
 msgstr "File XML (*.xml)"
 
-#: rustconn/src/dialogs/import/sources.rs:1104
+#: rustconn/src/dialogs/import/sources.rs:1200
 msgid "All files"
 msgstr "Tutti i file"
 
-#: rustconn/src/dialogs/import/sources.rs:1185
+#: rustconn/src/dialogs/import/sources.rs:1281
 msgid "Select Virt-Viewer File"
 msgstr "Seleziona file Virt-Viewer"
 
-#: rustconn/src/dialogs/import/sources.rs:1191
+#: rustconn/src/dialogs/import/sources.rs:1287
 msgid "Virt-Viewer files (*.vv)"
 msgstr "File Virt-Viewer (*.vv)"
 
-#: rustconn/src/dialogs/import/sources.rs:1273
+#: rustconn/src/dialogs/import/sources.rs:1369
 msgid "Select RDP File"
 msgstr "Seleziona file RDP"
 
-#: rustconn/src/dialogs/import/sources.rs:1363
+#: rustconn/src/dialogs/import/sources.rs:1459
 msgid "Select CSV File"
 msgstr "Seleziona file CSV"
 
-#: rustconn/src/dialogs/import/sources.rs:1370
+#: rustconn/src/dialogs/import/sources.rs:1466
 msgid "CSV files (*.csv, *.tsv)"
 msgstr "File CSV (*.csv, *.tsv)"
 
-#: rustconn/src/dialogs/import/sources.rs:1479
+#: rustconn/src/dialogs/import/sources.rs:1575
 msgid "Select Files to Import"
 msgstr "Seleziona file da importare"
 
-#: rustconn/src/dialogs/import/sources.rs:1498
+#: rustconn/src/dialogs/import/sources.rs:1594
 msgid "All supported formats"
 msgstr "Tutti i formati supportati"
 
-#: rustconn/src/dialogs/import/sources.rs:1537
+#: rustconn/src/dialogs/import/sources.rs:1633
 msgid "Importing from {} files…"
 msgstr "Importazione da {} file…"
 
-#: rustconn/src/dialogs/import/sources.rs:1555
+#: rustconn/src/dialogs/import/sources.rs:1651
 msgid "Importing {}…"
 msgstr "Importazione di {}…"
 
-#: rustconn/src/dialogs/import/sources.rs:1576
+#: rustconn/src/dialogs/import/sources.rs:1672
 msgid ""
 "Imported {} connection(s) and {} group(s) from {} files ({} errors).\n"
 "Connections will be added to 'Multiple Files Import' group."
@@ -5292,7 +5316,7 @@ msgstr ""
 "Importate {} connessione/i e {} gruppo/i da {} file ({} errori).\n"
 "Le connessioni saranno aggiunte al gruppo 'Multiple Files Import'."
 
-#: rustconn/src/dialogs/import/sources.rs:1586
+#: rustconn/src/dialogs/import/sources.rs:1682
 msgid ""
 "Imported {} connection(s) and {} group(s) from {} files.\n"
 "Connections will be added to 'Multiple Files Import' group."

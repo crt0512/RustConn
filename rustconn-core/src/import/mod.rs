@@ -46,6 +46,7 @@ mod csv_import;
 mod libvirt;
 mod libvirt_daemon;
 mod mobaxterm;
+mod mremoteng;
 mod normalize;
 mod preview;
 mod putty;
@@ -68,6 +69,7 @@ pub use csv_import::{CsvColumnMapping, CsvImporter, CsvParseOptions};
 pub use libvirt::LibvirtXmlImporter;
 pub use libvirt_daemon::LibvirtDaemonImporter;
 pub use mobaxterm::MobaXtermImporter;
+pub use mremoteng::MRemoteNgImporter;
 pub use normalize::{
     ImportNormalizer, NormalizeOptions, is_valid_hostname, looks_like_hostname, parse_host_port,
     sanitize_imported_value,

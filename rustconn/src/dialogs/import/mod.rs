@@ -757,6 +757,21 @@ impl ImportDialog {
                     return;
                 }
 
+                if source_id == "mremoteng_file" {
+                    Self::handle_mremoteng_file_import(
+                        parent_window.as_ref(),
+                        &stack,
+                        &progress_bar,
+                        &progress_label,
+                        &result_label,
+                        &result_details,
+                        &result_cell,
+                        &source_name_cell,
+                        btn,
+                    );
+                    return;
+                }
+
                 if source_id == "libvirt_file" {
                     Self::handle_libvirt_file_import(
                         parent_window.as_ref(),
