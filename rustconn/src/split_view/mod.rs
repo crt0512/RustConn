@@ -73,8 +73,12 @@ use crate::window::types::{SessionSplitBridges, SharedNotebook};
 /// change between them (SSH tabs connecting in the background could steal
 /// focus between timeouts).
 ///
-/// ponytail: restores split direction only, not `split_ratio` (panes open 50/50);
-/// upgrade path: expose a ratio setter on `SplitViewBridge` and apply it post-split.
+/// After the splits are created it reapplies the saved root `split_ratio` via
+/// [`SplitViewBridge::set_root_split_position`]; a freshly created split opens
+/// at 0.5, so the persisted fraction has to be written back once the tree
+/// exists. Only the root split's ratio is restored — the nested splits of a
+/// balanced multi-panel grid still open evenly, since `WorkspaceSplitLayout`
+/// records a single fraction (a per-split `Vec<f64>` would be the upgrade path).
 pub fn apply_layout(
     window: &gtk4::Window,
     layout: &WorkspaceSplitLayout,
@@ -97,6 +101,7 @@ pub fn apply_layout(
     let window_weak = window.downgrade();
     let notebook = notebook.clone();
     let session_bridges = session_bridges.clone();
+    let root_ratio = layout.split_ratio;
 
     gtk4::glib::idle_add_local_once(move || {
         let Some(win) = window_weak.upgrade() else {
@@ -198,6 +203,18 @@ pub fn apply_layout(
             panels[largest_idx] = (new_w, new_h, panels[largest_idx].2);
             // The new panel is the other half.
             panels.push((new_w, new_h, new_uuid));
+        }
+
+        // Reapply the saved root split ratio. Every split above opened at the
+        // model default of 0.5; the persisted fraction is written back into the
+        // active session's bridge, which rebuilds the widget tree and lets the
+        // idle-poll in build_split_widget position the divider. Skipped for a
+        // near-even ratio so an ordinary 50/50 layout is not rebuilt for nothing.
+        if (root_ratio - 0.5).abs() > 0.01
+            && let Some(active_session) = notebook.get_active_session_id()
+            && let Some(bridge) = session_bridges.borrow().get(&active_session)
+        {
+            bridge.set_root_split_position(root_ratio);
         }
     });
 }

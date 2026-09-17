@@ -2754,8 +2754,9 @@ fn transfer_key_for_group(
         backend_type,
         SecretBackendType::KeePassXc | SecretBackendType::KdbxFile
     ) {
-        let path = rustconn_core::secret::KeePassHierarchy::build_group_entry_path(group, groups);
-        return path.strip_prefix("RustConn/").unwrap_or(&path).to_string();
+        // The entry name without the `RustConn/` root — the KDBX helpers add it
+        // back (see issue #327). Shared with the group load path.
+        return rustconn_core::secret::KeePassHierarchy::build_group_entry_name(group, groups);
     }
 
     // Every other backend keys group credentials by the group's UUID, which is

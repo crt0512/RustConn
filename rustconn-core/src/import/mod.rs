@@ -46,8 +46,10 @@ mod csv_import;
 mod libvirt;
 mod libvirt_daemon;
 mod mobaxterm;
+mod mremoteng;
 mod normalize;
 mod preview;
+mod putty;
 mod rdm;
 mod rdp_file;
 mod remmina;
@@ -67,11 +69,13 @@ pub use csv_import::{CsvColumnMapping, CsvImporter, CsvParseOptions};
 pub use libvirt::LibvirtXmlImporter;
 pub use libvirt_daemon::LibvirtDaemonImporter;
 pub use mobaxterm::MobaXtermImporter;
+pub use mremoteng::MRemoteNgImporter;
 pub use normalize::{
     ImportNormalizer, NormalizeOptions, is_valid_hostname, looks_like_hostname, parse_host_port,
     sanitize_imported_value,
 };
 pub use preview::{DuplicateAction, ImportPreview, MergeStrategy, PreviewConnection, PreviewGroup};
+pub use putty::PuttyImporter;
 pub use rdm::RdmImporter;
 pub use rdp_file::RdpFileImporter;
 pub use remmina::RemminaImporter;

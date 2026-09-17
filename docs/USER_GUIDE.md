@@ -1,6 +1,6 @@
 # RustConn User Guide
 
-**Version 0.21.14** | GTK4/libadwaita Connection Manager for Linux
+**Version 0.22.0** | GTK4/libadwaita Connection Manager for Linux
 
 RustConn is a modern connection manager designed for Linux with Wayland-first approach. It supports SSH, RDP, VNC, SPICE, MOSH, SFTP, Telnet, Serial, Kubernetes, Web protocols and Zero Trust integrations through a native GTK4/libadwaita interface.
 
@@ -1846,6 +1846,7 @@ Sessions shown through an external viewer (xfreerdp, vncviewer, or an external S
 - **Select Tab** — click the "Select Tab..." button in an empty pane to pick which session to display; sessions already in other split views show a colored indicator
 - **Move between splits** — a session can be moved from one split to another via "Select Tab"; the original split keeps a placeholder in the vacated panel, and the session's own tab shows a "Displayed in Split View" page with a "Go to Split View" button
 - **Tab Overview** — split-view tabs render correctly in Tab Overview (Ctrl+Shift+O) with live thumbnails showing the split layout
+- **Divider ratio is remembered** — when a split layout is saved in a [workspace profile](#workspace-profiles), the position of the divider (for example a 30/70 split) is saved with it and restored, not reset to an even 50/50. Multi-panel grids restore their shape; the balanced sub-panels open evenly.
 
 Embedded viewers adapt to narrow panels: the toolbar collapses its secondary actions into an overflow ("⋯") menu (Fit resolution and Ctrl+Alt+Del stay visible), and the remote desktop rescales to fully fill a small or oddly-shaped panel. The same adaptation applies to a single embedded tab in a small or narrow application window. Keystroke broadcast (Ctrl+Shift+B) applies only to terminals — its toggle appears when a split holds at least two terminal sessions and a terminal panel is focused, and mirroring never targets an embedded remote desktop.
 
@@ -2662,6 +2663,8 @@ Workspace profiles save your current set of open connections (with tab order) as
 2. Select the workspace → click **Open**
 3. All connections from the workspace are connected simultaneously
 
+A workspace also remembers the [split view](#split-view) layout of the active tab — the number of panels, their orientation, and the divider ratio (for example 30/70). Opening the workspace restores that layout instead of an even split.
+
 **Use cases:**
 - "Production" workspace with monitoring + DB + web servers
 - "Development" workspace with staging servers + bastion
@@ -3214,6 +3217,8 @@ Back up your entire RustConn configuration as a single ZIP archive.
 - Royal TS / Royal TSX (`.rtsz`, `.rtsx` — passwords stay in Royal TS, see below)
 - MobaXterm sessions (.mxtsessions)
 - SecureCRT sessions (.ini directory)
+- PuTTY / KiTTY sessions (`.reg` registry export)
+- mRemoteNG connections (`confCons.xml`)
 - Remote Desktop Manager (JSON)
 - RDP files (.rdp — Microsoft Remote Desktop)
 - Virt-Viewer (.vv files — SPICE/VNC from libvirt, Proxmox VE)
@@ -3242,6 +3247,8 @@ Double-click source to start import immediately.
 | Royal TS / Royal TSX | — | `.rtsz` (compressed) or `.rtsx` file | SSH, Telnet, RDP, VNC | Folder hierarchy → groups; usernames inherited from folder credentials; passwords cannot be imported (encrypted in the document) |
 | MobaXterm | — | `.mxtsessions` | SSH, RDP, VNC, Telnet, Serial | INI-based sessions |
 | SecureCRT | `~/.vandyke/Config/Sessions/` | Directory or `.ini` | SSH, Telnet, RDP, VNC | Folder hierarchy → groups |
+| PuTTY / KiTTY | — | `.reg` registry export | SSH, Telnet (Raw, Rlogin → Telnet) | Key file, agent/X11 forwarding, compression imported; passwords are not stored in the export |
+| mRemoteNG | — | `confCons.xml` | SSH, RDP, VNC, Telnet, Web (Raw, Rlogin → Telnet; HTTP/HTTPS → Web) | Container nodes → nested groups; unencrypted documents only; passwords are not imported |
 | Remote Desktop Manager | — | JSON file | SSH, RDP, VNC, Telnet | Devolutions JSON export; `Group` paths → groups |
 | RDP File | — | `.rdp` file | RDP | Microsoft Remote Desktop format |
 | Virt-Viewer | — | `.vv` file | SPICE, VNC | From libvirt, Proxmox VE, oVirt |
@@ -3353,6 +3360,26 @@ xdg-mime default io.github.totoshko88.RustConn.desktop application/x-virt-viewer
 1. Locate SecureCRT sessions directory (`~/.vandyke/Config/Sessions/` on Linux, or `%APPDATA%\VanDyke\Config\Sessions\` on Windows — copy to Linux)
 2. **File > Import > SecureCRT** → select the `Sessions` directory → Import
 3. Folder hierarchy is preserved as connection groups; SSH keys, usernames, ports, X11/agent forwarding settings are imported
+
+#### From PuTTY / KiTTY
+
+PuTTY (and the compatible KiTTY fork) store sessions in the Windows Registry, not in files, so the import works from a registry export:
+
+1. On Windows, export the sessions key to a file:
+   `reg export "HKCU\Software\SimonTatham\PuTTY\Sessions" putty.reg`
+   Copy `putty.reg` to Linux.
+2. **File > Import > PuTTY** → select the `.reg` file → Import.
+
+Each saved session becomes a connection. SSH sessions carry over their private key file, agent forwarding, X11 forwarding and compression; the host, port and username are imported for every protocol. Telnet, Raw and Rlogin sessions are imported as RustConn Telnet connections (Rlogin keeps its own default port 513). The "Default Settings" template and any session without a host name are skipped, as are Serial and other protocols RustConn does not serve. Passwords are never present in a PuTTY export, so none are imported — enter them on first connect and let RustConn store them in your vault.
+
+#### From mRemoteNG
+
+mRemoteNG stores its connection tree in a `confCons.xml` file (on Windows, `%APPDATA%\mRemoteNG\confCons.xml`):
+
+1. Copy `confCons.xml` to Linux — or use **Tools > Export** in mRemoteNG to write one.
+2. **File > Import > mRemoteNG** → select the file → Import.
+
+Container nodes become nested connection groups, and each connection node becomes a connection with its host, port, username and (for RDP) domain. SSH1/SSH2 import as SSH; RDP, VNC and Telnet keep their protocol; Raw and Rlogin become Telnet connections (Rlogin on port 513); HTTP and HTTPS become Web bookmarks (the host is turned into a URL, keeping an explicit scheme or a non-default port). Protocols with no RustConn equivalent (Citrix ICA, PowerShell, Winbox, external apps) and host-less nodes are reported as skipped. Only unencrypted documents are read: a file saved with **full-file encryption** is reported with a message asking you to export it without encryption first, and per-connection encrypted passwords are never decoded — so, as with every other importer, no password is carried across.
 
 #### From Royal TS / Royal TSX
 

@@ -518,6 +518,15 @@ impl SplitViewBridge {
         self.adapter.borrow().root_split()
     }
 
+    /// Sets the root split divider position as a fraction (0.0..=1.0).
+    ///
+    /// Reapplies a split ratio saved in a workspace profile after
+    /// `apply_layout` has recreated the split (which otherwise opens 50/50).
+    /// Returns `false` when the view is not split.
+    pub fn set_root_split_position(&self, fraction: f64) -> bool {
+        self.adapter.borrow_mut().set_root_split_position(fraction)
+    }
+
     /// Returns the direction of every split in the tree (pre-order DFS).
     #[must_use]
     pub fn all_split_directions(&self) -> Vec<rustconn_core::split::SplitDirection> {
@@ -2027,16 +2036,19 @@ impl SplitViewBridge {
         }
         col.append(&quick_group);
 
-        // Import formats
+        // Import formats. Four lines so the two groups in this column add up to
+        // the same number of rows (4 + 4) as the single nine-row groups in the
+        // Features and Shortcuts columns once the second group's header is
+        // counted, keeping the three columns close to the same height.
         let formats_group = adw::PreferencesGroup::builder()
             .title(i18n("Import Formats"))
             .margin_top(6)
             .build();
 
         let formats = [
-            "SSH Config / Ansible / RDP",
-            "Remmina / Asbru-CM / MobaXterm",
-            "Royal TS / Remote Desktop Manager",
+            "SSH Config / Ansible / RDP / CSV",
+            "Remmina / Asbru-CM / MobaXterm / SecureCRT",
+            "PuTTY / KiTTY / mRemoteNG / Royal TS / RDM",
             "Libvirt XML / Virt-Viewer",
         ];
 

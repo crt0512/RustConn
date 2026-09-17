@@ -1,4 +1,29 @@
 -------------------------------------------------------------------
+Fri Sep 18 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.0
+
+- Version bump to 0.22.0
+- Added: import mRemoteNG connections from confCons.xml. Container nodes become
+  nested groups; SSH/RDP/VNC/Telnet keep their protocol, Raw and Rlogin map to
+  Telnet, HTTP/HTTPS become Web bookmarks. Only unencrypted documents are read
+  and no password is imported. Attribute and protocol names were verified
+  against mRemoteNG's own serializer.
+- Added: import PuTTY and KiTTY sessions from a Windows Registry export (.reg).
+  SSH key file, agent/X11 forwarding and compression are carried across; the
+  live registry is never read, only the exported file.
+- Fixed: KeePass group passwords could be saved but not loaded (issue #327) — the
+  load path looked up a doubled RustConn/RustConn/Groups/... entry; both group
+  load sites now share a helper symmetric with the save path.
+- Improved: the welcome screen no longer lists Import twice and its columns are
+  balanced; the Import Formats panel now lists every supported source.
+- Improved: split view divider ratio is restored from a workspace profile
+  instead of always reopening at an even 50/50.
+- Improved: the snippet dialog builds a Snippet from one grouped context struct
+  instead of ten loose arguments (no behaviour change).
+- Dependencies: cfg-if 1.0.4->1.0.5, redox_users 0.5.2->0.5.3, rustix
+  1.1.4->1.1.5, syn 3.0.5->3.0.6, unicode-ident 1.0.24->1.0.26, yuv
+  0.8.18->0.8.19.
+
+-------------------------------------------------------------------
 Wed Sep 16 2026 Anton Isaiev <totoshko88@gmail.com> - 0.21.14
 
 - Version bump to 0.21.14

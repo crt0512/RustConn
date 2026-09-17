@@ -619,7 +619,10 @@ pub fn show_new_group_dialog_with_parent(
                 };
                 let db_password = settings.secrets.kdbx_password.clone();
                 let key_file = settings.secrets.kdbx_key_file.clone();
-                let entry_name = format!("RustConn/Groups/{group_name}");
+                // Entry NAME without the `RustConn/` root — the read helper adds
+                // it back. A leading `RustConn/` here produced the doubled
+                // `RustConn/RustConn/Groups/…` lookup of issue #327.
+                let entry_name = format!("Groups/{group_name}");
 
                 crate::utils::spawn_blocking_with_callback(
                     move || {
