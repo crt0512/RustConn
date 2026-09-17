@@ -300,6 +300,33 @@ impl SplitViewAdapter {
         self.model.borrow().root_split()
     }
 
+    /// Sets the root split divider position as a fraction (0.0..=1.0) and
+    /// rebuilds the widget tree so the new position takes effect.
+    ///
+    /// Used by workspace restore to reapply a saved split ratio: a freshly
+    /// created split defaults to 0.5, so the persisted fraction has to be
+    /// written back into the model after the split action fires. The fraction
+    /// is keyed on the first (leftmost/topmost) panel of the root split, the
+    /// same key `build_split_widget` uses when it saves a user drag. Returns
+    /// `false` if the layout is not split.
+    pub fn set_root_split_position(&mut self, fraction: f64) -> bool {
+        let first_panel_id = {
+            let model = self.model.borrow();
+            if !model.is_split() {
+                return false;
+            }
+            model.first_panel().id
+        };
+        let updated = self
+            .model
+            .borrow_mut()
+            .update_split_position(first_panel_id, fraction);
+        if updated {
+            self.rebuild_widgets();
+        }
+        updated
+    }
+
     /// Returns the direction of every split in the tree (pre-order DFS).
     #[must_use]
     pub fn all_split_directions(&self) -> Vec<SplitDirection> {

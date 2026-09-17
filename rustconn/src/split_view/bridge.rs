@@ -518,6 +518,15 @@ impl SplitViewBridge {
         self.adapter.borrow().root_split()
     }
 
+    /// Sets the root split divider position as a fraction (0.0..=1.0).
+    ///
+    /// Reapplies a split ratio saved in a workspace profile after
+    /// `apply_layout` has recreated the split (which otherwise opens 50/50).
+    /// Returns `false` when the view is not split.
+    pub fn set_root_split_position(&self, fraction: f64) -> bool {
+        self.adapter.borrow_mut().set_root_split_position(fraction)
+    }
+
     /// Returns the direction of every split in the tree (pre-order DFS).
     #[must_use]
     pub fn all_split_directions(&self) -> Vec<rustconn_core::split::SplitDirection> {

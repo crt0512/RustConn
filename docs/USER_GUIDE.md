@@ -1846,6 +1846,7 @@ Sessions shown through an external viewer (xfreerdp, vncviewer, or an external S
 - **Select Tab** — click the "Select Tab..." button in an empty pane to pick which session to display; sessions already in other split views show a colored indicator
 - **Move between splits** — a session can be moved from one split to another via "Select Tab"; the original split keeps a placeholder in the vacated panel, and the session's own tab shows a "Displayed in Split View" page with a "Go to Split View" button
 - **Tab Overview** — split-view tabs render correctly in Tab Overview (Ctrl+Shift+O) with live thumbnails showing the split layout
+- **Divider ratio is remembered** — when a split layout is saved in a [workspace profile](#workspace-profiles), the position of the divider (for example a 30/70 split) is saved with it and restored, not reset to an even 50/50. Multi-panel grids restore their shape; the balanced sub-panels open evenly.
 
 Embedded viewers adapt to narrow panels: the toolbar collapses its secondary actions into an overflow ("⋯") menu (Fit resolution and Ctrl+Alt+Del stay visible), and the remote desktop rescales to fully fill a small or oddly-shaped panel. The same adaptation applies to a single embedded tab in a small or narrow application window. Keystroke broadcast (Ctrl+Shift+B) applies only to terminals — its toggle appears when a split holds at least two terminal sessions and a terminal panel is focused, and mirroring never targets an embedded remote desktop.
 
@@ -2661,6 +2662,8 @@ Workspace profiles save your current set of open connections (with tab order) as
 1. Menu → Tools → **Workspaces...**
 2. Select the workspace → click **Open**
 3. All connections from the workspace are connected simultaneously
+
+A workspace also remembers the [split view](#split-view) layout of the active tab — the number of panels, their orientation, and the divider ratio (for example 30/70). Opening the workspace restores that layout instead of an even split.
 
 **Use cases:**
 - "Production" workspace with monitoring + DB + web servers
