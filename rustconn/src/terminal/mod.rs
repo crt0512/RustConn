@@ -239,6 +239,13 @@ pub struct TerminalNotebook {
     tab_group_manager: Rc<RefCell<TabGroupManager>>,
     /// Callback for reconnect button clicks (session_id, connection_id)
     on_reconnect: Rc<RefCell<Option<Box<dyn Fn(Uuid, Uuid)>>>>,
+    /// Resolves the split-pane container box a session is displayed in, when it
+    /// is a split guest with no `TabPage` of its own (issue #328).
+    ///
+    /// Wired by the window to look the session up across the per-tab split
+    /// bridges. `session_content_box` consults this as a last resort so the
+    /// reconnect banner reaches every pane, not only the split owner's.
+    split_pane_box_provider: Rc<RefCell<Option<Rc<dyn Fn(Uuid) -> Option<GtkBox>>>>>,
     /// Callback fired when terminal focus changes (`true` = focus entered the
     /// VTE, `false` = focus left). Drives focus-based accelerator suspend (#197).
     on_terminal_focus: Rc<RefCell<Option<Box<dyn Fn(bool)>>>>,
@@ -498,6 +505,7 @@ impl TerminalNotebook {
             split_session_colors: Rc::new(RefCell::new(HashMap::new())),
             tab_group_manager: Rc::new(RefCell::new(TabGroupManager::new())),
             on_reconnect: Rc::new(RefCell::new(None)),
+            split_pane_box_provider: Rc::new(RefCell::new(None)),
             on_terminal_focus: Rc::new(RefCell::new(None)),
             reconnect_shown: Rc::new(RefCell::new(HashSet::new())),
             disconnected_sessions: Rc::new(RefCell::new(HashSet::new())),
@@ -2099,17 +2107,33 @@ impl TerminalNotebook {
     /// A tabbed session resolves through its page, exactly as
     /// [`Self::get_session_container`] does. A detached session has no page, so
     /// its box is the parent of the widget [`Self::build_session_content`]
-    /// wrapped — which is the very box handed to its window. Split guests
-    /// deliberately resolve to `None`: their widget lives inside another
-    /// session's layout, which is not theirs to add chrome to.
+    /// wrapped — which is the very box handed to its window. A split guest owns
+    /// no page either; it resolves through the wired split-pane box provider to
+    /// its own pane container, so a reconnect banner attaches to that pane
+    /// rather than to the split owner's (issue #328). Only a session displayed
+    /// nowhere resolves to `None`.
     ///
     /// Used by everything that decorates a session in place (reconnect banner,
     /// monitoring bar) so the decoration follows the session between windows
-    /// (issue #236).
+    /// (issue #236) and reaches every split pane (issue #328).
     #[must_use]
     pub fn session_content_box(&self, session_id: Uuid) -> Option<GtkBox> {
         if let Some(container) = self.get_session_container(session_id) {
             return Some(container);
+        }
+        // A split guest owns no TabPage; its widget lives in another session's
+        // Paned tree. Resolve the pane's own container so a reconnect banner can
+        // attach there too (issue #328). Checked before the detached branch
+        // because a split guest is not detached.
+        let provider = self
+            .split_pane_box_provider
+            .borrow()
+            .as_ref()
+            .map(Rc::clone);
+        if let Some(provider) = provider
+            && let Some(pane_box) = provider(session_id)
+        {
+            return Some(pane_box);
         }
         if !self.is_detached(session_id) {
             return None;

@@ -477,6 +477,18 @@ impl TerminalNotebook {
         *self.on_reconnect.borrow_mut() = Some(Box::new(callback));
     }
 
+    /// Sets the resolver for a split guest's pane container box (issue #328).
+    ///
+    /// The window wires this to look a session up across its per-tab split
+    /// bridges, so [`Self::session_content_box`] can attach a reconnect banner
+    /// to a pane that has no `TabPage` of its own.
+    pub fn set_split_pane_box_provider<F>(&self, provider: F)
+    where
+        F: Fn(Uuid) -> Option<GtkBox> + 'static,
+    {
+        *self.split_pane_box_provider.borrow_mut() = Some(Rc::new(provider));
+    }
+
     /// Returns a clone of the reconnect callback reference for use in auto-reconnect polling
     #[must_use]
     pub fn reconnect_callback(&self) -> Rc<RefCell<Option<Box<dyn Fn(Uuid, Uuid)>>>> {

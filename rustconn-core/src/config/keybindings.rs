@@ -336,6 +336,15 @@ pub fn default_keybindings() -> Vec<KeybindingDef> {
             "Focus Next Pane",
             SplitView,
         ),
+        // Reconnects the focused pane's session, or the active tab's session
+        // when the tab is not split (issue #328). A configurable, MobaXterm-style
+        // reconnect key that works for any pane, not only a split owner.
+        KeybindingDef::new(
+            "win.reconnect-pane",
+            "<Control><Shift>Return",
+            "Reconnect Session",
+            SplitView,
+        ),
         // View
         KeybindingDef::new("win.toggle-fullscreen", "F11", "Toggle Fullscreen", View),
         KeybindingDef::new("win.toggle-sidebar", "F9", "Toggle Sidebar", View),

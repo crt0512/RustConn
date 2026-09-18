@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 00:11+0300\n"
+"POT-Creation-Date: 2026-09-19 01:05+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: RustConn Team\n"
 "Language-Team: French\n"
@@ -48,7 +48,7 @@ msgstr "OK"
 #: rustconn/src/vault_ops.rs:315 rustconn/src/window/batch_edit.rs:69
 #: rustconn/src/window/connection_dialogs.rs:1081
 #: rustconn/src/window/edit_group.rs:1811
-#: rustconn/src/window/edit_group.rs:1859 rustconn/src/window/mod.rs:3651
+#: rustconn/src/window/edit_group.rs:1859 rustconn/src/window/mod.rs:3663
 #: rustconn/src/window/operations.rs:82 rustconn/src/window/operations.rs:457
 #: rustconn/src/window/operations.rs:640 rustconn/src/window/sessions.rs:339
 #: rustconn/src/window/workspaces.rs:548
@@ -89,7 +89,7 @@ msgstr ""
 "dans Paramètres"
 
 #: rustconn/src/app.rs:707 rustconn/src/dialogs/shortcuts.rs:176
-#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1986
+#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:2004
 #: rustconn/src/window/ui.rs:111
 msgid "Settings"
 msgstr "Paramètres"
@@ -206,7 +206,7 @@ msgid "Enter Password Manually"
 msgstr "Saisir le mot de passe manuellement"
 
 #: rustconn/src/dialogs/backend_missing.rs:56 rustconn/src/vault_ops.rs:66
-#: rustconn/src/vault_ops.rs:316 rustconn/src/window/mod.rs:817
+#: rustconn/src/vault_ops.rs:316 rustconn/src/window/mod.rs:829
 msgid "Open Settings"
 msgstr "Ouvrir les paramètres"
 
@@ -2326,7 +2326,7 @@ msgstr "Le mode intégré s'adapte automatiquement à la taille de la fenêtre"
 #: rustconn/src/dialogs/connection/spice.rs:158
 #: rustconn/src/dialogs/connection/vnc.rs:213
 #: rustconn/src/dialogs/template.rs:899 rustconn/src/dialogs/template.rs:1094
-#: rustconn/src/dialogs/template.rs:1229 rustconn/src/split_view/bridge.rs:1898
+#: rustconn/src/dialogs/template.rs:1229 rustconn/src/split_view/bridge.rs:1916
 msgid "Features"
 msgstr "Fonctionnalités"
 
@@ -4111,7 +4111,7 @@ msgstr "Vos modèles"
 #: rustconn/src/dialogs/connection_wizard/mod.rs:453
 #: rustconn/src/dialogs/connection_wizard/protocol_page.rs:224
 #: rustconn/src/dialogs/shortcuts.rs:162 rustconn/src/sidebar_ui.rs:434
-#: rustconn/src/sidebar_ui.rs:471 rustconn/src/split_view/bridge.rs:1812
+#: rustconn/src/sidebar_ui.rs:471 rustconn/src/split_view/bridge.rs:1830
 #: rustconn/src/window/ui.rs:74 rustconn/src/window/ui.rs:242
 msgid "New Connection"
 msgstr "Nouvelle connexion"
@@ -4288,7 +4288,7 @@ msgstr "Copie arrêtée"
 #: rustconn/src/dialogs/settings/cloud_sync_tab.rs:238
 #: rustconn/src/dialogs/tunnel_builder/mod.rs:618
 #: rustconn/src/dialogs/widgets.rs:488 rustconn/src/terminal/tab_menu.rs:407
-#: rustconn/src/vault_ops.rs:65 rustconn/src/window/mod.rs:3652
+#: rustconn/src/vault_ops.rs:65 rustconn/src/window/mod.rs:3664
 msgid "Close"
 msgstr "Fermer"
 
@@ -4806,7 +4806,7 @@ msgstr "Importer des connexions"
 #: rustconn/src/dialogs/import/mod.rs:61 rustconn/src/dialogs/import/mod.rs:62
 #: rustconn/src/dialogs/settings/cloud_sync_tab.rs:184
 #: rustconn/src/dialogs/shortcuts.rs:165 rustconn/src/dialogs/widgets.rs:492
-#: rustconn/src/split_view/bridge.rs:1826 rustconn/src/window/edit_group.rs:813
+#: rustconn/src/split_view/bridge.rs:1844 rustconn/src/window/edit_group.rs:813
 msgid "Import"
 msgstr "Importer"
 
@@ -5400,7 +5400,7 @@ msgid "Log Content"
 msgstr "Contenu du journal"
 
 #: rustconn/src/dialogs/log_viewer.rs:353
-#: rustconn/src/split_view/adapter.rs:1540
+#: rustconn/src/split_view/adapter.rs:1577
 msgid "Loading…"
 msgstr "Chargement…"
 
@@ -6075,8 +6075,8 @@ msgid "Keybindings"
 msgstr "Raccourcis clavier"
 
 #: rustconn/src/dialogs/settings/keybindings_tab.rs:58
-#: rustconn/src/dialogs/shortcuts.rs:155 rustconn/src/dialogs/shortcuts.rs:301
-#: rustconn/src/split_view/bridge.rs:1974
+#: rustconn/src/dialogs/shortcuts.rs:155 rustconn/src/dialogs/shortcuts.rs:302
+#: rustconn/src/split_view/bridge.rs:1992
 msgid "Keyboard Shortcuts"
 msgstr "Raccourcis clavier"
 
@@ -7592,7 +7592,7 @@ msgstr ""
 #: rustconn/src/dialogs/settings/ui_tab.rs:437
 #: rustconn/src/dialogs/settings/ui_tab.rs:722
 #: rustconn/src/dialogs/shortcuts.rs:168
-#: rustconn/src/split_view/adapter.rs:1470 rustconn/src/tray.rs:229
+#: rustconn/src/split_view/adapter.rs:1507 rustconn/src/tray.rs:229
 #: rustconn/src/tray.rs:587 rustconn/src/window/ui.rs:249
 msgid "Local Shell"
 msgstr "Shell local"
@@ -8074,7 +8074,7 @@ msgid "New Group"
 msgstr "Nouveau groupe"
 
 #: rustconn/src/dialogs/shortcuts.rs:167 rustconn/src/sidebar_ui.rs:470
-#: rustconn/src/split_view/bridge.rs:1819
+#: rustconn/src/split_view/bridge.rs:1837
 #: rustconn/src/window/edit_dialogs.rs:733 rustconn/src/window/ui.rs:67
 #: rustconn/src/window/ui.rs:248
 msgid "Quick Connect"
@@ -8084,7 +8084,7 @@ msgstr "Connexion rapide"
 msgid "Move to Group"
 msgstr "Déplacer vers le groupe"
 
-#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1982
+#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:2000
 msgid "Search"
 msgstr "Rechercher"
 
@@ -8121,7 +8121,7 @@ msgstr "Onglet suivant"
 msgid "Previous Tab"
 msgstr "Onglet précédent"
 
-#: rustconn/src/dialogs/shortcuts.rs:184 rustconn/src/terminal/mod.rs:464
+#: rustconn/src/dialogs/shortcuts.rs:184 rustconn/src/terminal/mod.rs:471
 msgid "Tab Overview"
 msgstr "Aperçu des onglets"
 
@@ -8145,13 +8145,14 @@ msgstr "Diviser verticalement"
 msgid "Close Pane"
 msgstr "Fermer le panneau"
 
-#: rustconn/src/dialogs/shortcuts.rs:191 rustconn/src/split_view/adapter.rs:992
-#: rustconn/src/split_view/adapter.rs:1388
+#: rustconn/src/dialogs/shortcuts.rs:191
+#: rustconn/src/split_view/adapter.rs:1016
+#: rustconn/src/split_view/adapter.rs:1425
 msgid "Remove from Split"
 msgstr "Retirer de la vue fractionnée"
 
 #: rustconn/src/dialogs/shortcuts.rs:192
-#: rustconn/src/split_view/adapter.rs:1389
+#: rustconn/src/split_view/adapter.rs:1426
 #: rustconn/src/terminal/tab_menu.rs:777
 msgid "Remove Split"
 msgstr "Retirer le fractionnement"
@@ -8160,27 +8161,31 @@ msgstr "Retirer le fractionnement"
 msgid "Focus Next Pane"
 msgstr "Placer le focus sur le panneau suivant"
 
-#: rustconn/src/dialogs/shortcuts.rs:195
+#: rustconn/src/dialogs/shortcuts.rs:194
+msgid "Reconnect Session"
+msgstr "Reconnecter la session"
+
+#: rustconn/src/dialogs/shortcuts.rs:196
 msgid "Toggle Fullscreen"
 msgstr "Basculer en plein écran"
 
-#: rustconn/src/dialogs/shortcuts.rs:196 rustconn/src/window/ui.rs:59
+#: rustconn/src/dialogs/shortcuts.rs:197 rustconn/src/window/ui.rs:59
 msgid "Toggle Sidebar"
 msgstr "Basculer la barre latérale"
 
-#: rustconn/src/dialogs/shortcuts.rs:197
+#: rustconn/src/dialogs/shortcuts.rs:198
 msgid "Toggle Compact Interface"
 msgstr "Basculer l’interface compacte"
 
-#: rustconn/src/dialogs/shortcuts.rs:198
+#: rustconn/src/dialogs/shortcuts.rs:199
 msgid "Toggle Keyboard Passthrough"
 msgstr "Basculer la transmission du clavier"
 
-#: rustconn/src/dialogs/shortcuts.rs:199
+#: rustconn/src/dialogs/shortcuts.rs:200
 msgid "Toggle Split Broadcast"
 msgstr "Basculer la diffusion en vue fractionnée"
 
-#: rustconn/src/dialogs/shortcuts.rs:327
+#: rustconn/src/dialogs/shortcuts.rs:328
 msgid "Search shortcuts…"
 msgstr "Rechercher des raccourcis…"
 
@@ -9748,13 +9753,13 @@ msgid "Save files from remote clipboard"
 msgstr "Enregistrer les fichiers du presse-papiers distant"
 
 #: rustconn/src/embedded_rdp/mod.rs:764 rustconn/src/embedded_vnc/ui.rs:145
-#: rustconn/src/terminal/mod.rs:1305
+#: rustconn/src/split_view/adapter.rs:1424 rustconn/src/terminal/mod.rs:1313
 #: rustconn/src/terminal/session_lifecycle.rs:350
 msgid "Reconnect"
 msgstr "Reconnecter"
 
 #: rustconn/src/embedded_rdp/mod.rs:766 rustconn/src/embedded_vnc/ui.rs:147
-#: rustconn/src/terminal/mod.rs:1307
+#: rustconn/src/terminal/mod.rs:1315
 #: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Reconnect to this session"
 msgstr "Se reconnecter à cette session"
@@ -9884,16 +9889,16 @@ msgstr "Aucune connexion configurée"
 msgid "Starting RDP…"
 msgstr "Démarrage de RDP…"
 
-#: rustconn/src/embedded_rdp/ui.rs:171
+#: rustconn/src/embedded_rdp/ui.rs:172
 msgid "RDP session running in external window"
 msgstr "Session RDP dans une fenêtre externe"
 
-#: rustconn/src/embedded_rdp/ui.rs:174 rustconn/src/session/vnc.rs:337
+#: rustconn/src/embedded_rdp/ui.rs:177 rustconn/src/session/vnc.rs:337
 #: rustconn/src/sidebar/view.rs:750
 msgid "Connection failed"
 msgstr "Connexion échouée"
 
-#: rustconn/src/embedded_rdp/ui.rs:187
+#: rustconn/src/embedded_rdp/ui.rs:190
 msgid "Switch to the external window to interact with the session"
 msgstr "Basculez vers la fenêtre externe pour interagir avec la session"
 
@@ -10526,59 +10531,59 @@ msgstr "Créer un nouveau dossier intelligent"
 msgid "No smart folders"
 msgstr "Aucun dossier intelligent"
 
-#: rustconn/src/split_view/adapter.rs:899
-#: rustconn/src/split_view/adapter.rs:901
+#: rustconn/src/split_view/adapter.rs:923
+#: rustconn/src/split_view/adapter.rs:925
 msgid "Show panel actions"
 msgstr "Afficher les actions du panneau"
 
-#: rustconn/src/split_view/adapter.rs:985
+#: rustconn/src/split_view/adapter.rs:1009
 msgid "Remove this session from the split and show it in its own tab"
 msgstr ""
 "Retirer cette session de la vue fractionnée et l'afficher dans son propre "
 "onglet"
 
-#: rustconn/src/split_view/adapter.rs:1004
-#: rustconn/src/split_view/adapter.rs:1009
+#: rustconn/src/split_view/adapter.rs:1028
+#: rustconn/src/split_view/adapter.rs:1033
 msgid "Close session"
 msgstr "Fermer la session"
 
-#: rustconn/src/split_view/adapter.rs:1223
+#: rustconn/src/split_view/adapter.rs:1247
 msgid "Terminal panel"
 msgstr "Panneau du terminal"
 
-#: rustconn/src/split_view/adapter.rs:1318
+#: rustconn/src/split_view/adapter.rs:1342
 msgid "Drag to move this session to another panel or tab"
 msgstr "Glisser pour déplacer cette session vers un autre panneau ou onglet"
 
-#: rustconn/src/split_view/adapter.rs:1390
+#: rustconn/src/split_view/adapter.rs:1427
 msgid "Close Connection"
 msgstr "Fermer la connexion"
 
-#: rustconn/src/split_view/adapter.rs:1433
+#: rustconn/src/split_view/adapter.rs:1470
 msgid "Empty Panel"
 msgstr "Panneau vide"
 
-#: rustconn/src/split_view/adapter.rs:1434
+#: rustconn/src/split_view/adapter.rs:1471
 msgid "Select an existing tab to display in this panel"
 msgstr "Sélectionner un onglet existant à afficher dans ce panneau"
 
-#: rustconn/src/split_view/adapter.rs:1444
+#: rustconn/src/split_view/adapter.rs:1481
 msgid "Select Tab…"
 msgstr "Sélectionner un onglet…"
 
-#: rustconn/src/split_view/adapter.rs:1445
+#: rustconn/src/split_view/adapter.rs:1482
 msgid "Choose an open tab to display in this panel"
 msgstr "Choisir un onglet ouvert à afficher dans ce panneau"
 
-#: rustconn/src/split_view/adapter.rs:1471
+#: rustconn/src/split_view/adapter.rs:1508
 msgid "Open a new local shell in this panel"
 msgstr "Ouvrir un nouveau shell local dans ce panneau"
 
-#: rustconn/src/split_view/adapter.rs:1498
+#: rustconn/src/split_view/adapter.rs:1535
 msgid "Close panel"
 msgstr "Fermer le panneau"
 
-#: rustconn/src/split_view/adapter.rs:1509
+#: rustconn/src/split_view/adapter.rs:1546
 msgid "Close split view panel"
 msgstr "Fermer le panneau de vue divisée"
 
@@ -10586,112 +10591,112 @@ msgstr "Fermer le panneau de vue divisée"
 msgid "Basic Information"
 msgstr "Informations de base"
 
-#: rustconn/src/split_view/bridge.rs:1785
+#: rustconn/src/split_view/bridge.rs:1803
 #: rustconn/assets/io.github.totoshko88.RustConn.desktop:3
 msgid "Manage remote connections easily"
 msgstr "Gérez facilement les connexions distantes"
 
-#: rustconn/src/split_view/bridge.rs:1865
+#: rustconn/src/split_view/bridge.rs:1883
 msgid "Double-click a connection in the sidebar to get started"
 msgstr "Double-cliquez sur une connexion dans la barre latérale pour commencer"
 
-#: rustconn/src/split_view/bridge.rs:1879
+#: rustconn/src/split_view/bridge.rs:1897
 msgid "Don't show this page at startup"
 msgstr "Ne pas afficher cette page au démarrage"
 
-#: rustconn/src/split_view/bridge.rs:1904
+#: rustconn/src/split_view/bridge.rs:1922
 msgid "Embedded SSH, RDP, VNC, SPICE"
 msgstr "SSH, RDP, VNC, SPICE intégrés"
 
-#: rustconn/src/split_view/bridge.rs:1906
+#: rustconn/src/split_view/bridge.rs:1924
 msgid "Secure credential storage"
 msgstr "Stockage sécurisé des identifiants"
 
-#: rustconn/src/split_view/bridge.rs:1909
+#: rustconn/src/split_view/bridge.rs:1927
 msgid "Remote host monitoring"
 msgstr "Surveillance des hôtes distants"
 
-#: rustconn/src/split_view/bridge.rs:1911
+#: rustconn/src/split_view/bridge.rs:1929
 msgid "Cloud Sync across devices"
 msgstr "Synchronisation cloud entre appareils"
 
-#: rustconn/src/split_view/bridge.rs:1912
+#: rustconn/src/split_view/bridge.rs:1930
 msgid "Expect automation & tasks"
 msgstr "Automatisation Expect et tâches"
 
-#: rustconn/src/split_view/bridge.rs:1913
+#: rustconn/src/split_view/bridge.rs:1931
 msgid "Groups, tags, and templates"
 msgstr "Groupes, étiquettes et modèles"
 
-#: rustconn/src/split_view/bridge.rs:1914
+#: rustconn/src/split_view/bridge.rs:1932
 msgid "Zero Trust tunnels"
 msgstr "Tunnels Zero Trust"
 
-#: rustconn/src/split_view/bridge.rs:1915
+#: rustconn/src/split_view/bridge.rs:1933
 msgid "Command snippets & clusters"
 msgstr "Extraits de commandes et clusters"
 
-#: rustconn/src/split_view/bridge.rs:1918
+#: rustconn/src/split_view/bridge.rs:1936
 msgid "Drag & drop files to sessions"
 msgstr "Glisser-déposer des fichiers vers les sessions"
 
-#: rustconn/src/split_view/bridge.rs:1978
+#: rustconn/src/split_view/bridge.rs:1996
 msgid "New connection"
 msgstr "Nouvelle connexion"
 
-#: rustconn/src/split_view/bridge.rs:1979
+#: rustconn/src/split_view/bridge.rs:1997
 msgid "Quick connect"
 msgstr "Connexion rapide"
 
-#: rustconn/src/split_view/bridge.rs:1980
+#: rustconn/src/split_view/bridge.rs:1998
 msgid "Command palette"
 msgstr "Palette de commandes"
 
-#: rustconn/src/split_view/bridge.rs:1981
+#: rustconn/src/split_view/bridge.rs:1999
 msgid "Local shell"
 msgstr "Shell local"
 
-#: rustconn/src/split_view/bridge.rs:1983
+#: rustconn/src/split_view/bridge.rs:2001
 msgid "Split vertical / horizontal"
 msgstr "Diviser vertical / horizontal"
 
-#: rustconn/src/split_view/bridge.rs:1984
+#: rustconn/src/split_view/bridge.rs:2002
 msgid "Disable shortcuts"
 msgstr "Désactiver les raccourcis"
 
-#: rustconn/src/split_view/bridge.rs:1985
+#: rustconn/src/split_view/bridge.rs:2003
 msgid "Import connections"
 msgstr "Importer des connexions"
 
-#: rustconn/src/split_view/bridge.rs:2015
+#: rustconn/src/split_view/bridge.rs:2033
 msgid "Quick Access"
 msgstr "Accès rapide"
 
-#: rustconn/src/split_view/bridge.rs:2019
+#: rustconn/src/split_view/bridge.rs:2037
 msgid "Fuzzy search & command palette"
 msgstr "Recherche floue et palette de commandes"
 
-#: rustconn/src/split_view/bridge.rs:2020
+#: rustconn/src/split_view/bridge.rs:2038
 msgid "Pin favorites to sidebar"
 msgstr "Épingler les favoris dans la barre latérale"
 
-#: rustconn/src/split_view/bridge.rs:2021
+#: rustconn/src/split_view/bridge.rs:2039
 msgid "Split view for terminals"
 msgstr "Vue fractionnée pour les terminaux"
 
-#: rustconn/src/split_view/bridge.rs:2024
+#: rustconn/src/split_view/bridge.rs:2042
 msgid "Tab Overview grid (Ctrl+Shift+O)"
 msgstr "Grille d'aperçu des onglets (Ctrl+Shift+O)"
 
-#: rustconn/src/split_view/bridge.rs:2044
+#: rustconn/src/split_view/bridge.rs:2062
 msgid "Import Formats"
 msgstr "Formats d'importation"
 
-#: rustconn/src/split_view/bridge.rs:2210
+#: rustconn/src/split_view/bridge.rs:2228
 msgid "All tabs are already displayed in this split view"
 msgstr "Tous les onglets sont déjà affichés dans cette vue fractionnée"
 
-#: rustconn/src/split_view/bridge.rs:2249
+#: rustconn/src/split_view/bridge.rs:2267
 msgid "Select a tab to display"
 msgstr "Sélectionner un onglet à afficher"
 
@@ -10699,34 +10704,34 @@ msgstr "Sélectionner un onglet à afficher"
 msgid "Execute Snippet…"
 msgstr "Exécuter le snippet…"
 
-#: rustconn/src/terminal/mod.rs:460
+#: rustconn/src/terminal/mod.rs:467
 msgid "Tab Overview (Ctrl+Shift+O)"
 msgstr "Aperçu des onglets (Ctrl+Shift+O)"
 
-#: rustconn/src/terminal/mod.rs:477 rustconn/src/terminal/tab_lifecycle.rs:35
-#: rustconn/src/terminal/tab_lifecycle.rs:50 rustconn/src/window/mod.rs:3240
+#: rustconn/src/terminal/mod.rs:484 rustconn/src/terminal/tab_lifecycle.rs:35
+#: rustconn/src/terminal/tab_lifecycle.rs:50 rustconn/src/window/mod.rs:3252
 msgid "Welcome"
 msgstr "Bienvenue"
 
-#: rustconn/src/terminal/mod.rs:1009
+#: rustconn/src/terminal/mod.rs:1017
 msgid "Output filter '{}' is not installed; session output is not filtered"
 msgstr ""
 "Le filtre de sortie « {} » n’est pas installé ; la sortie de la session "
 "n’est pas filtrée"
 
-#: rustconn/src/terminal/mod.rs:1299
+#: rustconn/src/terminal/mod.rs:1307
 msgid "Command not found: {}"
 msgstr "Commande introuvable : {}"
 
-#: rustconn/src/terminal/mod.rs:1301
+#: rustconn/src/terminal/mod.rs:1309
 msgid "Failed to start '{}'"
 msgstr "Impossible de démarrer « {} »"
 
-#: rustconn/src/terminal/mod.rs:1323
+#: rustconn/src/terminal/mod.rs:1331
 msgid "'{}' is not installed"
 msgstr "« {} » n’est pas installé"
 
-#: rustconn/src/terminal/mod.rs:1326
+#: rustconn/src/terminal/mod.rs:1334
 msgid "Failed to start '{}': {}"
 msgstr "Impossible de démarrer « {} » : {}"
 
@@ -10921,7 +10926,7 @@ msgstr "{} session(s) active(s)"
 msgid "About RustConn"
 msgstr "À propos de RustConn"
 
-#: rustconn/src/vault_ops.rs:50 rustconn/src/window/mod.rs:4563
+#: rustconn/src/vault_ops.rs:50 rustconn/src/window/mod.rs:4575
 msgid "Passphrase Does Not Open the Portable File"
 msgstr "La phrase secrète n’ouvre pas le fichier portable"
 
@@ -11862,47 +11867,47 @@ msgstr ""
 msgid "Global variables could not be saved to disk."
 msgstr "Les variables globales n'ont pas pu être enregistrées sur le disque."
 
-#: rustconn/src/window/mod.rs:804
+#: rustconn/src/window/mod.rs:816
 msgid "Dismiss"
 msgstr "Ignorer"
 
-#: rustconn/src/window/mod.rs:2193
+#: rustconn/src/window/mod.rs:2205
 msgid "Already running in an external window"
 msgstr "Déjà en cours d'exécution dans une fenêtre externe"
 
-#: rustconn/src/window/mod.rs:2344
+#: rustconn/src/window/mod.rs:2356
 msgid "Connection to ‘{}’ failed"
 msgstr "Connexion à ‘{}’ échouée"
 
-#: rustconn/src/window/mod.rs:2570 rustconn/src/window/mod.rs:2584
+#: rustconn/src/window/mod.rs:2582 rustconn/src/window/mod.rs:2596
 msgid "Pre-connect task failed: {}"
 msgstr "La tâche de pré-connexion a échoué : {}"
 
-#: rustconn/src/window/mod.rs:2618
+#: rustconn/src/window/mod.rs:2630
 msgid "Port knock failed: {}"
 msgstr "Échec du port knocking : {}"
 
-#: rustconn/src/window/mod.rs:2667
+#: rustconn/src/window/mod.rs:2679
 msgid "SPA failed: {}"
 msgstr "Échec du SPA : {}"
 
-#: rustconn/src/window/mod.rs:2866 rustconn/src/window/mod.rs:3041
+#: rustconn/src/window/mod.rs:2878 rustconn/src/window/mod.rs:3053
 msgid "Connection “{}” created"
 msgstr "Connexion “{}” créée"
 
-#: rustconn/src/window/mod.rs:3245
+#: rustconn/src/window/mod.rs:3257
 msgid "RustConn - {}"
 msgstr "RustConn — {}"
 
-#: rustconn/src/window/mod.rs:3378
+#: rustconn/src/window/mod.rs:3390
 msgid "Settings saved"
 msgstr "Paramètres enregistrés"
 
-#: rustconn/src/window/mod.rs:3415
+#: rustconn/src/window/mod.rs:3427
 msgid "Passphrase Not Saved on This Computer"
 msgstr "Phrase secrète non enregistrée sur cet ordinateur"
 
-#: rustconn/src/window/mod.rs:3417
+#: rustconn/src/window/mod.rs:3429
 msgid ""
 "The passphrase could not be encrypted for local storage, so it is kept for "
 "this session only and you will be asked for it again after a restart. Choose "
@@ -11914,11 +11919,11 @@ msgstr ""
 "redémarrage. Choisissez plutôt « Trousseau système » ou vérifiez que "
 "RustConn peut écrire dans son répertoire de données."
 
-#: rustconn/src/window/mod.rs:3463
+#: rustconn/src/window/mod.rs:3475
 msgid "Credentials Not Saved to Keyring"
 msgstr "Identifiants non enregistrés dans le trousseau"
 
-#: rustconn/src/window/mod.rs:3465
+#: rustconn/src/window/mod.rs:3477
 msgid ""
 "The system keyring did not accept the credentials, so they are kept for this "
 "session only and will be gone after a restart. Check that your keyring "
@@ -11929,45 +11934,45 @@ msgstr ""
 "Vérifiez que le service de trousseau est actif et déverrouillé, puis "
 "enregistrez à nouveau les paramètres."
 
-#: rustconn/src/window/mod.rs:3645
+#: rustconn/src/window/mod.rs:3657
 msgid "Close RustConn?"
 msgstr "Fermer RustConn ?"
 
-#: rustconn/src/window/mod.rs:3647
+#: rustconn/src/window/mod.rs:3659
 msgid "{} session tab(s) are open. Active connections will be disconnected."
 msgstr ""
 "{} onglet(s) de session sont ouverts. Les connexions actives seront "
 "déconnectées."
 
-#: rustconn/src/window/mod.rs:3682
+#: rustconn/src/window/mod.rs:3694
 msgid "Cloud sync failed for '{}': {}"
 msgstr "Échec de la synchronisation cloud pour « {} » : {}"
 
-#: rustconn/src/window/mod.rs:3863
+#: rustconn/src/window/mod.rs:3875
 msgid "Startup connection not found"
 msgstr "Connexion de démarrage introuvable"
 
-#: rustconn/src/window/mod.rs:3899
+#: rustconn/src/window/mod.rs:3911
 msgid "Failed to open .rdp file"
 msgstr "Échec de l'ouverture du fichier .rdp"
 
-#: rustconn/src/window/mod.rs:3935
+#: rustconn/src/window/mod.rs:3947
 msgid "Failed to open .vv file"
 msgstr "Échec de l'ouverture du fichier .vv"
 
-#: rustconn/src/window/mod.rs:3972
+#: rustconn/src/window/mod.rs:3984
 msgid "Tunnel “{}” stopped: {}"
 msgstr "Le tunnel “{}” s'est arrêté : {}"
 
-#: rustconn/src/window/mod.rs:3988
+#: rustconn/src/window/mod.rs:4000
 msgid "Gave up reconnecting tunnel “{}”: {}"
 msgstr "Abandon de la reconnexion du tunnel “{}” : {}"
 
-#: rustconn/src/window/mod.rs:4479
+#: rustconn/src/window/mod.rs:4491
 msgid "Successfully exported {} connection(s). {} skipped."
 msgstr "{} connexion(s) exportée(s) avec succès. {} ignorée(s)."
 
-#: rustconn/src/window/mod.rs:4565
+#: rustconn/src/window/mod.rs:4577
 msgid ""
 "The passphrase you saved does not decrypt the portable credential file, so "
 "none of the passwords in it can be read. Open Settings ▸ Secrets and enter "
@@ -12442,7 +12447,7 @@ msgid "Cannot move a folder into one of its own subfolders"
 msgstr ""
 "Impossible de déplacer un dossier dans l'un de ses propres sous-dossiers"
 
-#: rustconn/src/window/split_view_actions.rs:454
+#: rustconn/src/window/split_view_actions.rs:455
 msgid ""
 "Tip: press Ctrl+Shift+B or use the Broadcast button to mirror keystrokes "
 "across split panels"
@@ -12450,8 +12455,8 @@ msgstr ""
 "Astuce : appuyez sur Ctrl+Maj+B ou utilisez le bouton « Diffusion » pour "
 "dupliquer les frappes vers tous les panneaux divisés"
 
-#: rustconn/src/window/split_view_actions.rs:496
-#: rustconn/src/window/split_view_actions.rs:716
+#: rustconn/src/window/split_view_actions.rs:497
+#: rustconn/src/window/split_view_actions.rs:717
 msgid ""
 "Split view is not available for external-viewer sessions. Switch this "
 "connection to embedded mode to use split."

@@ -83,6 +83,11 @@ pub struct SplitViewAdapter {
     /// then activates the window action that returns the panel's session to its
     /// own tab, keeping the connection alive (issue #252).
     pop_panel_callback: Rc<RefCell<Option<SelectTabCallback>>>,
+    /// Callback for "Reconnect" clicks on an occupied panel (issue #328).
+    ///
+    /// Symmetric to `pop_panel_callback`: the bridge focuses the panel and then
+    /// activates the window action that reconnects the focused pane's session.
+    reconnect_panel_callback: Rc<RefCell<Option<SelectTabCallback>>>,
     /// Header widgets for each panel (connection name labels, issue #277).
     ///
     /// These are prepended to the panel container (above session content) and
@@ -106,6 +111,7 @@ impl std::fmt::Debug for SplitViewAdapter {
             .field("new_shell_callback", &"<callback>")
             .field("close_panel_callback", &"<callback>")
             .field("pop_panel_callback", &"<callback>")
+            .field("reconnect_panel_callback", &"<callback>")
             .field("panel_headers", &self.panel_headers)
             .field("show_labels", &self.show_labels)
             .finish()
@@ -132,6 +138,7 @@ impl SplitViewAdapter {
             new_shell_callback: Rc::new(RefCell::new(None)),
             close_panel_callback: Rc::new(RefCell::new(None)),
             pop_panel_callback: Rc::new(RefCell::new(None)),
+            reconnect_panel_callback: Rc::new(RefCell::new(None)),
             panel_headers: Rc::new(RefCell::new(HashMap::new())),
             show_labels: Rc::new(Cell::new(false)),
         };
@@ -159,6 +166,7 @@ impl SplitViewAdapter {
             new_shell_callback: Rc::new(RefCell::new(None)),
             close_panel_callback: Rc::new(RefCell::new(None)),
             pop_panel_callback: Rc::new(RefCell::new(None)),
+            reconnect_panel_callback: Rc::new(RefCell::new(None)),
             panel_headers: Rc::new(RefCell::new(HashMap::new())),
             show_labels: Rc::new(Cell::new(false)),
         };
@@ -277,6 +285,22 @@ impl SplitViewAdapter {
         F: Fn(PanelId) + 'static,
     {
         *self.pop_panel_callback.borrow_mut() = Some(Rc::new(callback));
+    }
+
+    /// Sets a callback for "Reconnect" clicks on an occupied panel (issue #328).
+    ///
+    /// Invoked with the panel ID when the user asks to reconnect the panel's
+    /// session. The callback should focus the panel and trigger the
+    /// corresponding window action.
+    ///
+    /// # Arguments
+    ///
+    /// * `callback` - A closure that receives the `PanelId` when the item is activated
+    pub fn set_reconnect_panel_callback<F>(&self, callback: F)
+    where
+        F: Fn(PanelId) + 'static,
+    {
+        *self.reconnect_panel_callback.borrow_mut() = Some(Rc::new(callback));
     }
 
     /// Returns a reference to the underlying model.
@@ -1359,6 +1383,18 @@ impl SplitViewAdapter {
         });
         action_group.add_action(&pop_action);
 
+        let reconnect_action = gio::SimpleAction::new("reconnect", None);
+        let reconnect_callback_ref = Rc::clone(&self.reconnect_panel_callback);
+        reconnect_action.connect_activate(move |_, _| {
+            tracing::debug!(
+                "Context menu: Reconnect for panel {panel_id} with session {session_id}"
+            );
+            if let Some(ref callback) = *reconnect_callback_ref.borrow() {
+                callback(panel_id);
+            }
+        });
+        action_group.add_action(&reconnect_action);
+
         let close_action = gio::SimpleAction::new("close", None);
         let close_callback_ref = Rc::clone(&self.close_panel_callback);
         close_action.connect_activate(move |_, _| {
@@ -1385,6 +1421,7 @@ impl SplitViewAdapter {
             // Create the context menu model. HIG order: the non-destructive
             // action first, the destructive one last.
             let menu = gio::Menu::new();
+            menu.append(Some(&i18n("Reconnect")), Some("panel.reconnect"));
             menu.append(Some(&i18n("Remove from Split")), Some("panel.move-to-tab"));
             menu.append(Some(&i18n("Remove Split")), Some("win.unsplit"));
             menu.append(Some(&i18n("Close Connection")), Some("panel.close"));

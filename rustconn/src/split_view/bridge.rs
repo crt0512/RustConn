@@ -1704,6 +1704,24 @@ impl SplitViewBridge {
         self.adapter.borrow().get_panel_widget(panel_id)
     }
 
+    /// Returns the container box of the pane currently showing `session_id`.
+    ///
+    /// This is the `split-panel` box a reconnect banner attaches to for a split
+    /// guest (issue #328), which has no `TabPage` of its own — so
+    /// [`crate::terminal::TerminalNotebook::session_content_box`] returns `None`
+    /// for it and falls back to this. Returns `None` when the session is not
+    /// displayed in any pane of this layout.
+    #[must_use]
+    pub fn pane_container_for_session(&self, session_id: Uuid) -> Option<gtk4::Box> {
+        let session = SessionId::from_uuid(session_id);
+        let adapter = self.adapter.borrow();
+        let panel_id = adapter
+            .panel_ids()
+            .into_iter()
+            .find(|&pid| adapter.get_panel_session(pid) == Some(session))?;
+        adapter.get_panel_widget(panel_id)
+    }
+
     /// Gets the panel ID for a given pane UUID.
     ///
     /// This is useful when you need to interact with the adapter using panel IDs
@@ -2342,6 +2360,23 @@ impl SplitViewBridge {
     {
         let handler = self.panel_action_handler("pop-pane-to-tab", on_focus);
         self.adapter.borrow().set_pop_panel_callback(handler);
+    }
+
+    /// Sets up the "Reconnect" callback for the panel context menu (issue #328).
+    ///
+    /// Same two steps as [`Self::setup_pop_panel_callback`], but activates
+    /// `win.reconnect-pane`, which reconnects the focused pane's session in
+    /// place.
+    ///
+    /// # Arguments
+    ///
+    /// * `on_focus` - Callback to focus the panel, receives the pane UUID
+    pub fn setup_reconnect_panel_callback<F>(&self, on_focus: F)
+    where
+        F: Fn(Uuid) + Clone + 'static,
+    {
+        let handler = self.panel_action_handler("reconnect-pane", on_focus);
+        self.adapter.borrow().set_reconnect_panel_callback(handler);
     }
 
     /// Builds the "focus this panel, then activate a window action" handler that

@@ -191,6 +191,7 @@ fn i18n_markers() -> Vec<String> {
         i18n("Remove from Split"),
         i18n("Remove Split"),
         i18n("Focus Next Pane"),
+        i18n("Reconnect Session"),
         // View
         i18n("Toggle Fullscreen"),
         i18n("Toggle Sidebar"),
@@ -619,6 +620,7 @@ mod tests {
         "<Control>c",
         "<Control>v",
         "Return",
+        "<Control><Shift>Return",
         // Navigation
         "<Control>f",
         "<Control>1|<Alt>1",

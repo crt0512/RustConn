@@ -627,6 +627,18 @@ impl MainWindow {
             });
         }
 
+        // Resolve a split guest's pane container so its reconnect banner can be
+        // shown inside its own pane, not only for the split owner (issue #328).
+        {
+            let bridges_for_pane_box = session_split_bridges.clone();
+            terminal_notebook.set_split_pane_box_provider(move |session_id| {
+                let bridges = bridges_for_pane_box.borrow();
+                bridges
+                    .values()
+                    .find_map(|bridge| bridge.pane_container_for_session(session_id))
+            });
+        }
+
         // Set up reconnect callback for VTE sessions
         // When user clicks "Reconnect" in a disconnected tab, reuse the
         // existing terminal tab instead of closing and creating a new one.

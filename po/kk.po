@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 00:11+0300\n"
+"POT-Creation-Date: 2026-09-19 01:05+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: RustConn Team\n"
 "Language-Team: Kazakh\n"
@@ -48,7 +48,7 @@ msgstr "OK"
 #: rustconn/src/vault_ops.rs:315 rustconn/src/window/batch_edit.rs:69
 #: rustconn/src/window/connection_dialogs.rs:1081
 #: rustconn/src/window/edit_group.rs:1811
-#: rustconn/src/window/edit_group.rs:1859 rustconn/src/window/mod.rs:3651
+#: rustconn/src/window/edit_group.rs:1859 rustconn/src/window/mod.rs:3663
 #: rustconn/src/window/operations.rs:82 rustconn/src/window/operations.rs:457
 #: rustconn/src/window/operations.rs:640 rustconn/src/window/sessions.rs:339
 #: rustconn/src/window/workspaces.rs:548
@@ -89,7 +89,7 @@ msgstr ""
 "енгізіңіз"
 
 #: rustconn/src/app.rs:707 rustconn/src/dialogs/shortcuts.rs:176
-#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:1986
+#: rustconn/src/embedded_rdp/mod.rs:398 rustconn/src/split_view/bridge.rs:2004
 #: rustconn/src/window/ui.rs:111
 msgid "Settings"
 msgstr "Баптаулар"
@@ -205,7 +205,7 @@ msgid "Enter Password Manually"
 msgstr "Құпия сөзді қолмен енгізу"
 
 #: rustconn/src/dialogs/backend_missing.rs:56 rustconn/src/vault_ops.rs:66
-#: rustconn/src/vault_ops.rs:316 rustconn/src/window/mod.rs:817
+#: rustconn/src/vault_ops.rs:316 rustconn/src/window/mod.rs:829
 msgid "Open Settings"
 msgstr "Параметрлерді ашу"
 
@@ -2309,7 +2309,7 @@ msgstr "Кірістірілген режим терезе өлшеміне ав
 #: rustconn/src/dialogs/connection/spice.rs:158
 #: rustconn/src/dialogs/connection/vnc.rs:213
 #: rustconn/src/dialogs/template.rs:899 rustconn/src/dialogs/template.rs:1094
-#: rustconn/src/dialogs/template.rs:1229 rustconn/src/split_view/bridge.rs:1898
+#: rustconn/src/dialogs/template.rs:1229 rustconn/src/split_view/bridge.rs:1916
 msgid "Features"
 msgstr "Мүмкіндіктер"
 
@@ -4089,7 +4089,7 @@ msgstr "Сіздің үлгілеріңіз"
 #: rustconn/src/dialogs/connection_wizard/mod.rs:453
 #: rustconn/src/dialogs/connection_wizard/protocol_page.rs:224
 #: rustconn/src/dialogs/shortcuts.rs:162 rustconn/src/sidebar_ui.rs:434
-#: rustconn/src/sidebar_ui.rs:471 rustconn/src/split_view/bridge.rs:1812
+#: rustconn/src/sidebar_ui.rs:471 rustconn/src/split_view/bridge.rs:1830
 #: rustconn/src/window/ui.rs:74 rustconn/src/window/ui.rs:242
 msgid "New Connection"
 msgstr "Жаңа қосылым"
@@ -4264,7 +4264,7 @@ msgstr "Көшіру тоқтатылды"
 #: rustconn/src/dialogs/settings/cloud_sync_tab.rs:238
 #: rustconn/src/dialogs/tunnel_builder/mod.rs:618
 #: rustconn/src/dialogs/widgets.rs:488 rustconn/src/terminal/tab_menu.rs:407
-#: rustconn/src/vault_ops.rs:65 rustconn/src/window/mod.rs:3652
+#: rustconn/src/vault_ops.rs:65 rustconn/src/window/mod.rs:3664
 msgid "Close"
 msgstr "Жабу"
 
@@ -4774,7 +4774,7 @@ msgstr "Қосылымдарды импорттау"
 #: rustconn/src/dialogs/import/mod.rs:61 rustconn/src/dialogs/import/mod.rs:62
 #: rustconn/src/dialogs/settings/cloud_sync_tab.rs:184
 #: rustconn/src/dialogs/shortcuts.rs:165 rustconn/src/dialogs/widgets.rs:492
-#: rustconn/src/split_view/bridge.rs:1826 rustconn/src/window/edit_group.rs:813
+#: rustconn/src/split_view/bridge.rs:1844 rustconn/src/window/edit_group.rs:813
 msgid "Import"
 msgstr "Импорт"
 
@@ -5363,7 +5363,7 @@ msgid "Log Content"
 msgstr "Журнал мазмұны"
 
 #: rustconn/src/dialogs/log_viewer.rs:353
-#: rustconn/src/split_view/adapter.rs:1540
+#: rustconn/src/split_view/adapter.rs:1577
 msgid "Loading…"
 msgstr "Жүктелуде…"
 
@@ -6031,8 +6031,8 @@ msgid "Keybindings"
 msgstr "Пернетақта тіркесімдері"
 
 #: rustconn/src/dialogs/settings/keybindings_tab.rs:58
-#: rustconn/src/dialogs/shortcuts.rs:155 rustconn/src/dialogs/shortcuts.rs:301
-#: rustconn/src/split_view/bridge.rs:1974
+#: rustconn/src/dialogs/shortcuts.rs:155 rustconn/src/dialogs/shortcuts.rs:302
+#: rustconn/src/split_view/bridge.rs:1992
 msgid "Keyboard Shortcuts"
 msgstr "Пернетақта тіркесімдері"
 
@@ -7526,7 +7526,7 @@ msgstr "Құрама таңбалардың орнына Escape префиксі
 #: rustconn/src/dialogs/settings/ui_tab.rs:437
 #: rustconn/src/dialogs/settings/ui_tab.rs:722
 #: rustconn/src/dialogs/shortcuts.rs:168
-#: rustconn/src/split_view/adapter.rs:1470 rustconn/src/tray.rs:229
+#: rustconn/src/split_view/adapter.rs:1507 rustconn/src/tray.rs:229
 #: rustconn/src/tray.rs:587 rustconn/src/window/ui.rs:249
 msgid "Local Shell"
 msgstr "Жергілікті қабықша"
@@ -7993,7 +7993,7 @@ msgid "New Group"
 msgstr "Жаңа топ"
 
 #: rustconn/src/dialogs/shortcuts.rs:167 rustconn/src/sidebar_ui.rs:470
-#: rustconn/src/split_view/bridge.rs:1819
+#: rustconn/src/split_view/bridge.rs:1837
 #: rustconn/src/window/edit_dialogs.rs:733 rustconn/src/window/ui.rs:67
 #: rustconn/src/window/ui.rs:248
 msgid "Quick Connect"
@@ -8003,7 +8003,7 @@ msgstr "Жылдам қосылу"
 msgid "Move to Group"
 msgstr "Топқа жылжыту"
 
-#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:1982
+#: rustconn/src/dialogs/shortcuts.rs:171 rustconn/src/split_view/bridge.rs:2000
 msgid "Search"
 msgstr "Іздеу"
 
@@ -8040,7 +8040,7 @@ msgstr "Келесі қойынды"
 msgid "Previous Tab"
 msgstr "Алдыңғы қойынды"
 
-#: rustconn/src/dialogs/shortcuts.rs:184 rustconn/src/terminal/mod.rs:464
+#: rustconn/src/dialogs/shortcuts.rs:184 rustconn/src/terminal/mod.rs:471
 msgid "Tab Overview"
 msgstr "Қойындылар шолуы"
 
@@ -8064,13 +8064,14 @@ msgstr "Тігінен бөлу"
 msgid "Close Pane"
 msgstr "Панельді жабу"
 
-#: rustconn/src/dialogs/shortcuts.rs:191 rustconn/src/split_view/adapter.rs:992
-#: rustconn/src/split_view/adapter.rs:1388
+#: rustconn/src/dialogs/shortcuts.rs:191
+#: rustconn/src/split_view/adapter.rs:1016
+#: rustconn/src/split_view/adapter.rs:1425
 msgid "Remove from Split"
 msgstr "Бөлінген көріністен алып тастау"
 
 #: rustconn/src/dialogs/shortcuts.rs:192
-#: rustconn/src/split_view/adapter.rs:1389
+#: rustconn/src/split_view/adapter.rs:1426
 #: rustconn/src/terminal/tab_menu.rs:777
 msgid "Remove Split"
 msgstr "Бөлуді алып тастау"
@@ -8079,27 +8080,31 @@ msgstr "Бөлуді алып тастау"
 msgid "Focus Next Pane"
 msgstr "Келесі панельге өту"
 
-#: rustconn/src/dialogs/shortcuts.rs:195
+#: rustconn/src/dialogs/shortcuts.rs:194
+msgid "Reconnect Session"
+msgstr "Сеансқа қайта қосылу"
+
+#: rustconn/src/dialogs/shortcuts.rs:196
 msgid "Toggle Fullscreen"
 msgstr "Толық экранды ауыстыру"
 
-#: rustconn/src/dialogs/shortcuts.rs:196 rustconn/src/window/ui.rs:59
+#: rustconn/src/dialogs/shortcuts.rs:197 rustconn/src/window/ui.rs:59
 msgid "Toggle Sidebar"
 msgstr "Бүйір панелін ауыстыру"
 
-#: rustconn/src/dialogs/shortcuts.rs:197
+#: rustconn/src/dialogs/shortcuts.rs:198
 msgid "Toggle Compact Interface"
 msgstr "Ықшам интерфейсті ауыстыру"
 
-#: rustconn/src/dialogs/shortcuts.rs:198
+#: rustconn/src/dialogs/shortcuts.rs:199
 msgid "Toggle Keyboard Passthrough"
 msgstr "Пернетақтаны тікелей беруді ауыстыру"
 
-#: rustconn/src/dialogs/shortcuts.rs:199
+#: rustconn/src/dialogs/shortcuts.rs:200
 msgid "Toggle Split Broadcast"
 msgstr "Бөлінген көріністе таратуды ауыстыру"
 
-#: rustconn/src/dialogs/shortcuts.rs:327
+#: rustconn/src/dialogs/shortcuts.rs:328
 msgid "Search shortcuts…"
 msgstr "Тіркесімдерді іздеу…"
 
@@ -9649,13 +9654,13 @@ msgid "Save files from remote clipboard"
 msgstr "Қашықтағы алмасу буферінен файлдарды сақтау"
 
 #: rustconn/src/embedded_rdp/mod.rs:764 rustconn/src/embedded_vnc/ui.rs:145
-#: rustconn/src/terminal/mod.rs:1305
+#: rustconn/src/split_view/adapter.rs:1424 rustconn/src/terminal/mod.rs:1313
 #: rustconn/src/terminal/session_lifecycle.rs:350
 msgid "Reconnect"
 msgstr "Қайта қосылу"
 
 #: rustconn/src/embedded_rdp/mod.rs:766 rustconn/src/embedded_vnc/ui.rs:147
-#: rustconn/src/terminal/mod.rs:1307
+#: rustconn/src/terminal/mod.rs:1315
 #: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Reconnect to this session"
 msgstr "Бұл сеансқа қайта қосылу"
@@ -9783,16 +9788,16 @@ msgstr "Қосылым бапталмаған"
 msgid "Starting RDP…"
 msgstr "RDP іске қосылуда…"
 
-#: rustconn/src/embedded_rdp/ui.rs:171
+#: rustconn/src/embedded_rdp/ui.rs:172
 msgid "RDP session running in external window"
 msgstr "RDP сеансы сыртқы терезеде жұмыс істеуде"
 
-#: rustconn/src/embedded_rdp/ui.rs:174 rustconn/src/session/vnc.rs:337
+#: rustconn/src/embedded_rdp/ui.rs:177 rustconn/src/session/vnc.rs:337
 #: rustconn/src/sidebar/view.rs:750
 msgid "Connection failed"
 msgstr "Қосылу сәтсіз"
 
-#: rustconn/src/embedded_rdp/ui.rs:187
+#: rustconn/src/embedded_rdp/ui.rs:190
 msgid "Switch to the external window to interact with the session"
 msgstr "Сеанспен өзара әрекеттесу үшін сыртқы терезеге ауысыңыз"
 
@@ -10424,57 +10429,57 @@ msgstr "Жаңа ақылды қалта жасау"
 msgid "No smart folders"
 msgstr "Ақылды қалталар жоқ"
 
-#: rustconn/src/split_view/adapter.rs:899
-#: rustconn/src/split_view/adapter.rs:901
+#: rustconn/src/split_view/adapter.rs:923
+#: rustconn/src/split_view/adapter.rs:925
 msgid "Show panel actions"
 msgstr "Панель әрекеттерін көрсету"
 
-#: rustconn/src/split_view/adapter.rs:985
+#: rustconn/src/split_view/adapter.rs:1009
 msgid "Remove this session from the split and show it in its own tab"
 msgstr "Бұл сеансты бөлінген көріністен алып тастап, өз қойындысында көрсету"
 
-#: rustconn/src/split_view/adapter.rs:1004
-#: rustconn/src/split_view/adapter.rs:1009
+#: rustconn/src/split_view/adapter.rs:1028
+#: rustconn/src/split_view/adapter.rs:1033
 msgid "Close session"
 msgstr "Сеансты жабу"
 
-#: rustconn/src/split_view/adapter.rs:1223
+#: rustconn/src/split_view/adapter.rs:1247
 msgid "Terminal panel"
 msgstr "Терминал панелі"
 
-#: rustconn/src/split_view/adapter.rs:1318
+#: rustconn/src/split_view/adapter.rs:1342
 msgid "Drag to move this session to another panel or tab"
 msgstr "Бұл сеансты басқа панельге немесе қойындыға жылжыту үшін сүйреңіз"
 
-#: rustconn/src/split_view/adapter.rs:1390
+#: rustconn/src/split_view/adapter.rs:1427
 msgid "Close Connection"
 msgstr "Қосылымды жабу"
 
-#: rustconn/src/split_view/adapter.rs:1433
+#: rustconn/src/split_view/adapter.rs:1470
 msgid "Empty Panel"
 msgstr "Бос панель"
 
-#: rustconn/src/split_view/adapter.rs:1434
+#: rustconn/src/split_view/adapter.rs:1471
 msgid "Select an existing tab to display in this panel"
 msgstr "Осы панельде көрсету үшін бар қойындыны таңдаңыз"
 
-#: rustconn/src/split_view/adapter.rs:1444
+#: rustconn/src/split_view/adapter.rs:1481
 msgid "Select Tab…"
 msgstr "Қойындыны таңдау…"
 
-#: rustconn/src/split_view/adapter.rs:1445
+#: rustconn/src/split_view/adapter.rs:1482
 msgid "Choose an open tab to display in this panel"
 msgstr "Осы панельде көрсету үшін ашық қойындыны таңдаңыз"
 
-#: rustconn/src/split_view/adapter.rs:1471
+#: rustconn/src/split_view/adapter.rs:1508
 msgid "Open a new local shell in this panel"
 msgstr "Осы панельде жаңа жергілікті қабықша ашу"
 
-#: rustconn/src/split_view/adapter.rs:1498
+#: rustconn/src/split_view/adapter.rs:1535
 msgid "Close panel"
 msgstr "Панельді жабу"
 
-#: rustconn/src/split_view/adapter.rs:1509
+#: rustconn/src/split_view/adapter.rs:1546
 msgid "Close split view panel"
 msgstr "Бөлінген көрініс панелін жабу"
 
@@ -10482,112 +10487,112 @@ msgstr "Бөлінген көрініс панелін жабу"
 msgid "Basic Information"
 msgstr "Негізгі ақпарат"
 
-#: rustconn/src/split_view/bridge.rs:1785
+#: rustconn/src/split_view/bridge.rs:1803
 #: rustconn/assets/io.github.totoshko88.RustConn.desktop:3
 msgid "Manage remote connections easily"
 msgstr "Қашықтағы қосылымдарды оңай басқарыңыз"
 
-#: rustconn/src/split_view/bridge.rs:1865
+#: rustconn/src/split_view/bridge.rs:1883
 msgid "Double-click a connection in the sidebar to get started"
 msgstr "Бастау үшін бүйір тақтадағы қосылымды екі рет басыңыз"
 
-#: rustconn/src/split_view/bridge.rs:1879
+#: rustconn/src/split_view/bridge.rs:1897
 msgid "Don't show this page at startup"
 msgstr "Іске қосылғанда бұл бетті көрсетпеу"
 
-#: rustconn/src/split_view/bridge.rs:1904
+#: rustconn/src/split_view/bridge.rs:1922
 msgid "Embedded SSH, RDP, VNC, SPICE"
 msgstr "Кірістірілген SSH, RDP, VNC, SPICE"
 
-#: rustconn/src/split_view/bridge.rs:1906
+#: rustconn/src/split_view/bridge.rs:1924
 msgid "Secure credential storage"
 msgstr "Тіркелгі деректерін қауіпсіз сақтау"
 
-#: rustconn/src/split_view/bridge.rs:1909
+#: rustconn/src/split_view/bridge.rs:1927
 msgid "Remote host monitoring"
 msgstr "Қашықтағы хосттарды бақылау"
 
-#: rustconn/src/split_view/bridge.rs:1911
+#: rustconn/src/split_view/bridge.rs:1929
 msgid "Cloud Sync across devices"
 msgstr "Құрылғылар арасында бұлтты синхрондау"
 
-#: rustconn/src/split_view/bridge.rs:1912
+#: rustconn/src/split_view/bridge.rs:1930
 msgid "Expect automation & tasks"
 msgstr "Expect автоматтандыру және тапсырмалар"
 
-#: rustconn/src/split_view/bridge.rs:1913
+#: rustconn/src/split_view/bridge.rs:1931
 msgid "Groups, tags, and templates"
 msgstr "Топтар, тегтер және үлгілер"
 
-#: rustconn/src/split_view/bridge.rs:1914
+#: rustconn/src/split_view/bridge.rs:1932
 msgid "Zero Trust tunnels"
 msgstr "Zero Trust туннельдері"
 
-#: rustconn/src/split_view/bridge.rs:1915
+#: rustconn/src/split_view/bridge.rs:1933
 msgid "Command snippets & clusters"
 msgstr "Команда үзінділері және кластерлер"
 
-#: rustconn/src/split_view/bridge.rs:1918
+#: rustconn/src/split_view/bridge.rs:1936
 msgid "Drag & drop files to sessions"
 msgstr "Файлдарды сеанстарға сүйреп апару"
 
-#: rustconn/src/split_view/bridge.rs:1978
+#: rustconn/src/split_view/bridge.rs:1996
 msgid "New connection"
 msgstr "Жаңа қосылым"
 
-#: rustconn/src/split_view/bridge.rs:1979
+#: rustconn/src/split_view/bridge.rs:1997
 msgid "Quick connect"
 msgstr "Жылдам қосылу"
 
-#: rustconn/src/split_view/bridge.rs:1980
+#: rustconn/src/split_view/bridge.rs:1998
 msgid "Command palette"
 msgstr "Команда палитрасы"
 
-#: rustconn/src/split_view/bridge.rs:1981
+#: rustconn/src/split_view/bridge.rs:1999
 msgid "Local shell"
 msgstr "Жергілікті қабықша"
 
-#: rustconn/src/split_view/bridge.rs:1983
+#: rustconn/src/split_view/bridge.rs:2001
 msgid "Split vertical / horizontal"
 msgstr "Тігінен / көлденеңінен бөлу"
 
-#: rustconn/src/split_view/bridge.rs:1984
+#: rustconn/src/split_view/bridge.rs:2002
 msgid "Disable shortcuts"
 msgstr "Пернетақта тіркесімдерін өшіру"
 
-#: rustconn/src/split_view/bridge.rs:1985
+#: rustconn/src/split_view/bridge.rs:2003
 msgid "Import connections"
 msgstr "Қосылымдарды импорттау"
 
-#: rustconn/src/split_view/bridge.rs:2015
+#: rustconn/src/split_view/bridge.rs:2033
 msgid "Quick Access"
 msgstr "Жылдам қол жеткізу"
 
-#: rustconn/src/split_view/bridge.rs:2019
+#: rustconn/src/split_view/bridge.rs:2037
 msgid "Fuzzy search & command palette"
 msgstr "Бұлдыр іздеу және команда палитрасы"
 
-#: rustconn/src/split_view/bridge.rs:2020
+#: rustconn/src/split_view/bridge.rs:2038
 msgid "Pin favorites to sidebar"
 msgstr "Таңдаулыларды бүйір панельге бекіту"
 
-#: rustconn/src/split_view/bridge.rs:2021
+#: rustconn/src/split_view/bridge.rs:2039
 msgid "Split view for terminals"
 msgstr "Терминалдар үшін бөлінген көрініс"
 
-#: rustconn/src/split_view/bridge.rs:2024
+#: rustconn/src/split_view/bridge.rs:2042
 msgid "Tab Overview grid (Ctrl+Shift+O)"
 msgstr "Қойындыларға шолу торы (Ctrl+Shift+O)"
 
-#: rustconn/src/split_view/bridge.rs:2044
+#: rustconn/src/split_view/bridge.rs:2062
 msgid "Import Formats"
 msgstr "Импорт пішімдері"
 
-#: rustconn/src/split_view/bridge.rs:2210
+#: rustconn/src/split_view/bridge.rs:2228
 msgid "All tabs are already displayed in this split view"
 msgstr "Барлық қойындылар осы бөлінген көріністе көрсетілген"
 
-#: rustconn/src/split_view/bridge.rs:2249
+#: rustconn/src/split_view/bridge.rs:2267
 msgid "Select a tab to display"
 msgstr "Көрсету үшін қойындыны таңдаңыз"
 
@@ -10595,32 +10600,32 @@ msgstr "Көрсету үшін қойындыны таңдаңыз"
 msgid "Execute Snippet…"
 msgstr "Үзіндіні орындау…"
 
-#: rustconn/src/terminal/mod.rs:460
+#: rustconn/src/terminal/mod.rs:467
 msgid "Tab Overview (Ctrl+Shift+O)"
 msgstr "Қойындылар шолуы (Ctrl+Shift+O)"
 
-#: rustconn/src/terminal/mod.rs:477 rustconn/src/terminal/tab_lifecycle.rs:35
-#: rustconn/src/terminal/tab_lifecycle.rs:50 rustconn/src/window/mod.rs:3240
+#: rustconn/src/terminal/mod.rs:484 rustconn/src/terminal/tab_lifecycle.rs:35
+#: rustconn/src/terminal/tab_lifecycle.rs:50 rustconn/src/window/mod.rs:3252
 msgid "Welcome"
 msgstr "Қош келдіңіз"
 
-#: rustconn/src/terminal/mod.rs:1009
+#: rustconn/src/terminal/mod.rs:1017
 msgid "Output filter '{}' is not installed; session output is not filtered"
 msgstr "«{}» шығыс сүзгісі орнатылмаған; сеанс шығысы сүзгіленбейді"
 
-#: rustconn/src/terminal/mod.rs:1299
+#: rustconn/src/terminal/mod.rs:1307
 msgid "Command not found: {}"
 msgstr "Команда табылмады: {}"
 
-#: rustconn/src/terminal/mod.rs:1301
+#: rustconn/src/terminal/mod.rs:1309
 msgid "Failed to start '{}'"
 msgstr "«{}» іске қосу мүмкін болмады"
 
-#: rustconn/src/terminal/mod.rs:1323
+#: rustconn/src/terminal/mod.rs:1331
 msgid "'{}' is not installed"
 msgstr "«{}» орнатылмаған"
 
-#: rustconn/src/terminal/mod.rs:1326
+#: rustconn/src/terminal/mod.rs:1334
 msgid "Failed to start '{}': {}"
 msgstr "«{}» іске қосу мүмкін болмады: {}"
 
@@ -10815,7 +10820,7 @@ msgstr "{} белсенді сеанс"
 msgid "About RustConn"
 msgstr "RustConn туралы"
 
-#: rustconn/src/vault_ops.rs:50 rustconn/src/window/mod.rs:4563
+#: rustconn/src/vault_ops.rs:50 rustconn/src/window/mod.rs:4575
 msgid "Passphrase Does Not Open the Portable File"
 msgstr "Құпия фраза тасымалды файлды ашпайды"
 
@@ -11738,47 +11743,47 @@ msgstr ""
 msgid "Global variables could not be saved to disk."
 msgstr "Жаһандық айнымалыларды дискіге сақтау мүмкін болмады."
 
-#: rustconn/src/window/mod.rs:804
+#: rustconn/src/window/mod.rs:816
 msgid "Dismiss"
 msgstr "Елемеу"
 
-#: rustconn/src/window/mod.rs:2193
+#: rustconn/src/window/mod.rs:2205
 msgid "Already running in an external window"
 msgstr "Сыртқы терезеде әлдеқашан жұмыс істеп тұр"
 
-#: rustconn/src/window/mod.rs:2344
+#: rustconn/src/window/mod.rs:2356
 msgid "Connection to ‘{}’ failed"
 msgstr "‘{}’ қосылу сәтсіз аяқталды"
 
-#: rustconn/src/window/mod.rs:2570 rustconn/src/window/mod.rs:2584
+#: rustconn/src/window/mod.rs:2582 rustconn/src/window/mod.rs:2596
 msgid "Pre-connect task failed: {}"
 msgstr "Қосылым алдындағы тапсырма сәтсіз: {}"
 
-#: rustconn/src/window/mod.rs:2618
+#: rustconn/src/window/mod.rs:2630
 msgid "Port knock failed: {}"
 msgstr "Port knock сәтсіз аяқталды: {}"
 
-#: rustconn/src/window/mod.rs:2667
+#: rustconn/src/window/mod.rs:2679
 msgid "SPA failed: {}"
 msgstr "SPA сәтсіз аяқталды: {}"
 
-#: rustconn/src/window/mod.rs:2866 rustconn/src/window/mod.rs:3041
+#: rustconn/src/window/mod.rs:2878 rustconn/src/window/mod.rs:3053
 msgid "Connection “{}” created"
 msgstr "“{}” қосылымы жасалды"
 
-#: rustconn/src/window/mod.rs:3245
+#: rustconn/src/window/mod.rs:3257
 msgid "RustConn - {}"
 msgstr "RustConn — {}"
 
-#: rustconn/src/window/mod.rs:3378
+#: rustconn/src/window/mod.rs:3390
 msgid "Settings saved"
 msgstr "Баптаулар сақталды"
 
-#: rustconn/src/window/mod.rs:3415
+#: rustconn/src/window/mod.rs:3427
 msgid "Passphrase Not Saved on This Computer"
 msgstr "Құпия фраза осы компьютерде сақталмады"
 
-#: rustconn/src/window/mod.rs:3417
+#: rustconn/src/window/mod.rs:3429
 msgid ""
 "The passphrase could not be encrypted for local storage, so it is kept for "
 "this session only and you will be asked for it again after a restart. Choose "
@@ -11790,11 +11795,11 @@ msgstr ""
 "сұралады. Оның орнына «Жүйелік кілттер сақтағышын» таңдаңыз немесе RustConn "
 "өз деректер каталогына жаза алатынын тексеріңіз."
 
-#: rustconn/src/window/mod.rs:3463
+#: rustconn/src/window/mod.rs:3475
 msgid "Credentials Not Saved to Keyring"
 msgstr "Тіркелгі деректері кілттер қоймасына сақталмады"
 
-#: rustconn/src/window/mod.rs:3465
+#: rustconn/src/window/mod.rs:3477
 msgid ""
 "The system keyring did not accept the credentials, so they are kept for this "
 "session only and will be gone after a restart. Check that your keyring "
@@ -11805,43 +11810,43 @@ msgstr ""
 "қоймасы қызметінің іске қосылғанын және құлпы ашылғанын тексеріп, "
 "баптауларды қайта сақтаңыз."
 
-#: rustconn/src/window/mod.rs:3645
+#: rustconn/src/window/mod.rs:3657
 msgid "Close RustConn?"
 msgstr "RustConn жабылсын ба?"
 
-#: rustconn/src/window/mod.rs:3647
+#: rustconn/src/window/mod.rs:3659
 msgid "{} session tab(s) are open. Active connections will be disconnected."
 msgstr "{} сессия қойындысы ашық. Белсенді қосылымдар ажыратылады."
 
-#: rustconn/src/window/mod.rs:3682
+#: rustconn/src/window/mod.rs:3694
 msgid "Cloud sync failed for '{}': {}"
 msgstr "«{}» үшін бұлтпен синхрондау сәтсіз аяқталды: {}"
 
-#: rustconn/src/window/mod.rs:3863
+#: rustconn/src/window/mod.rs:3875
 msgid "Startup connection not found"
 msgstr "Іске қосу қосылымы табылмады"
 
-#: rustconn/src/window/mod.rs:3899
+#: rustconn/src/window/mod.rs:3911
 msgid "Failed to open .rdp file"
 msgstr ".rdp файлын ашу сәтсіз"
 
-#: rustconn/src/window/mod.rs:3935
+#: rustconn/src/window/mod.rs:3947
 msgid "Failed to open .vv file"
 msgstr ".vv файлын ашу сәтсіз"
 
-#: rustconn/src/window/mod.rs:3972
+#: rustconn/src/window/mod.rs:3984
 msgid "Tunnel “{}” stopped: {}"
 msgstr "“{}” туннелі тоқтады: {}"
 
-#: rustconn/src/window/mod.rs:3988
+#: rustconn/src/window/mod.rs:4000
 msgid "Gave up reconnecting tunnel “{}”: {}"
 msgstr "“{}” туннелін қайта қосу тоқтатылды: {}"
 
-#: rustconn/src/window/mod.rs:4479
+#: rustconn/src/window/mod.rs:4491
 msgid "Successfully exported {} connection(s). {} skipped."
 msgstr "{} қосылым сәтті экспортталды. {} өткізіп жіберілді."
 
-#: rustconn/src/window/mod.rs:4565
+#: rustconn/src/window/mod.rs:4577
 msgid ""
 "The passphrase you saved does not decrypt the portable credential file, so "
 "none of the passwords in it can be read. Open Settings ▸ Secrets and enter "
@@ -12310,7 +12315,7 @@ msgstr ""
 msgid "Cannot move a folder into one of its own subfolders"
 msgstr "Қалтаны өзінің ішкі қалталарының біріне жылжытуға болмайды"
 
-#: rustconn/src/window/split_view_actions.rs:454
+#: rustconn/src/window/split_view_actions.rs:455
 msgid ""
 "Tip: press Ctrl+Shift+B or use the Broadcast button to mirror keystrokes "
 "across split panels"
@@ -12318,8 +12323,8 @@ msgstr ""
 "Кеңес: пернелер басуды барлық бөлінген тақталарға қайталау үшін Ctrl+Shift+B "
 "басыңыз немесе «Тарату» түймесін қолданыңыз"
 
-#: rustconn/src/window/split_view_actions.rs:496
-#: rustconn/src/window/split_view_actions.rs:716
+#: rustconn/src/window/split_view_actions.rs:497
+#: rustconn/src/window/split_view_actions.rs:717
 msgid ""
 "Split view is not available for external-viewer sessions. Switch this "
 "connection to embedded mode to use split."

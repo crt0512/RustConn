@@ -51,7 +51,8 @@ pub(super) fn wire_panel_action_callbacks(bridge: &Rc<SplitViewBridge>) {
         }
     };
     bridge.setup_close_panel_callback(focus_pane.clone());
-    bridge.setup_pop_panel_callback(focus_pane);
+    bridge.setup_pop_panel_callback(focus_pane.clone());
+    bridge.setup_reconnect_panel_callback(focus_pane);
 }
 
 /// Wires the empty panel's "Local Shell" button for one split layout.
@@ -1046,5 +1047,46 @@ impl MainWindow {
             }
         });
         window.add_action(&focus_next_pane_action);
+
+        // Reconnect the focused pane's session, or the active tab's session when
+        // the tab is not split (issue #328). The per-pane context menu and the
+        // reconnect keybinding both activate this action; the in-pane banner
+        // button calls the reconnect callback directly with its own session id.
+        //
+        // The reconnect engine is keyed by (session_id, connection_id) and is
+        // already pane-agnostic — only the target session had to be resolved
+        // per pane, which is what a split-owner tab could not express before:
+        // its Reconnect banner reached only the one session that owned the tab.
+        let reconnect_pane_action = gio::SimpleAction::new("reconnect-pane", None);
+        let notebook_for_reconnect = self.terminal_notebook.clone();
+        let session_bridges_reconnect = self.session_split_bridges.clone();
+        reconnect_pane_action.connect_activate(move |_, _| {
+            let Some(active) = notebook_for_reconnect.get_active_session_id() else {
+                tracing::debug!("reconnect-pane: no active session");
+                return;
+            };
+            // In a split, target the focused pane's session; otherwise the
+            // active session itself. A split with no focused pane falls back to
+            // the owner so the shortcut is never a no-op inside a split.
+            let target = {
+                let bridges = session_bridges_reconnect.borrow();
+                match bridges.get(&active) {
+                    Some(bridge) => bridge.get_focused_session().unwrap_or(active),
+                    None => active,
+                }
+            };
+            let Some(connection_id) = notebook_for_reconnect
+                .get_session_info(target)
+                .map(|i| i.connection_id)
+            else {
+                tracing::debug!(session = %target, "reconnect-pane: session has no info");
+                return;
+            };
+            if let Some(ref callback) = *notebook_for_reconnect.reconnect_callback().borrow() {
+                tracing::info!(session = %target, %connection_id, "reconnect-pane: reconnecting");
+                callback(target, connection_id);
+            }
+        });
+        window.add_action(&reconnect_pane_action);
     }
 }
