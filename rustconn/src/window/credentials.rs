@@ -1044,6 +1044,15 @@ impl MainWindow {
                     }
                 })
                 .unwrap_or_default();
+            // Warm the session cache with what the vault just returned. The SSH,
+            // VNC and Web branches all do this; RDP did not, so every rapid
+            // successive connect re-hit the backend instead of the warm cache —
+            // which is what pushed the concurrent-lookup race (a busy backend
+            // timing out into a spurious password prompt). Now the second launch
+            // takes the cache fast path before any vault call is even attempted.
+            if let Ok(mut state_mut) = state.try_borrow_mut() {
+                state_mut.cache_credentials(connection_id, username, password, &domain);
+            }
             Self::start_rdp_session_with_credentials(
                 &state,
                 &notebook,
