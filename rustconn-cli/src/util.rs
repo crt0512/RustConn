@@ -277,6 +277,7 @@ pub fn parse_protocol_type(s: &str) -> Result<rustconn_core::models::ProtocolTyp
         "kubernetes" | "k8s" => Ok(ProtocolType::Kubernetes),
         "zerotrust" | "zero-trust" | "zt" => Ok(ProtocolType::ZeroTrust),
         "mosh" => Ok(ProtocolType::Mosh),
+        "web" | "http" | "https" => Ok(ProtocolType::Web),
         _ => Err(CliError::Config(format!("Unknown protocol: {s}"))),
     }
 }
@@ -320,5 +321,32 @@ mod confirmation_tests {
     #[test]
     fn declining_and_having_nobody_to_ask_stay_distinguishable() {
         assert_ne!(Confirmation::Declined, Confirmation::NotInteractive);
+    }
+}
+
+#[cfg(test)]
+mod protocol_parse_tests {
+    use super::parse_protocol_type;
+    use rustconn_core::models::ProtocolType;
+
+    /// `add --help` advertises `web`, and the Web construction path
+    /// (`ProtocolType::Web`) exists, but the parser used to reject it — so a
+    /// documented protocol could not be created at all. Guard the three
+    /// accepted spellings.
+    #[test]
+    fn web_aliases_parse() {
+        for s in ["web", "http", "https", "WEB", "HTTPS"] {
+            assert_eq!(parse_protocol_type(s).unwrap(), ProtocolType::Web);
+        }
+    }
+
+    /// A few of the other protocols, to prove the added branch did not shadow
+    /// them.
+    #[test]
+    fn known_protocols_still_parse() {
+        assert_eq!(parse_protocol_type("ssh").unwrap(), ProtocolType::Ssh);
+        assert_eq!(parse_protocol_type("k8s").unwrap(), ProtocolType::Kubernetes);
+        assert_eq!(parse_protocol_type("zt").unwrap(), ProtocolType::ZeroTrust);
+        assert!(parse_protocol_type("nonsense").is_err());
     }
 }

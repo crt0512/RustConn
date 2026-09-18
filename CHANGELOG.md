@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`rustconn-cli add --tunnel-via <NAME|UUID>` for Web connections** — a Web connection can now be created from the CLI so it browses *through* an existing SSH connection's host via an auto-raised dynamic SOCKS proxy, the same `tunnel_via` the connection editor writes. This is what makes a host-only web UI (a Kubernetes dashboard, Cockpit, a router page reachable only past a bastion) openable from the CLI-created entry. The flag resolves the SSH connection by name or UUID and is rejected for non-Web protocols.
+
 ### Fixed
 
+- **`rustconn-cli add --protocol web` was rejected despite being advertised** — `add --help` listed `web` as a valid protocol and the Web construction path existed, but the protocol-string parser had no branch for it, so `Unknown protocol: web` came back and a Web connection could not be created from the CLI at all. The parser now accepts `web`, `http` and `https`, matching the documented surface; the existing Web option flags (`--browser-mode`, `--accept-invalid-certs`, `--web-toolbar`, `--zoom-level`, …) already applied once the connection was built.
+- **`rustconn-cli add --aws-profile` help described the wrong field** — for `--provider aws_ssm` the help read "AWS SSM instance ID (uses --host as target if not set)", but the flag actually sets the AWS *profile* (the instance ID always comes from `--host`). A user following the help put the instance ID in `--profile`, producing `aws ssm start-session --target i-… --profile i-… --region …` and `The config profile (i-…) could not be found`. The help now matches the `update` command's correct wording and the code's behaviour (profile, defaults to `default`).
 - **Reconnect sometimes did not send the vault password (issue #330)** — after a session ended, hitting Reconnect sometimes launched without the credentials that a fresh connection always populated, forcing the user to type them by hand. The initial connect always re-resolves credentials from the vault and caches them, but the in-place reconnect read the target password from that session cache alone, which expires after five minutes; a reconnect past the TTL launched with no password, so it worked only while the cache was still warm. Reconnect now falls back to the same blocking vault resolve the bastion-hop credentials already use, through a shared `AppState::ensure_connection_password` (cache-first, vault on a miss, then re-cache). Key- and agent-based connections (`PasswordSource::None`) and interactively prompted ones (`Prompt`) skip the lookup entirely, so they add no latency. Covers the SSH reconnect path and the Zero Trust Custom Command reconnect that expands `${password}`.
 
 ## [0.22.0] - 2026-09-18
