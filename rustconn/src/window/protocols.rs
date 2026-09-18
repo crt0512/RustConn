@@ -1701,7 +1701,14 @@ pub fn reconnect_generic_vte_in_place(
     match &conn.protocol_config {
         rustconn_core::ProtocolConfig::ZeroTrust(zt_config) => {
             let global_variables = resolve_globals_with_ask(state, connection_id);
-            let password = cached_connection_password(state, connection_id);
+            // Resolve from the vault on a cache miss, like the SSH reconnect
+            // path: a Custom Command referencing `${password}` reconnected after
+            // the cache TTL expired used to expand to an empty password (issue
+            // #330). No other AppState borrow is held across this blocking call.
+            let password = state
+                .try_borrow_mut()
+                .ok()
+                .and_then(|mut s| s.ensure_connection_password(connection_id));
             let launch = match build_zerotrust_launch(
                 &conn,
                 zt_config,

@@ -1402,20 +1402,16 @@ fn start_ssh_connection_internal(
         .as_ref()
         .map(|u| substitute_variables(u, &global_variables));
 
-    // Retrieve the cached target credential resolved from the vault earlier.
-    // It is only exposed to OpenSSH when the strict password-only gate below passes.
+    // Retrieve the target credential resolved from the vault earlier. The
+    // initial connect caches it just before this, so this is a cache hit; the
+    // vault fallback shared with the reconnect path (issue #330) only matters if
+    // the entry is somehow absent. It is only exposed to OpenSSH when the strict
+    // password-only gate below passes. No other AppState borrow is held across
+    // the call.
     let cached_password: Option<SecretString> = state
-        .try_borrow()
+        .try_borrow_mut()
         .ok()
-        .and_then(|s| s.get_cached_credentials(connection_id).cloned())
-        .and_then(|c| {
-            use secrecy::ExposeSecret;
-            if c.password.expose_secret().is_empty() {
-                None
-            } else {
-                Some(c.password.clone())
-            }
-        });
+        .and_then(|mut s| s.ensure_connection_password(connection_id));
 
     // Get SSH-specific options
     let (
@@ -1798,20 +1794,16 @@ pub fn reconnect_ssh_in_place(
         .is_some()
         || ssh_inheritance::resolve_ssh_proxy_jump(&conn, &groups, &network).is_some();
 
-    // Retrieve the cached target credential before building the launch plan so
-    // proxy routing and auth flags are scoped consistently with initial connect.
+    // Retrieve the target credential before building the launch plan so proxy
+    // routing and auth flags are scoped consistently with initial connect.
+    // Resolve from the vault on a cache miss — the initial connect always
+    // re-resolves, but a reconnect after the cache TTL expired used to launch
+    // with no password (issue #330). No other AppState borrow is held across
+    // this blocking call.
     let cached_password: Option<SecretString> = state
-        .try_borrow()
+        .try_borrow_mut()
         .ok()
-        .and_then(|s| s.get_cached_credentials(connection_id).cloned())
-        .and_then(|c| {
-            use secrecy::ExposeSecret;
-            if c.password.expose_secret().is_empty() {
-                None
-            } else {
-                Some(c.password.clone())
-            }
-        });
+        .and_then(|mut s| s.ensure_connection_password(connection_id));
 
     // Build SSH args (shared with start_ssh_connection).
     let (

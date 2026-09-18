@@ -854,6 +854,63 @@ impl AppState {
         }
     }
 
+    /// Returns the connection's target password for a launch, resolving it from
+    /// the vault when the session cache has none — and caching the result.
+    ///
+    /// The reconnect paths used to read this password from the session cache
+    /// alone. That cache expires after [`DEFAULT_CREDENTIAL_TTL_SECONDS`], so a
+    /// reconnect more than five minutes after the last connect silently launched
+    /// with no password and the user had to type it (issue #330). The initial
+    /// connect never hit this because it always re-resolves through
+    /// `resolve_credentials_gtk` first.
+    ///
+    /// This is the same cache-first, vault-fallback, cache-again shape the
+    /// bastion-hop resolver already uses in `build_ssh_command_args`, so the
+    /// target credential and the jump-host credentials are acquired the same
+    /// way. Sources that need no vault lookup ([`PasswordSource::None`],
+    /// [`PasswordSource::Prompt`]) are skipped before any blocking call, so an
+    /// SSH-key or agent connection pays nothing.
+    ///
+    /// Performs a blocking vault call on a cache miss; GTK-thread callers MUST
+    /// NOT hold any other `AppState` borrow across it. An empty password
+    /// resolves to `None`.
+    pub(crate) fn ensure_connection_password(
+        &mut self,
+        connection_id: Uuid,
+    ) -> Option<SecretString> {
+        use secrecy::ExposeSecret;
+
+        // Fast path: a warm cache entry with a non-empty password.
+        if let Some(cached) = self
+            .get_cached_credentials(connection_id)
+            .map(|c| c.password.clone())
+            .filter(|p| !p.expose_secret().is_empty())
+        {
+            return Some(cached);
+        }
+
+        let connection = self.get_connection(connection_id)?.clone();
+
+        // Skip the blocking vault call for sources that never carry one, so a
+        // key/agent reconnect adds no latency (the SHALL-CONTINUE-TO path).
+        if !password_source_needs_resolution(&connection.password_source) {
+            return None;
+        }
+
+        let resolved = self.resolve_connection_password_blocking(&connection)?;
+
+        // Warm the cache so a subsequent reconnect within the TTL takes the fast
+        // path above, matching what the initial connect leaves behind.
+        self.cache_credentials(
+            connection_id,
+            connection.username.as_deref().unwrap_or_default(),
+            resolved.expose_secret(),
+            "",
+        );
+
+        Some(resolved)
+    }
+
     /// Reports that the portable store must be unlocked before resolving.
     ///
     /// Returns `None` when the preferred backend is not the portable file, or
@@ -1741,6 +1798,16 @@ impl AppState {
     // ========== Cluster Operations ==========
 }
 
+/// Whether a password source warrants a vault lookup on a cache miss.
+///
+/// `None` (SSH key / agent / no password) and `Prompt` (asked interactively)
+/// never read the vault, so a reconnect on such a connection must not pay the
+/// blocking backend call. Every other source — `Vault`, `Variable`, `Inherit`,
+/// `Script` — resolves through the backend and so is worth the lookup.
+fn password_source_needs_resolution(source: &PasswordSource) -> bool {
+    !matches!(source, PasswordSource::None | PasswordSource::Prompt)
+}
+
 /// Shared application state type
 pub type SharedAppState = Rc<RefCell<AppState>>;
 
@@ -1776,3 +1843,36 @@ pub fn create_shared_state() -> Result<SharedAppState, String> {
 // Vault credential operations — extracted to reduce module complexity.
 // Re-exported here so all `crate::state::` paths continue to work.
 pub use crate::vault_ops::*;
+
+#[cfg(test)]
+mod tests {
+    use super::password_source_needs_resolution;
+    use rustconn_core::models::PasswordSource;
+
+    // Root cause of issue #330: the reconnect path read the target password
+    // from the session cache only. When the cache is empty (expired past the
+    // TTL), a Vault-sourced connection must fall back to a vault lookup — the
+    // predicate that gates that lookup must say "yes" for every source that
+    // reads a backend.
+    #[test]
+    fn vault_backed_sources_need_resolution_on_cache_miss() {
+        assert!(password_source_needs_resolution(&PasswordSource::Vault));
+        assert!(password_source_needs_resolution(&PasswordSource::Variable(
+            "SECRET".to_string()
+        )));
+        assert!(password_source_needs_resolution(&PasswordSource::Inherit));
+        assert!(password_source_needs_resolution(&PasswordSource::Script(
+            "op read".to_string()
+        )));
+    }
+
+    // SHALL CONTINUE TO: a key/agent connection (None) and an interactively
+    // prompted one (Prompt) never read the vault, so a reconnect on them must
+    // not trigger a blocking backend call — the predicate must say "no" so the
+    // fast path is preserved and no latency is added.
+    #[test]
+    fn keyless_and_prompt_sources_skip_resolution() {
+        assert!(!password_source_needs_resolution(&PasswordSource::None));
+        assert!(!password_source_needs_resolution(&PasswordSource::Prompt));
+    }
+}
