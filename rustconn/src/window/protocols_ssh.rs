@@ -314,6 +314,93 @@ fn agent_identity_file(ssh_config: &rustconn_core::SshConfig) -> Option<String> 
     }
 }
 
+/// The authentication/known-hosts shape of a jump-host chain, used to decide
+/// how the first hop is wired (`-J` vs an explicit `ProxyCommand`).
+///
+/// Grouped into a struct rather than passed as a row of booleans so the two
+/// decision helpers read by field name and stay under clippy's
+/// `fn_params_excessive_bools` ceiling.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is an independent auth/known-hosts condition the routing decision depends on; \
+              collapsing them into an enum would lose the per-condition meaning the two predicates read"
+)]
+struct JumpAuthShape {
+    hop_count: usize,
+    has_identity: bool,
+    has_flatpak_known_hosts: bool,
+    has_pkcs11: bool,
+    has_askpass: bool,
+    any_hop_has_password: bool,
+    target_askpass_allowed: bool,
+}
+
+impl JumpAuthShape {
+    /// Multi-hop with only an identity key — no password, Flatpak known-hosts,
+    /// or PKCS#11 token in play.
+    ///
+    /// This is the one case the nested `ProxyCommand` cannot serve (a deep `-W`
+    /// hop runs ssh on the previous hop, where the client's local `-i <path>`
+    /// does not exist), so it is routed to `-J` with the key loaded into the
+    /// agent instead.
+    fn is_multi_hop_identity_only(&self) -> bool {
+        self.hop_count > 1
+            && self.has_identity
+            && !self.has_flatpak_known_hosts
+            && !self.has_pkcs11
+            && !self.has_askpass
+            && !self.any_hop_has_password
+            && !self.target_askpass_allowed
+    }
+
+    /// Whether the first hop needs an explicit `ProxyCommand` rather than `-J`.
+    ///
+    /// `-J` spawns child ssh processes that do not inherit `-o`/`-i`, so Flatpak
+    /// known-hosts, a PKCS#11 token, a first-hop identity, or any password hop
+    /// all force the explicit `ProxyCommand` that passes them to the first hop.
+    /// The one exception is [`Self::is_multi_hop_identity_only`], which `-J` +
+    /// agent serves better than a nested `ProxyCommand` that cannot carry a
+    /// local key past the first hop.
+    fn needs_explicit_proxy_command(&self) -> bool {
+        !self.is_multi_hop_identity_only()
+            && (self.has_flatpak_known_hosts
+                || self.has_pkcs11
+                || self.has_identity
+                || self.has_askpass
+                || self.any_hop_has_password
+                || self.target_askpass_allowed)
+    }
+}
+
+/// Ensures a private-key identity is loaded into the running ssh-agent.
+///
+/// The multi-hop `-J` path needs this: OpenSSH's `ProxyJump` does not pass the
+/// outer command's `-i <path>` to the ssh processes it spawns for each hop, so
+/// the only identity every hop can see is one the agent already holds. Adding
+/// it here (idempotently — `ssh-add` re-adding a loaded key is a no-op) makes a
+/// key-authenticated multi-hop chain work without the user pre-running
+/// `ssh-add`. Best-effort: a passphrase-protected key with no cached passphrase
+/// cannot be added non-interactively, so a failure is logged and the connection
+/// still proceeds (the agent may already hold it, or the user can add it).
+fn ensure_identity_in_agent(key_path: &std::path::Path) {
+    use rustconn_core::ssh_agent::SshAgentManager;
+
+    if !key_path.exists() {
+        return;
+    }
+    let manager = SshAgentManager::from_env();
+    if manager.socket_path().is_none() {
+        tracing::debug!("no ssh-agent socket; multi-hop -J relies on an existing agent identity");
+        return;
+    }
+    // `add_key` with no passphrase covers unencrypted keys and keys whose
+    // passphrase the agent/askpass can still resolve. Encrypted keys without a
+    // resolvable passphrase fail here and are left to the agent/user.
+    if let Err(e) = manager.add_key(key_path, None) {
+        tracing::debug!(error = %e, "could not add identity to ssh-agent for multi-hop -J");
+    }
+}
+
 /// Builds the SSH command pieces shared by initial connect and in-place
 /// reconnect: the resolved identity file, the extra CLI args (including the
 /// jump-host `ProxyCommand`/`-J` wiring and Flatpak known_hosts), whether
@@ -840,13 +927,27 @@ fn build_ssh_command_args(
             None
         };
 
-        if flatpak_known_hosts.is_some()
-            || first_hop_pkcs11.is_some()
-            || first_hop_identity.is_some()
-            || askpass_script.is_some()
-            || any_hop_has_password
-            || target_askpass_allowed
-        {
+        // Multi-hop with only an identity key (no password/Flatpak/PKCS#11)
+        // cannot use the nested ProxyCommand: each `-W` hop past the first runs
+        // ssh ON the previous hop, where the client's local `-i <path>` file
+        // does not exist, so deep hops fail with "Permission denied" (proven
+        // against a genuine laptop→bastion1→bastion2→target chain). OpenSSH's
+        // `-J` is the mechanism that carries one client identity across every
+        // hop — but only via the agent, since `-J` does not pass `-i` to its
+        // child ssh processes either. So for this case route to `-J` and load
+        // the key into the agent below (`ensure_identity_in_agent`).
+        let auth_shape = JumpAuthShape {
+            hop_count: jump_hosts.len(),
+            has_identity: first_hop_identity.is_some(),
+            has_flatpak_known_hosts: flatpak_known_hosts.is_some(),
+            has_pkcs11: first_hop_pkcs11.is_some(),
+            has_askpass: askpass_script.is_some(),
+            any_hop_has_password,
+            target_askpass_allowed,
+        };
+        let multi_hop_identity_only = auth_shape.is_multi_hop_identity_only();
+
+        if auth_shape.needs_explicit_proxy_command() {
             // Build a ProxyCommand for the first hop;
             // if there are multiple hops, nest them via nested ProxyCommand.
             let mut proxy_parts: Vec<String> = Vec::new();
@@ -999,6 +1100,16 @@ fn build_ssh_command_args(
         } else {
             // Non-Flatpak, no passwords: use standard -J. `chain` is target-first
             // (RustConn's internal order); OpenSSH `-J` visits hops client-first, so reverse.
+            //
+            // For the multi-hop identity-only case (routed here deliberately),
+            // `-J` needs the identity in the agent because it does not pass `-i`
+            // to the ssh processes it spawns for each hop. Load it now; the key
+            // is added idempotently and only when a real path is known.
+            if multi_hop_identity_only
+                && let Some(ref key_path) = first_hop_identity.as_ref().or(key.as_ref())
+            {
+                ensure_identity_in_agent(std::path::Path::new(key_path.as_str()));
+            }
             args.push("-J".to_string());
             args.push(rustconn_core::ssh_tunnel::proxy_jump_arg(&chain));
         }
@@ -1668,6 +1779,7 @@ fn start_ssh_connection_internal(
             let mon_port = conn.port;
             let mon_username = conn.username.clone();
             let mon_jump_host = jump_host_chain.clone();
+            let mon_uses_jump_host = has_jump_host;
             let monitoring_started = std::rc::Rc::new(std::cell::Cell::new(false));
             let monitoring_started_clone = monitoring_started.clone();
 
@@ -1679,6 +1791,21 @@ fn start_ssh_connection_internal(
                     return;
                 };
                 if row <= 2 {
+                    return;
+                }
+                // Same guard as the sidebar "connected" detection above: a jump
+                // chain can push the cursor past row 2 with a bastion banner or
+                // an SSH error even when the FINAL host never came up. Starting
+                // monitoring then opens the bar for a session that failed — and
+                // because the monitoring probe uses accept-new + its own
+                // ControlMaster, it can even reach the target and show live data
+                // for a session the user saw fail. Don't start until the output
+                // is free of known SSH failure patterns; the closure runs again
+                // on the next output, so a later successful prompt still starts it.
+                if mon_uses_jump_host
+                    && let Some(text) = notebook_clone.get_terminal_text(session_id)
+                    && contains_ssh_failure(&text)
+                {
                     return;
                 }
                 monitoring_started_clone.set(true);
@@ -1987,6 +2114,7 @@ pub fn reconnect_ssh_in_place(
             let mon_port = conn.port;
             let mon_username = conn.username.clone();
             let mon_jump_host = jump_host_chain;
+            let mon_uses_jump_host = has_jump_host;
             let monitoring_started = std::rc::Rc::new(std::cell::Cell::new(false));
             let monitoring_started_clone = monitoring_started.clone();
 
@@ -1998,6 +2126,16 @@ pub fn reconnect_ssh_in_place(
                     return;
                 };
                 if row <= 2 {
+                    return;
+                }
+                // See the initial-connect path: don't open the monitor for a
+                // jump-chain session whose terminal shows an SSH failure — the
+                // accept-new probe could otherwise show live data for a session
+                // that never established.
+                if mon_uses_jump_host
+                    && let Some(text) = notebook_clone.get_terminal_text(session_id)
+                    && contains_ssh_failure(&text)
+                {
                     return;
                 }
                 monitoring_started_clone.set(true);
@@ -2048,6 +2186,62 @@ mod tests {
             .output()
             .expect("test askpass script must run");
         (output, secret_path)
+    }
+
+    fn jump_shape(hop_count: usize) -> JumpAuthShape {
+        // A neutral baseline: identity-only, no password/Flatpak/PKCS#11.
+        JumpAuthShape {
+            hop_count,
+            has_identity: true,
+            has_flatpak_known_hosts: false,
+            has_pkcs11: false,
+            has_askpass: false,
+            any_hop_has_password: false,
+            target_askpass_allowed: false,
+        }
+    }
+
+    #[test]
+    fn multi_hop_identity_only_routes_to_proxy_jump() {
+        // Two hops, identity only, nothing else: this is the case that must use
+        // -J + agent, not a nested ProxyCommand.
+        let s = jump_shape(2);
+        assert!(s.is_multi_hop_identity_only());
+        assert!(!s.needs_explicit_proxy_command());
+    }
+
+    #[test]
+    fn single_hop_identity_still_uses_proxy_command() {
+        // One hop with an identity works fine as a local ProxyCommand, so it is
+        // NOT flagged multi-hop-identity-only and DOES take the explicit path.
+        let s = jump_shape(1);
+        assert!(!s.is_multi_hop_identity_only());
+        assert!(s.needs_explicit_proxy_command());
+    }
+
+    #[test]
+    fn multi_hop_with_password_or_flatpak_stays_on_proxy_command() {
+        // A password hop or Flatpak known-hosts must keep the explicit
+        // ProxyCommand even across multiple hops.
+        let mut pw = jump_shape(3);
+        pw.any_hop_has_password = true;
+        assert!(!pw.is_multi_hop_identity_only());
+        assert!(pw.needs_explicit_proxy_command());
+
+        let mut flatpak = jump_shape(3);
+        flatpak.has_flatpak_known_hosts = true;
+        assert!(!flatpak.is_multi_hop_identity_only());
+        assert!(flatpak.needs_explicit_proxy_command());
+    }
+
+    #[test]
+    fn no_bastion_needs_neither_path() {
+        // No hop and no special requirement: not multi-hop-identity, and with
+        // no identity/password/etc. the explicit path is not needed.
+        let mut s = jump_shape(0);
+        s.has_identity = false;
+        assert!(!s.is_multi_hop_identity_only());
+        assert!(!s.needs_explicit_proxy_command());
     }
 
     #[test]

@@ -587,8 +587,7 @@ pub(super) fn cmd_add(config_path: Option<&Path>, params: AddParams<'_>) -> Resu
     if let Some(tunnel_ref) = params.tunnel_via {
         let tunnel_conn = find_connection(&connections, tunnel_ref)?;
         let tunnel_id = tunnel_conn.id;
-        if let rustconn_core::models::ProtocolConfig::Web(ref mut cfg) =
-            connection.protocol_config
+        if let rustconn_core::models::ProtocolConfig::Web(ref mut cfg) = connection.protocol_config
         {
             cfg.tunnel_via = Some(tunnel_id);
         } else {

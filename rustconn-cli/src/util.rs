@@ -345,7 +345,10 @@ mod protocol_parse_tests {
     #[test]
     fn known_protocols_still_parse() {
         assert_eq!(parse_protocol_type("ssh").unwrap(), ProtocolType::Ssh);
-        assert_eq!(parse_protocol_type("k8s").unwrap(), ProtocolType::Kubernetes);
+        assert_eq!(
+            parse_protocol_type("k8s").unwrap(),
+            ProtocolType::Kubernetes
+        );
         assert_eq!(parse_protocol_type("zt").unwrap(), ProtocolType::ZeroTrust);
         assert!(parse_protocol_type("nonsense").is_err());
     }
