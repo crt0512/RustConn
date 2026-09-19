@@ -2241,28 +2241,17 @@ impl SplitViewBridge {
                         1,
                     )));
 
-                    popover.popup();
-                    // Diagnostic for the "popover never appears" report: log
-                    // whether it is actually visible right after popup() and how
-                    // long it survives. A visible=false here, or a closed within
-                    // a few ms, means it lost the grab (another popover, a
-                    // just-realized widget) rather than a logic bug.
-                    tracing::debug!(
-                        %panel_id,
-                        visible = popover.is_visible(),
-                        "select_tab: empty-state popover popped up"
-                    );
-                    let opened_at = std::time::Instant::now();
                     let parent_weak = popover_parent.downgrade();
                     popover.connect_closed(move |pop| {
-                        tracing::debug!(
-                            %panel_id,
-                            alive_ms = opened_at.elapsed().as_millis() as u64,
-                            "select_tab: empty-state popover closed"
-                        );
                         if parent_weak.upgrade().is_some() {
                             pop.unparent();
                         }
+                    });
+                    // Deferred for the same grab-race reason as the session-list
+                    // popover below (issue #328 follow-up).
+                    let popover_for_idle = popover.clone();
+                    gtk4::glib::idle_add_local_once(move || {
+                        popover_for_idle.popup();
                     });
                     return;
                 }
@@ -2331,30 +2320,25 @@ impl SplitViewBridge {
                     1,
                 )));
 
-                popover.popup();
-                // Diagnostic for the "Select Tab popover never appears" report
-                // (issue #328 follow-up): a visible=false right after popup(),
-                // or a close within a few ms, means the popover lost the grab to
-                // another widget/popover rather than a logic failure — the flow
-                // reached popup() either way.
-                tracing::debug!(
-                    %panel_id,
-                    visible = popover.is_visible(),
-                    "select_tab: session-list popover popped up"
-                );
-                let opened_at = std::time::Instant::now();
-
-                // Clean up popover when closed
+                // Clean up popover when closed.
                 let parent_weak = popover_parent.downgrade();
                 popover.connect_closed(move |pop| {
-                    tracing::debug!(
-                        %panel_id,
-                        alive_ms = opened_at.elapsed().as_millis() as u64,
-                        "select_tab: session-list popover closed"
-                    );
                     if parent_weak.upgrade().is_some() {
                         pop.unparent();
                     }
+                });
+
+                // Defer popup() to the next idle tick. Calling it inline from a
+                // button's `clicked` handler raced with a surface reallocation —
+                // an embedded RDP/web pane in the same split resizes and forces a
+                // Vulkan swapchain rebuild (VK_SUBOPTIMAL_KHR), and that
+                // reallocation stole the just-popped autohide popover's grab, so
+                // it closed itself after ~8 ms (issue #328 follow-up). Popping up
+                // on the next idle lets the reallocation settle first, so the
+                // grab is stable when the popover appears.
+                let popover_for_idle = popover.clone();
+                gtk4::glib::idle_add_local_once(move || {
+                    popover_for_idle.popup();
                 });
             });
     }
