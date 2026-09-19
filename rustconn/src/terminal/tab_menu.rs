@@ -766,29 +766,34 @@ impl TerminalNotebook {
             .map(|(id, _)| *id)
     }
 
-    /// Builds the "Move to New Window on…" submenu, or `None` for one monitor.
+    /// Appends one flat "Move to New Window on …" item per monitor.
     ///
-    /// With a single monitor there is no choice to present, so the submenu is
-    /// omitted rather than shown with one entry (Requirement 8.3).
-    fn monitor_detach_submenu() -> Option<gio::Menu> {
-        let monitors = gdk::Display::default()?.monitors();
+    /// With a single monitor there is no choice to present, so nothing is added
+    /// and only the plain "Move to New Window" item stands (Requirement 8.3).
+    /// These are flat items rather than a submenu on purpose — a submenu becomes
+    /// a page in the reused PopoverMenu's internal `GtkStack`, which duplicated
+    /// on every menu rebuild; flat items carry no such page.
+    fn append_monitor_detach_items(section: &gio::Menu) {
+        let Some(display) = gdk::Display::default() else {
+            return;
+        };
+        let monitors = display.monitors();
         let count = monitors.n_items();
         if count < 2 {
-            return None;
+            return;
         }
 
-        let submenu = gio::Menu::new();
         for index in 0..count {
             let monitor = monitors.item(index).and_downcast::<gdk::Monitor>();
-            let label = Self::monitor_label(index, monitor.as_ref());
+            let target = Self::monitor_label(index, monitor.as_ref());
+            let label = i18n_f("Move to New Window on {}", &[&target]);
             let item = gio::MenuItem::new(Some(&label), None);
             item.set_action_and_target_value(
                 Some("tab.detach-to-monitor"),
                 Some(&index.to_variant()),
             );
-            submenu.append_item(&item);
+            section.append_item(&item);
         }
-        Some(submenu)
     }
 
     /// Names a monitor for the submenu, for example "Monitor 1 (DP-1)".
@@ -876,10 +881,16 @@ impl TerminalNotebook {
         if state.can_detach {
             let detach_section = gio::Menu::new();
             detach_section.append(Some(&i18n("Move to New Window")), Some("tab.detach"));
-            if let Some(monitors) = Self::monitor_detach_submenu() {
-                // No ellipsis: this opens a submenu, not a dialog (HIG).
-                detach_section.append_submenu(Some(&i18n("Move to New Window on")), &monitors);
-            }
+            // Per-monitor targets are appended as flat items, not a submenu.
+            // A submenu becomes a page in the PopoverMenu's internal GtkStack,
+            // and because the TabView keeps one long-lived PopoverMenu bound to
+            // a model we clear and rebuild on every `setup-menu`, that stack
+            // page was re-added under the same name on each rebuild —
+            // `Gtk-WARNING: duplicate child name in GtkStack: Move to New
+            // Window on`. Flat items carry no stack page, so the collision is
+            // gone; each monitor still has its own `tab.detach-to-monitor`
+            // entry (issue #328 follow-up).
+            Self::append_monitor_detach_items(&detach_section);
             menu.append_section(None, &detach_section);
         }
 
