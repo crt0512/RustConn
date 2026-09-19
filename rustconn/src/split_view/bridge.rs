@@ -2216,7 +2216,13 @@ impl SplitViewBridge {
                     // Show a toast or message that all sessions are already displayed
                     let popover = gtk4::Popover::new();
                     popover.set_parent(&popover_parent);
-                    popover.set_autohide(true);
+                    // autohide=false: an embedded RDP/web pane in the same split
+                    // continuously repaints (Vulkan swapchain rebuilds), and an
+                    // autohide popover loses its input grab to that and dismisses
+                    // itself within milliseconds. Without autohide the popover
+                    // does not depend on holding a grab, so it survives; Escape
+                    // and the close-on-select below take over dismissal (#328).
+                    popover.set_autohide(false);
 
                     let content = GtkBox::new(Orientation::Vertical, 6);
                     content.set_margin_top(12);
@@ -2247,19 +2253,30 @@ impl SplitViewBridge {
                             pop.unparent();
                         }
                     });
-                    // Deferred for the same grab-race reason as the session-list
-                    // popover below (issue #328 follow-up).
-                    let popover_for_idle = popover.clone();
-                    gtk4::glib::idle_add_local_once(move || {
-                        popover_for_idle.popup();
+                    // Escape closes it, since autohide no longer does.
+                    let key_controller = gtk4::EventControllerKey::new();
+                    let popover_for_key = popover.downgrade();
+                    key_controller.connect_key_pressed(move |_, key, _, _| {
+                        if key == gtk4::gdk::Key::Escape {
+                            if let Some(pop) = popover_for_key.upgrade() {
+                                pop.popdown();
+                            }
+                            return gtk4::glib::Propagation::Stop;
+                        }
+                        gtk4::glib::Propagation::Proceed
                     });
+                    popover.add_controller(key_controller);
+                    popover.popup();
                     return;
                 }
 
                 // Create a popover with session list
                 let popover = gtk4::Popover::new();
                 popover.set_parent(&popover_parent);
-                popover.set_autohide(true);
+                // autohide=false — see the note on the empty-state popover above
+                // (issue #328): an embedded pane's continuous repaint steals an
+                // autohide popover's grab and closes it within milliseconds.
+                popover.set_autohide(false);
 
                 let content = GtkBox::new(Orientation::Vertical, 6);
                 content.set_margin_top(12);
@@ -2328,18 +2345,22 @@ impl SplitViewBridge {
                     }
                 });
 
-                // Defer popup() to the next idle tick. Calling it inline from a
-                // button's `clicked` handler raced with a surface reallocation —
-                // an embedded RDP/web pane in the same split resizes and forces a
-                // Vulkan swapchain rebuild (VK_SUBOPTIMAL_KHR), and that
-                // reallocation stole the just-popped autohide popover's grab, so
-                // it closed itself after ~8 ms (issue #328 follow-up). Popping up
-                // on the next idle lets the reallocation settle first, so the
-                // grab is stable when the popover appears.
-                let popover_for_idle = popover.clone();
-                gtk4::glib::idle_add_local_once(move || {
-                    popover_for_idle.popup();
+                // Escape closes it, since autohide no longer does. Selecting a
+                // row already calls popdown() in the row's activate handler.
+                let key_controller = gtk4::EventControllerKey::new();
+                let popover_for_key = popover.downgrade();
+                key_controller.connect_key_pressed(move |_, key, _, _| {
+                    if key == gtk4::gdk::Key::Escape {
+                        if let Some(pop) = popover_for_key.upgrade() {
+                            pop.popdown();
+                        }
+                        return gtk4::glib::Propagation::Stop;
+                    }
+                    gtk4::glib::Propagation::Proceed
                 });
+                popover.add_controller(key_controller);
+
+                popover.popup();
             });
     }
 
