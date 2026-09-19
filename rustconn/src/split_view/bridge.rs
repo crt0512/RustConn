@@ -2258,6 +2258,10 @@ impl SplitViewBridge {
                     if let Some(ref rect) = pointing_to {
                         popover.set_pointing_to(Some(rect));
                     }
+                    // Open downward — see the note on the session-list popover
+                    // below (issue #328): the right split pane has no room to
+                    // the side.
+                    popover.set_position(gtk4::PositionType::Bottom);
 
                     let content = GtkBox::new(Orientation::Vertical, 6);
                     content.set_margin_top(12);
@@ -2299,6 +2303,12 @@ impl SplitViewBridge {
                 if let Some(ref rect) = pointing_to {
                     popover.set_pointing_to(Some(rect));
                 }
+                // Open downward, not sideways. In the right pane of a vertical
+                // split the button sits against the window's right edge, so a
+                // popover opening to the side has nowhere to go and GTK, unable
+                // to place it, shows nothing (issue #328). The pane always has
+                // room below, and the scroller below caps the size so it fits.
+                popover.set_position(gtk4::PositionType::Bottom);
 
                 let content = GtkBox::new(Orientation::Vertical, 6);
                 content.set_margin_top(12);
@@ -2348,7 +2358,23 @@ impl SplitViewBridge {
                     list_box.append(&row);
                 }
 
-                content.append(&list_box);
+                // Cap the list's size and let it scroll. Without a cap the
+                // popover is as wide and tall as the full session list, which in
+                // a narrow right-hand split pane exceeds the space GTK has to
+                // place the popover — so it silently fails to appear. A bounded,
+                // scrolling child always fits (issue #328). `propagate_natural_*`
+                // keeps a short list exactly as small as its rows.
+                let scroller = gtk4::ScrolledWindow::builder()
+                    .hscrollbar_policy(gtk4::PolicyType::Never)
+                    .vscrollbar_policy(gtk4::PolicyType::Automatic)
+                    .propagate_natural_height(true)
+                    .propagate_natural_width(true)
+                    .max_content_height(360)
+                    .min_content_width(240)
+                    .max_content_width(360)
+                    .child(&list_box)
+                    .build();
+                content.append(&scroller);
                 popover.set_child(Some(&content));
 
                 // Track as the single active popover and clean up on close,
