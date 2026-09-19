@@ -2174,14 +2174,39 @@ impl SplitViewBridge {
                     return;
                 };
 
-                // Parent the popover to the clicked "Select Tab" button. It is a
-                // stable, unique, always-mapped per-panel widget, so this avoids
-                // the two failure modes of parenting to the panel/root widget
-                // (issue #328): a `set_parent` conflict when a stale popover was
-                // still attached (`gtk_popover_get_autohide: GTK_IS_POPOVER
-                // failed`, nothing shown), and popover accumulation on the shared
-                // root fallback that broke the right vertical pane specifically.
-                let popover_parent = button.clone().upcast::<gtk4::Widget>();
+                // Parent the popover to the panel *container*, not to the
+                // clicked button, and point it at the button (issue #328). The
+                // button lives inside an `Overlay` with `Overflow::Hidden`
+                // (create_empty_placeholder clips it so the placeholder cannot
+                // force the Paned past 50 %), and a popover parented into that
+                // clipped subtree is clipped away — it maps and pops up but
+                // paints nothing. In the right pane of a vertical split the
+                // clip is on the width, which is exactly what the popover needs,
+                // so it vanished there while the bottom pane of a horizontal
+                // split (clipped on height, full width) still showed it. The
+                // panel container is the unclipped `split-panel` box that the
+                // working context menu already parents to; use the same target.
+                let popover_parent = adapter
+                    .borrow()
+                    .get_panel_widget(panel_id)
+                    .map(|w| w.upcast::<gtk4::Widget>());
+                let Some(popover_parent) = popover_parent else {
+                    tracing::warn!("No panel widget for panel {panel_id}; cannot show picker");
+                    return;
+                };
+
+                // Point the popover at the button's position within the panel
+                // container, so the arrow still lands on "Select Tab".
+                let pointing_to = button
+                    .compute_bounds(&popover_parent)
+                    .map(|b| {
+                        gtk4::gdk::Rectangle::new(
+                            b.x() as i32,
+                            b.y() as i32,
+                            b.width() as i32,
+                            b.height() as i32,
+                        )
+                    });
 
                 // Tear down any previously open context menu / select popover
                 // before building a new one. This is the same shared mechanism
@@ -2190,10 +2215,11 @@ impl SplitViewBridge {
                 crate::sidebar_ui::close_active_popover();
 
                 tracing::debug!(
-                    "select_tab_callback: panel_id={}, panel_uuid={}, button_mapped={}",
+                    "select_tab_callback: panel_id={}, panel_uuid={}, parent_mapped={}, has_point={}",
                     panel_id,
                     panel_uuid,
                     popover_parent.is_mapped(),
+                    pointing_to.is_some(),
                 );
 
                 // Get sessions already displayed in this split view using the adapter
@@ -2222,12 +2248,16 @@ impl SplitViewBridge {
                     // Message that all sessions are already displayed.
                     let popover = gtk4::Popover::new();
                     popover.set_parent(&popover_parent);
-                    // Parented to the button, autohide behaves: the button is not
-                    // an embedded RDP/web surface, so it does not repaint and
-                    // steal the popover's grab. autohide gives correct
-                    // click-outside and Escape dismissal for free (issue #328).
+                    // Parented to the unclipped panel container, autohide
+                    // behaves: the container is not an embedded RDP/web surface,
+                    // so it does not repaint and steal the popover's grab.
+                    // autohide gives correct click-outside and Escape dismissal
+                    // for free (issue #328).
                     popover.set_autohide(true);
                     popover.set_has_arrow(true);
+                    if let Some(ref rect) = pointing_to {
+                        popover.set_pointing_to(Some(rect));
+                    }
 
                     let content = GtkBox::new(Orientation::Vertical, 6);
                     content.set_margin_top(12);
@@ -2256,15 +2286,19 @@ impl SplitViewBridge {
                     return;
                 }
 
-                // Create a popover with session list, parented to the button.
+                // Create a popover with session list, parented to the panel
+                // container (not the clipped button — see the parent note above).
                 let popover = gtk4::Popover::new();
                 popover.set_parent(&popover_parent);
                 // autohide=true — see the note on the empty-state popover above
-                // (issue #328): parented to the button (not to an embedded pane
-                // that repaints), the grab survives and autohide gives correct
-                // click-outside/Escape dismissal.
+                // (issue #328): parented to the unclipped panel container (not to
+                // an embedded pane that repaints), the grab survives and autohide
+                // gives correct click-outside/Escape dismissal.
                 popover.set_autohide(true);
                 popover.set_has_arrow(true);
+                if let Some(ref rect) = pointing_to {
+                    popover.set_pointing_to(Some(rect));
+                }
 
                 let content = GtkBox::new(Orientation::Vertical, 6);
                 content.set_margin_top(12);
@@ -2316,10 +2350,6 @@ impl SplitViewBridge {
 
                 content.append(&list_box);
                 popover.set_child(Some(&content));
-
-                // Parented to the button with an arrow, the popover positions
-                // itself against the button automatically — no manual
-                // `set_pointing_to` into panel coordinates needed (issue #328).
 
                 // Track as the single active popover and clean up on close,
                 // mirroring the panel context menu (issue #87, #328). autohide
