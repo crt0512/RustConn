@@ -6,7 +6,7 @@
 #
 
 Name:           rustconn
-Version:        0.22.0
+Version:        0.22.1
 Release:        0
 # rpmlint caps Summary at 79 characters (summary-too-long, badness 200); the
 # protocol list belongs in %description, which has room for all of it. Kept in
@@ -387,6 +387,21 @@ done
 %{_datadir}/icons/hicolor/*/apps/io.github.totoshko88.RustConn.*
 
 %changelog
+* Sat Sep 19 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.1-0
+- Version bump to 0.22.1
+- Added: broadcast keystrokes to a group of tabs (issue #329); explicit per-session opt-in, mirrors typing to the other members, a non-member tab types only into itself, toggles with Ctrl+Shift+A; terminal sessions only, independent of the split-view broadcast
+- Added: reconnect any pane in a split view, not only the split owner (issue #328); reachable from the tab menu, a pane's menu, a banner inside the disconnected pane, and a configurable shortcut (default Ctrl+Shift+Y)
+- Added: rustconn-cli add --tunnel-via <NAME|UUID> for Web connections, so a host-only web UI can be reached through an existing SSH connection's host
+- Fixed: multi-hop SSH with an identity key failed on every hop past the first; identity-only chains now use OpenSSH -J with the key loaded into the agent
+- Fixed: the monitoring bar could open for a jump-host session that never connected; the contains_ssh_failure guard is now applied to the monitoring start too
+- Fixed: reconnect sometimes did not send the vault password past the cache TTL (issue #330); reconnect now falls back to a blocking vault resolve
+- Fixed: rapidly opening RDP connections could pop a password prompt for a saved credential; vault backend operations are now serialised and the RDP path caches resolved credentials like the other protocols
+- Fixed: the RDP password dialog had no visible close button; the native close button is restored on the start side (GNOME HIG)
+- Fixed: rustconn-cli add --protocol web was rejected despite being advertised; the parser now accepts web, http and https
+- Fixed: rustconn-cli add --aws-profile help described the wrong field; it now matches the code (sets the AWS profile, not the instance ID)
+- Changed: embedded RDP status text no longer names the underlying client; labels now read "Starting RDP..." and "external window"
+- Dependencies: cc 1.4.6->1.4.7
+
 * Fri Sep 18 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.0-0
 - Version bump to 0.22.0
 - Added: import mRemoteNG connections from confCons.xml (nested groups; SSH/RDP/VNC/Telnet, Raw/Rlogin to Telnet, HTTP/HTTPS to Web; unencrypted only, no password imported; verified against mRemoteNG's own serializer)

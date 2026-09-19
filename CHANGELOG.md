@@ -5,7 +5,7 @@ All notable changes to RustConn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.22.1] - 2026-09-19
 
 ### Added
 
@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Embedded RDP status text no longer names the underlying client** — the connecting/connected labels read "Connecting via IronRDP…", "Starting FreeRDP…" and "RDP session running in FreeRDP window", exposing an implementation detail the user did not choose and that can silently switch mid-connect when the embedded client falls back. They now read "Starting RDP…" (both embedded and external), "RDP session running in external window", and "Switch to the external window to interact with the session".
+
+### Dependencies
+
+- **Updated**: cc 1.4.6→1.4.7
+- **Unchanged, checked**: `./scripts/check-cli-versions.sh` is clean — every CLI download endpoint is reachable and current (TigerVNC pinned at 1.16.2; kubectl, Tailscale, Teleport, Boundary, Hoop, Bitwarden, 1Password resolve latest at runtime). The bundled Flatpak sources and the GNOME runtime 50 pin are unchanged from 0.22.0.
 
 ## [0.22.0] - 2026-09-18
 
