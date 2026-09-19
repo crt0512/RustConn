@@ -400,6 +400,8 @@ done
 - Fixed: rustconn-cli add --protocol web was rejected despite being advertised; the parser now accepts web, http and https
 - Fixed: rustconn-cli add --aws-profile help described the wrong field; it now matches the code (sets the AWS profile, not the instance ID)
 - Changed: embedded RDP status text no longer names the underlying client; labels now read "Starting RDP..." and "external window"
+- Fixed: "Select Tab" in a split pane did not open the tab picker, most stubbornly in the right pane of a vertical split (issue #328); the picker now opens downward from the unclipped panel container with a size-capped list, so it always fits
+- Fixed: a duplicate-GtkStack-name warning from the tab menu on multi-monitor setups; the detach-to-monitor submenu is now flat menu items
 - Dependencies: cc 1.4.6->1.4.7
 
 * Fri Sep 18 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.0-0

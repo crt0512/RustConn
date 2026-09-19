@@ -30,6 +30,12 @@ rustconn (0.22.1-1) unstable; urgency=medium
     now matches the code (sets the AWS profile, not the instance ID).
   * Changed: embedded RDP status text no longer names the underlying client;
     labels now read "Starting RDP..." and "external window".
+  * Fixed: "Select Tab" in a split pane did not open the tab picker, most
+    stubbornly in the right pane of a vertical split (issue #328); the picker
+    now opens downward from the unclipped panel container with a size-capped
+    list, so it always fits.
+  * Fixed: a duplicate-GtkStack-name warning from the tab menu on multi-monitor
+    setups; the detach-to-monitor submenu is now flat menu items.
   * Dependencies: cc 1.4.6->1.4.7.
 
  -- Anton Isaiev <totoshko88@gmail.com>  Sat, 19 Sep 2026 12:00:00 +0200

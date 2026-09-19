@@ -151,6 +151,8 @@
           <li>Fixed: reconnect sometimes did not send the vault password once the credential cache had expired (issue #330)</li>
           <li>Fixed: rapidly opening RDP connections could show a password prompt for a saved credential</li>
           <li>Fixed: the RDP password dialog had no visible close button</li>
+          <li>Fixed: "Select Tab" in a split pane did not open the tab picker, most stubbornly in the right pane of a vertical split; it now opens downward with a size-capped list so it always fits (issue #328)</li>
+          <li>Fixed: a duplicate-GtkStack-name warning from the tab menu on multi-monitor setups; the move-to-monitor submenu is now flat menu items</li>
         </ul>
       </description>
     </release>
