@@ -341,7 +341,7 @@ pub fn default_keybindings() -> Vec<KeybindingDef> {
         // reconnect key that works for any pane, not only a split owner.
         KeybindingDef::new(
             "win.reconnect-pane",
-            "<Control><Shift>Return",
+            "<Control><Shift>y",
             "Reconnect Session",
             SplitView,
         ),

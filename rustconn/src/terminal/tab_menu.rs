@@ -15,7 +15,7 @@ use super::*;
 #[derive(Debug, Clone, Copy, Default)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "six independent per-tab facts, each gating one menu section"
+    reason = "seven independent per-tab facts, each gating one menu section"
 )]
 pub struct TabMenuState {
     /// Activity or silence monitoring mode of the tab's session, if any.
@@ -24,6 +24,8 @@ pub struct TabMenuState {
     pub has_group: bool,
     /// The tab is a member of the cross-tab broadcast group (issue #329).
     pub in_broadcast: bool,
+    /// The tab's connection has ended (reconnect is offered) (issue #328).
+    pub is_disconnected: bool,
     /// The tab is pinned.
     pub is_pinned: bool,
     /// At least one tab in the window belongs to a group.
@@ -69,6 +71,7 @@ impl TerminalNotebook {
         let activity_for_menu = self.activity_coordinator.clone();
         let detach_hooks_for_menu = self.detach_hooks();
         let broadcast_membership_for_menu = self.tab_broadcast_membership.clone();
+        let disconnected_for_menu = self.disconnected_sessions.clone();
         let menu_for_setup = menu;
         self.tab_view.connect_setup_menu(move |_tab_view, page| {
             *context_page_setup.borrow_mut() = page.cloned();
@@ -102,10 +105,13 @@ impl TerminalNotebook {
                             .as_ref()
                             .is_some_and(|q| q(sid))
                     });
+                    let is_disconnected =
+                        session_id.is_some_and(|sid| disconnected_for_menu.borrow().contains(&sid));
                     TabMenuState {
                         monitor_mode: mode,
                         has_group,
                         in_broadcast,
+                        is_disconnected,
                         is_pinned: page.is_pinned(),
                         // Check if ANY tab has a group assigned (for showing
                         // group-related actions)
@@ -382,6 +388,39 @@ impl TerminalNotebook {
             }
         });
         action_group.add_action(&toggle_broadcast_action);
+
+        // "Reconnect" action (issue #328) — reconnect the right-clicked tab's
+        // disconnected session in place, the same path as the banner button.
+        // Shown by populate only for a disconnected session.
+        let reconnect_action = gio::SimpleAction::new("reconnect", None);
+        let context_page_reconnect = context_page.clone();
+        let sessions_for_reconnect = self.sessions.clone();
+        let session_info_for_reconnect = self.session_info.clone();
+        let on_reconnect_for_menu = self.on_reconnect.clone();
+        reconnect_action.connect_activate(move |_, _| {
+            let Some(target_page) = context_page_reconnect.borrow().clone() else {
+                return;
+            };
+            let session_id = sessions_for_reconnect
+                .borrow()
+                .iter()
+                .find(|(_, p)| *p == &target_page)
+                .map(|(id, _)| *id);
+            let Some(session_id) = session_id else {
+                return;
+            };
+            let connection_id = session_info_for_reconnect
+                .borrow()
+                .get(&session_id)
+                .map(|i| i.connection_id);
+            let Some(connection_id) = connection_id else {
+                return;
+            };
+            if let Some(ref cb) = *on_reconnect_for_menu.borrow() {
+                cb(session_id, connection_id);
+            }
+        });
+        action_group.add_action(&reconnect_action);
 
         // "Close All in Group" action — closes all tabs belonging to the same group
         let close_all_group_action = gio::SimpleAction::new("close-all-in-group", None);
@@ -774,6 +813,15 @@ impl TerminalNotebook {
     /// (which would invalidate the popover's reference and cause a SIGSEGV on
     /// rapid repeated right-clicks).
     pub(crate) fn populate_tab_context_menu(menu: &gio::Menu, state: TabMenuState) {
+        // Reconnect section — only for a disconnected session, whose connection
+        // has ended but whose tab is still open (issue #328). The primary action
+        // for such a tab, so it comes first.
+        if state.is_disconnected {
+            let reconnect_section = gio::Menu::new();
+            reconnect_section.append(Some(&i18n("Reconnect")), Some("tab.reconnect"));
+            menu.append_section(None, &reconnect_section);
+        }
+
         // Pin/Unpin section
         let pin_section = gio::Menu::new();
         if state.is_pinned {

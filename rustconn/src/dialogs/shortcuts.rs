@@ -621,7 +621,6 @@ mod tests {
         "<Control>c",
         "<Control>v",
         "Return",
-        "<Control><Shift>Return",
         // Navigation
         "<Control>f",
         "<Control>1|<Alt>1",
@@ -649,6 +648,7 @@ mod tests {
         "<Control><Shift>r",
         "<Control><Shift>j",
         "<Control>grave",
+        "<Control><Shift>y",
         // View
         "F11",
         "F9",
