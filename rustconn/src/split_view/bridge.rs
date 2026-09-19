@@ -2164,30 +2164,36 @@ impl SplitViewBridge {
         // This ensures new panels added during splits are visible to the callback
         let panel_uuid_map = Rc::clone(&self.panel_uuid_map);
         let adapter = Rc::clone(&self.adapter);
-        let root = self.root.clone();
 
         self.adapter
             .borrow()
-            .set_select_tab_callback(move |panel_id| {
+            .set_select_tab_callback(move |panel_id, button| {
                 // Get the panel UUID for this panel_id
                 let Some(panel_uuid) = panel_uuid_map.borrow().get(&panel_id).copied() else {
                     tracing::warn!("No UUID found for panel {panel_id}");
                     return;
                 };
 
-                // Get the panel widget to use as popover parent (more reliable than root)
-                let panel_widget = adapter.borrow().get_panel_widget(panel_id);
-                let popover_parent = panel_widget
-                    .as_ref()
-                    .map_or_else(|| root.clone().upcast::<gtk4::Widget>(), |w| w.clone().upcast::<gtk4::Widget>());
+                // Parent the popover to the clicked "Select Tab" button. It is a
+                // stable, unique, always-mapped per-panel widget, so this avoids
+                // the two failure modes of parenting to the panel/root widget
+                // (issue #328): a `set_parent` conflict when a stale popover was
+                // still attached (`gtk_popover_get_autohide: GTK_IS_POPOVER
+                // failed`, nothing shown), and popover accumulation on the shared
+                // root fallback that broke the right vertical pane specifically.
+                let popover_parent = button.clone().upcast::<gtk4::Widget>();
+
+                // Tear down any previously open context menu / select popover
+                // before building a new one. This is the same shared mechanism
+                // the panel context menu uses and is what makes repeated opens
+                // reliable — one active popover at a time (issue #87, #328).
+                crate::sidebar_ui::close_active_popover();
 
                 tracing::debug!(
-                    "select_tab_callback: panel_id={}, panel_uuid={}, parent_mapped={}, parent_size={}x{}",
+                    "select_tab_callback: panel_id={}, panel_uuid={}, button_mapped={}",
                     panel_id,
                     panel_uuid,
                     popover_parent.is_mapped(),
-                    popover_parent.width(),
-                    popover_parent.height(),
                 );
 
                 // Get sessions already displayed in this split view using the adapter
@@ -2213,16 +2219,15 @@ impl SplitViewBridge {
 
                 if available_sessions.is_empty() {
                     tracing::debug!("No sessions available to select (all already in split view)");
-                    // Show a toast or message that all sessions are already displayed
+                    // Message that all sessions are already displayed.
                     let popover = gtk4::Popover::new();
                     popover.set_parent(&popover_parent);
-                    // autohide=false: an embedded RDP/web pane in the same split
-                    // continuously repaints (Vulkan swapchain rebuilds), and an
-                    // autohide popover loses its input grab to that and dismisses
-                    // itself within milliseconds. Without autohide the popover
-                    // does not depend on holding a grab, so it survives; Escape
-                    // and the close-on-select below take over dismissal (#328).
-                    popover.set_autohide(false);
+                    // Parented to the button, autohide behaves: the button is not
+                    // an embedded RDP/web surface, so it does not repaint and
+                    // steal the popover's grab. autohide gives correct
+                    // click-outside and Escape dismissal for free (issue #328).
+                    popover.set_autohide(true);
+                    popover.set_has_arrow(true);
 
                     let content = GtkBox::new(Orientation::Vertical, 6);
                     content.set_margin_top(12);
@@ -2238,45 +2243,28 @@ impl SplitViewBridge {
 
                     popover.set_child(Some(&content));
 
-                    let width = popover_parent.width();
-                    let height = popover_parent.height();
-                    popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
-                        width / 2,
-                        height / 2,
-                        1,
-                        1,
-                    )));
-
-                    let parent_weak = popover_parent.downgrade();
+                    // Track as the single active popover and clean up on close,
+                    // mirroring the panel context menu (issue #87, #328).
+                    crate::sidebar_ui::set_active_popover(popover.upcast_ref::<gtk4::Popover>());
                     popover.connect_closed(move |pop| {
-                        if parent_weak.upgrade().is_some() {
+                        crate::sidebar_ui::clear_active_popover(pop.upcast_ref::<gtk4::Popover>());
+                        if pop.parent().is_some() {
                             pop.unparent();
                         }
                     });
-                    // Escape closes it, since autohide no longer does.
-                    let key_controller = gtk4::EventControllerKey::new();
-                    let popover_for_key = popover.downgrade();
-                    key_controller.connect_key_pressed(move |_, key, _, _| {
-                        if key == gtk4::gdk::Key::Escape {
-                            if let Some(pop) = popover_for_key.upgrade() {
-                                pop.popdown();
-                            }
-                            return gtk4::glib::Propagation::Stop;
-                        }
-                        gtk4::glib::Propagation::Proceed
-                    });
-                    popover.add_controller(key_controller);
                     popover.popup();
                     return;
                 }
 
-                // Create a popover with session list
+                // Create a popover with session list, parented to the button.
                 let popover = gtk4::Popover::new();
                 popover.set_parent(&popover_parent);
-                // autohide=false — see the note on the empty-state popover above
-                // (issue #328): an embedded pane's continuous repaint steals an
-                // autohide popover's grab and closes it within milliseconds.
-                popover.set_autohide(false);
+                // autohide=true — see the note on the empty-state popover above
+                // (issue #328): parented to the button (not to an embedded pane
+                // that repaints), the grab survives and autohide gives correct
+                // click-outside/Escape dismissal.
+                popover.set_autohide(true);
+                popover.set_has_arrow(true);
 
                 let content = GtkBox::new(Orientation::Vertical, 6);
                 content.set_margin_top(12);
@@ -2301,16 +2289,18 @@ impl SplitViewBridge {
                         .title(&session_name)
                         .activatable(true)
                         .build();
-                    let icon_name = rustconn_core::protocol::icons::get_protocol_icon_by_name(&protocol);
+                    let icon_name =
+                        rustconn_core::protocol::icons::get_protocol_icon_by_name(&protocol);
                     row.add_prefix(&gtk4::Image::from_icon_name(icon_name));
 
                     // Show split color indicator if session is in any split view
                     if let Some(&color_index) = split_colors.borrow().get(&session_id)
-                        && let Some(icon) = create_colored_circle_icon(color_index, 12) {
-                            let color_image = gtk4::Image::from_gicon(&icon);
-                            color_image.set_pixel_size(12);
-                            row.add_suffix(&color_image);
-                        }
+                        && let Some(icon) = create_colored_circle_icon(color_index, 12)
+                    {
+                        let color_image = gtk4::Image::from_gicon(&icon);
+                        color_image.set_pixel_size(12);
+                        row.add_suffix(&color_image);
+                    }
 
                     let callback = on_session_selected.clone();
                     let popover_weak = popover.downgrade();
@@ -2327,38 +2317,20 @@ impl SplitViewBridge {
                 content.append(&list_box);
                 popover.set_child(Some(&content));
 
-                // Position popover in center of panel widget
-                let width = popover_parent.width();
-                let height = popover_parent.height();
-                popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
-                    width / 2,
-                    height / 2,
-                    1,
-                    1,
-                )));
+                // Parented to the button with an arrow, the popover positions
+                // itself against the button automatically — no manual
+                // `set_pointing_to` into panel coordinates needed (issue #328).
 
-                // Clean up popover when closed.
-                let parent_weak = popover_parent.downgrade();
+                // Track as the single active popover and clean up on close,
+                // mirroring the panel context menu (issue #87, #328). autohide
+                // and the per-row popdown() handle dismissal.
+                crate::sidebar_ui::set_active_popover(popover.upcast_ref::<gtk4::Popover>());
                 popover.connect_closed(move |pop| {
-                    if parent_weak.upgrade().is_some() {
+                    crate::sidebar_ui::clear_active_popover(pop.upcast_ref::<gtk4::Popover>());
+                    if pop.parent().is_some() {
                         pop.unparent();
                     }
                 });
-
-                // Escape closes it, since autohide no longer does. Selecting a
-                // row already calls popdown() in the row's activate handler.
-                let key_controller = gtk4::EventControllerKey::new();
-                let popover_for_key = popover.downgrade();
-                key_controller.connect_key_pressed(move |_, key, _, _| {
-                    if key == gtk4::gdk::Key::Escape {
-                        if let Some(pop) = popover_for_key.upgrade() {
-                            pop.popdown();
-                        }
-                        return gtk4::glib::Propagation::Stop;
-                    }
-                    gtk4::glib::Propagation::Proceed
-                });
-                popover.add_controller(key_controller);
 
                 popover.popup();
             });

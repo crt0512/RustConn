@@ -25,9 +25,16 @@ use crate::i18n::i18n;
 /// Callback type for "Select Tab" button clicks in empty panels.
 ///
 /// When the user clicks "Select Tab" in an empty panel, this callback is invoked
-/// with the panel ID. The UI layer (bridge) should then show a popover with
-/// available sessions to choose from.
-pub type SelectTabCallback = Rc<dyn Fn(PanelId)>;
+/// with the panel ID and the clicked button. The UI layer (bridge) should then
+/// show a popover with available sessions to choose from, parented to the button
+/// — a stable, unique, always-valid per-panel widget (issue #328).
+pub type SelectTabCallback = Rc<dyn Fn(PanelId, &Button)>;
+
+/// Callback type for panel affordances that only need the `PanelId`.
+///
+/// Close/reconnect/local-shell/pop buttons all take this shape; only the
+/// "Select Tab" button also needs the clicked widget for popover parenting.
+pub type PanelActionCallback = Rc<dyn Fn(PanelId)>;
 
 /// Adapts `SplitLayoutModel` to GTK widgets.
 ///
@@ -71,23 +78,23 @@ pub struct SplitViewAdapter {
     ///
     /// Lets the bridge start a fresh local shell session and place it in the
     /// panel, for when there is no open tab worth moving there.
-    new_shell_callback: Rc<RefCell<Option<SelectTabCallback>>>,
+    new_shell_callback: Rc<RefCell<Option<PanelActionCallback>>>,
     /// Callback for close button clicks in empty panels.
     ///
     /// This allows the bridge to focus the panel and trigger the close action
     /// when the user clicks the close button on an empty panel.
-    close_panel_callback: Rc<RefCell<Option<SelectTabCallback>>>,
+    close_panel_callback: Rc<RefCell<Option<PanelActionCallback>>>,
     /// Callback for "Remove from Split" clicks on an occupied panel.
     ///
     /// Symmetric to `close_panel_callback`: the bridge focuses the panel and
     /// then activates the window action that returns the panel's session to its
     /// own tab, keeping the connection alive (issue #252).
-    pop_panel_callback: Rc<RefCell<Option<SelectTabCallback>>>,
+    pop_panel_callback: Rc<RefCell<Option<PanelActionCallback>>>,
     /// Callback for "Reconnect" clicks on an occupied panel (issue #328).
     ///
     /// Symmetric to `pop_panel_callback`: the bridge focuses the panel and then
     /// activates the window action that reconnects the focused pane's session.
-    reconnect_panel_callback: Rc<RefCell<Option<SelectTabCallback>>>,
+    reconnect_panel_callback: Rc<RefCell<Option<PanelActionCallback>>>,
     /// Header widgets for each panel (connection name labels, issue #277).
     ///
     /// These are prepended to the panel container (above session content) and
@@ -232,10 +239,11 @@ impl SplitViewAdapter {
     ///
     /// # Arguments
     ///
-    /// * `callback` - A closure that receives the `PanelId` when the button is clicked
+    /// * `callback` - A closure that receives the `PanelId` and the clicked
+    ///   button, so the popover can be parented to that button (issue #328)
     pub fn set_select_tab_callback<F>(&self, callback: F)
     where
-        F: Fn(PanelId) + 'static,
+        F: Fn(PanelId, &Button) + 'static,
     {
         *self.select_tab_callback.borrow_mut() = Some(Rc::new(callback));
     }
@@ -1485,12 +1493,16 @@ impl SplitViewAdapter {
         select_button.add_css_class("suggested-action");
         select_button.add_css_class("pill");
 
-        // Connect select button to callback
+        // Connect select button to callback. Pass the button itself so the
+        // bridge can parent its popover to it: the button is a stable, unique,
+        // always-mapped per-panel widget, which avoids the parent conflicts and
+        // popover accumulation that plagued parenting to the panel/root widget
+        // (issue #328).
         let callback_ref = Rc::clone(&self.select_tab_callback);
-        select_button.connect_clicked(move |_| {
+        select_button.connect_clicked(move |button| {
             tracing::debug!("Select Tab button clicked for panel {panel_id}");
             if let Some(ref callback) = *callback_ref.borrow() {
-                callback(panel_id);
+                callback(panel_id, button);
             } else {
                 tracing::debug!(
                     "Select Tab button clicked for panel {panel_id}, but no callback set"
