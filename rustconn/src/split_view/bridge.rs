@@ -2242,9 +2242,24 @@ impl SplitViewBridge {
                     )));
 
                     popover.popup();
-
+                    // Diagnostic for the "popover never appears" report: log
+                    // whether it is actually visible right after popup() and how
+                    // long it survives. A visible=false here, or a closed within
+                    // a few ms, means it lost the grab (another popover, a
+                    // just-realized widget) rather than a logic bug.
+                    tracing::debug!(
+                        %panel_id,
+                        visible = popover.is_visible(),
+                        "select_tab: empty-state popover popped up"
+                    );
+                    let opened_at = std::time::Instant::now();
                     let parent_weak = popover_parent.downgrade();
                     popover.connect_closed(move |pop| {
+                        tracing::debug!(
+                            %panel_id,
+                            alive_ms = opened_at.elapsed().as_millis() as u64,
+                            "select_tab: empty-state popover closed"
+                        );
                         if parent_weak.upgrade().is_some() {
                             pop.unparent();
                         }
@@ -2317,10 +2332,26 @@ impl SplitViewBridge {
                 )));
 
                 popover.popup();
+                // Diagnostic for the "Select Tab popover never appears" report
+                // (issue #328 follow-up): a visible=false right after popup(),
+                // or a close within a few ms, means the popover lost the grab to
+                // another widget/popover rather than a logic failure — the flow
+                // reached popup() either way.
+                tracing::debug!(
+                    %panel_id,
+                    visible = popover.is_visible(),
+                    "select_tab: session-list popover popped up"
+                );
+                let opened_at = std::time::Instant::now();
 
                 // Clean up popover when closed
                 let parent_weak = popover_parent.downgrade();
                 popover.connect_closed(move |pop| {
+                    tracing::debug!(
+                        %panel_id,
+                        alive_ms = opened_at.elapsed().as_millis() as u64,
+                        "select_tab: session-list popover closed"
+                    );
                     if parent_weak.upgrade().is_some() {
                         pop.unparent();
                     }
