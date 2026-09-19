@@ -141,7 +141,8 @@ pub enum Commands {
         #[arg(long, value_name = "URL")]
         hoop_grpc_url: Option<String>,
 
-        /// AWS SSM instance ID (for --provider aws_ssm, uses --host as target if not set)
+        /// AWS profile (for --provider aws_ssm; defaults to "default"). The
+        /// instance ID is taken from --host, not this flag.
         #[arg(long, value_name = "PROFILE")]
         aws_profile: Option<String>,
 
@@ -508,6 +509,11 @@ pub enum Commands {
         /// Zoom level for the embedded browser (0.3–3.0, default: 1.0)
         #[arg(long, value_name = "FLOAT")]
         zoom_level: Option<f64>,
+
+        /// Browse this Web connection through an SSH connection's host via an
+        /// auto-raised dynamic SOCKS proxy (existing SSH connection name or UUID)
+        #[arg(long, value_name = "NAME|UUID")]
+        tunnel_via: Option<String>,
     },
 
     /// Export connections to external format

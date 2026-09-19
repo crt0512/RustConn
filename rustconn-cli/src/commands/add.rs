@@ -131,6 +131,7 @@ pub(super) struct AddParams<'a> {
     pub web_toolbar: Option<bool>,
     pub private_mode: bool,
     pub zoom_level: Option<f64>,
+    pub tunnel_via: Option<&'a str>,
 }
 
 /// Add connection command handler
@@ -579,6 +580,21 @@ pub(super) fn cmd_add(config_path: Option<&Path>, params: AddParams<'_>) -> Resu
         let jump_conn = find_connection(&connections, jump_host_ref)?;
         let jump_id = jump_conn.id;
         apply_jump_host_id(&mut connection, jump_id)?;
+    }
+
+    // Resolve --tunnel-via to a UUID (Web connections only): browse through the
+    // referenced SSH connection's host via an auto-raised dynamic SOCKS proxy.
+    if let Some(tunnel_ref) = params.tunnel_via {
+        let tunnel_conn = find_connection(&connections, tunnel_ref)?;
+        let tunnel_id = tunnel_conn.id;
+        if let rustconn_core::models::ProtocolConfig::Web(ref mut cfg) = connection.protocol_config
+        {
+            cfg.tunnel_via = Some(tunnel_id);
+        } else {
+            return Err(CliError::Config(
+                "--tunnel-via is only valid for Web connections".into(),
+            ));
+        }
     }
 
     ConfigManager::validate_connection(&connection)

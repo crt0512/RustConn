@@ -74,8 +74,8 @@
       <image type="source" width="2000" height="1400">https://raw.githubusercontent.com/totoshko88/RustConn/main/rustconn/assets/screenshots/sftp_mc_light.png</image>
     </screenshot>
     <screenshot>
-      <caption>Zero Trust Generic commands with AI CLI tools</caption>
-      <image type="source" width="2000" height="1400">https://raw.githubusercontent.com/totoshko88/RustConn/main/rustconn/assets/screenshots/zero_trust_ai_tools_light.png</image>
+      <caption>Web connection with embedded browser</caption>
+      <image type="source" width="2000" height="1400">https://raw.githubusercontent.com/totoshko88/RustConn/main/rustconn/assets/screenshots/web_light.png</image>
     </screenshot>
     <screenshot>
       <caption>Protocol filter bar</caption>
@@ -107,8 +107,8 @@
       <image type="source" width="2000" height="1400">https://raw.githubusercontent.com/totoshko88/RustConn/main/rustconn/assets/screenshots/rdp_session_dark.png</image>
     </screenshot>
     <screenshot environment="gnome:dark">
-      <caption>Smart Folders with dynamic connection grouping</caption>
-      <image type="source" width="2000" height="1400">https://raw.githubusercontent.com/totoshko88/RustConn/main/rustconn/assets/screenshots/smart_folder_dark.png</image>
+      <caption>Web connection in dark theme</caption>
+      <image type="source" width="2000" height="1400">https://raw.githubusercontent.com/totoshko88/RustConn/main/rustconn/assets/screenshots/web_dark.png</image>
     </screenshot>
     <screenshot environment="gnome:dark">
       <caption>Protocol filter bar</caption>
@@ -140,6 +140,22 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.22.1" date="2026-09-19">
+      <description>
+        <p>Version 0.22.1 - group broadcast, split-pane reconnect, and SSH, RDP and CLI fixes:</p>
+        <ul>
+          <li>Added: broadcast keystrokes to a group of tabs, each on its own tab, with explicit per-session membership and a Ctrl+Shift+A toggle (issue #329)</li>
+          <li>Added: reconnect any pane in a split view, not only the split owner, from the tab menu, a pane menu, an in-pane banner, or a configurable shortcut (issue #328)</li>
+          <li>Added: create a Web connection from the CLI that tunnels through an existing SSH connection's host (add --tunnel-via)</li>
+          <li>Fixed: multi-hop SSH with an identity key failed on every hop past the first; identity-only chains now use OpenSSH -J with the key in the agent</li>
+          <li>Fixed: reconnect sometimes did not send the vault password once the credential cache had expired (issue #330)</li>
+          <li>Fixed: rapidly opening RDP connections could show a password prompt for a saved credential</li>
+          <li>Fixed: the RDP password dialog had no visible close button</li>
+          <li>Fixed: "Select Tab" in a split pane did not open the tab picker, most stubbornly in the right pane of a vertical split; it now opens downward with a size-capped list so it always fits (issue #328)</li>
+          <li>Fixed: a duplicate-GtkStack-name warning from the tab menu on multi-monitor setups; the move-to-monitor submenu is now flat menu items</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.22.0" date="2026-09-18">
       <description>
         <p>Version 0.22.0 - import from more managers, and welcome-screen and split-view polish:</p>

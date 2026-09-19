@@ -163,6 +163,7 @@ pub fn dispatch(config_path: Option<&Path>, command: Commands) -> Result<(), Cli
             web_toolbar,
             private_mode,
             zoom_level,
+            tunnel_via,
         } => add::cmd_add(
             config_path,
             add::AddParams {
@@ -268,6 +269,7 @@ pub fn dispatch(config_path: Option<&Path>, command: Commands) -> Result<(), Cli
                 web_toolbar,
                 private_mode,
                 zoom_level,
+                tunnel_via: tunnel_via.as_deref(),
             },
         ),
         Commands::Export {

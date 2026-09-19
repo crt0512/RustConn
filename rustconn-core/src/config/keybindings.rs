@@ -336,6 +336,15 @@ pub fn default_keybindings() -> Vec<KeybindingDef> {
             "Focus Next Pane",
             SplitView,
         ),
+        // Reconnects the focused pane's session, or the active tab's session
+        // when the tab is not split (issue #328). A configurable, MobaXterm-style
+        // reconnect key that works for any pane, not only a split owner.
+        KeybindingDef::new(
+            "win.reconnect-pane",
+            "<Control><Shift>y",
+            "Reconnect Session",
+            SplitView,
+        ),
         // View
         KeybindingDef::new("win.toggle-fullscreen", "F11", "Toggle Fullscreen", View),
         KeybindingDef::new("win.toggle-sidebar", "F9", "Toggle Sidebar", View),
@@ -355,6 +364,15 @@ pub fn default_keybindings() -> Vec<KeybindingDef> {
             "win.toggle-broadcast",
             "<Control><Shift>b",
             "Toggle Split Broadcast",
+            View,
+        ),
+        // Cross-tab broadcast group (issue #329), distinct from the split
+        // broadcast above: mirrors keystrokes to tabs that each have their own
+        // tab rather than to panes of one split.
+        KeybindingDef::new(
+            "win.toggle-group-broadcast",
+            "<Control><Shift>a",
+            "Toggle Group Broadcast",
             View,
         ),
         // Application (additional)

@@ -191,12 +191,14 @@ fn i18n_markers() -> Vec<String> {
         i18n("Remove from Split"),
         i18n("Remove Split"),
         i18n("Focus Next Pane"),
+        i18n("Reconnect Session"),
         // View
         i18n("Toggle Fullscreen"),
         i18n("Toggle Sidebar"),
         i18n("Toggle Compact Interface"),
         i18n("Toggle Keyboard Passthrough"),
         i18n("Toggle Split Broadcast"),
+        i18n("Toggle Group Broadcast"),
     ]
 }
 
@@ -646,12 +648,14 @@ mod tests {
         "<Control><Shift>r",
         "<Control><Shift>j",
         "<Control>grave",
+        "<Control><Shift>y",
         // View
         "F11",
         "F9",
         "<Control><Shift>d",
         "<Control><Shift>BackSpace",
         "<Control><Shift>b",
+        "<Control><Shift>a",
     ];
 
     /// Collects what the dialog would render, without needing a display.

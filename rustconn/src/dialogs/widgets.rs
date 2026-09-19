@@ -14,8 +14,14 @@ use crate::i18n::i18n;
 /// Creates a standard dialog header bar following GNOME HIG.
 ///
 /// Returns `(header_bar, end_button)`. The action button is placed at the end
-/// with the `suggested-action` CSS class. Since `adw::Dialog` natively handles
-/// Escape to close, no Cancel button is needed.
+/// with the `suggested-action` CSS class.
+///
+/// The native window controls stay on the **start** side: for an `adw::Dialog`
+/// that renders the close (✕) button. Escape closing a dialog is discoverable
+/// only to someone who already knows the shortcut; GNOME HIG expects a visible
+/// close affordance in the header, and hiding both sides left dialogs — the RDP
+/// password prompt among them — with no on-screen way out. The end-side buttons
+/// stay hidden so the primary action is the only button packed there.
 ///
 /// # Arguments
 ///
@@ -24,7 +30,7 @@ use crate::i18n::i18n;
 pub fn dialog_header(end_label: &str) -> (adw::HeaderBar, Button) {
     let header = adw::HeaderBar::new();
     header.set_show_end_title_buttons(false);
-    header.set_show_start_title_buttons(false);
+    header.set_show_start_title_buttons(true);
 
     let end_btn = Button::builder()
         .label(i18n(end_label))

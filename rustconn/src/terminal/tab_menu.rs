@@ -15,13 +15,17 @@ use super::*;
 #[derive(Debug, Clone, Copy, Default)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "five independent per-tab facts, each gating one menu section"
+    reason = "seven independent per-tab facts, each gating one menu section"
 )]
 pub struct TabMenuState {
     /// Activity or silence monitoring mode of the tab's session, if any.
     pub monitor_mode: Option<MonitorMode>,
     /// The tab belongs to a tab group.
     pub has_group: bool,
+    /// The tab is a member of the cross-tab broadcast group (issue #329).
+    pub in_broadcast: bool,
+    /// The tab's connection has ended (reconnect is offered) (issue #328).
+    pub is_disconnected: bool,
     /// The tab is pinned.
     pub is_pinned: bool,
     /// At least one tab in the window belongs to a group.
@@ -66,6 +70,8 @@ impl TerminalNotebook {
         let session_info_for_menu = self.session_info.clone();
         let activity_for_menu = self.activity_coordinator.clone();
         let detach_hooks_for_menu = self.detach_hooks();
+        let broadcast_membership_for_menu = self.tab_broadcast_membership.clone();
+        let disconnected_for_menu = self.disconnected_sessions.clone();
         let menu_for_setup = menu;
         self.tab_view.connect_setup_menu(move |_tab_view, page| {
             *context_page_setup.borrow_mut() = page.cloned();
@@ -93,9 +99,19 @@ impl TerminalNotebook {
                     let has_group = session_id
                         .and_then(|sid| info_ref.get(&sid).and_then(|i| i.tab_group.clone()))
                         .is_some();
+                    let in_broadcast = session_id.is_some_and(|sid| {
+                        broadcast_membership_for_menu
+                            .borrow()
+                            .as_ref()
+                            .is_some_and(|q| q(sid))
+                    });
+                    let is_disconnected =
+                        session_id.is_some_and(|sid| disconnected_for_menu.borrow().contains(&sid));
                     TabMenuState {
                         monitor_mode: mode,
                         has_group,
+                        in_broadcast,
+                        is_disconnected,
                         is_pinned: page.is_pinned(),
                         // Check if ANY tab has a group assigned (for showing
                         // group-related actions)
@@ -347,6 +363,64 @@ impl TerminalNotebook {
             tracing::debug!(session_id = %session_id, "Tab removed from group via context menu");
         });
         action_group.add_action(&remove_group_action);
+
+        // "Add to / Remove from Broadcast" action (issue #329). Toggles the
+        // right-clicked tab's membership in the cross-tab broadcast group via
+        // the window-wired callback.
+        let toggle_broadcast_action = gio::SimpleAction::new("toggle-broadcast", None);
+        let context_page_bc = context_page.clone();
+        let sessions_for_bc = self.sessions.clone();
+        let on_tab_broadcast_toggle = self.on_tab_broadcast_toggle.clone();
+        toggle_broadcast_action.connect_activate(move |_, _| {
+            let Some(target_page) = context_page_bc.borrow().clone() else {
+                return;
+            };
+            let session_id = sessions_for_bc
+                .borrow()
+                .iter()
+                .find(|(_, p)| *p == &target_page)
+                .map(|(id, _)| *id);
+            let Some(session_id) = session_id else {
+                return;
+            };
+            if let Some(ref cb) = *on_tab_broadcast_toggle.borrow() {
+                cb(session_id);
+            }
+        });
+        action_group.add_action(&toggle_broadcast_action);
+
+        // "Reconnect" action (issue #328) — reconnect the right-clicked tab's
+        // disconnected session in place, the same path as the banner button.
+        // Shown by populate only for a disconnected session.
+        let reconnect_action = gio::SimpleAction::new("reconnect", None);
+        let context_page_reconnect = context_page.clone();
+        let sessions_for_reconnect = self.sessions.clone();
+        let session_info_for_reconnect = self.session_info.clone();
+        let on_reconnect_for_menu = self.on_reconnect.clone();
+        reconnect_action.connect_activate(move |_, _| {
+            let Some(target_page) = context_page_reconnect.borrow().clone() else {
+                return;
+            };
+            let session_id = sessions_for_reconnect
+                .borrow()
+                .iter()
+                .find(|(_, p)| *p == &target_page)
+                .map(|(id, _)| *id);
+            let Some(session_id) = session_id else {
+                return;
+            };
+            let connection_id = session_info_for_reconnect
+                .borrow()
+                .get(&session_id)
+                .map(|i| i.connection_id);
+            let Some(connection_id) = connection_id else {
+                return;
+            };
+            if let Some(ref cb) = *on_reconnect_for_menu.borrow() {
+                cb(session_id, connection_id);
+            }
+        });
+        action_group.add_action(&reconnect_action);
 
         // "Close All in Group" action — closes all tabs belonging to the same group
         let close_all_group_action = gio::SimpleAction::new("close-all-in-group", None);
@@ -692,29 +766,34 @@ impl TerminalNotebook {
             .map(|(id, _)| *id)
     }
 
-    /// Builds the "Move to New Window on…" submenu, or `None` for one monitor.
+    /// Appends one flat "Move to New Window on …" item per monitor.
     ///
-    /// With a single monitor there is no choice to present, so the submenu is
-    /// omitted rather than shown with one entry (Requirement 8.3).
-    fn monitor_detach_submenu() -> Option<gio::Menu> {
-        let monitors = gdk::Display::default()?.monitors();
+    /// With a single monitor there is no choice to present, so nothing is added
+    /// and only the plain "Move to New Window" item stands (Requirement 8.3).
+    /// These are flat items rather than a submenu on purpose — a submenu becomes
+    /// a page in the reused PopoverMenu's internal `GtkStack`, which duplicated
+    /// on every menu rebuild; flat items carry no such page.
+    fn append_monitor_detach_items(section: &gio::Menu) {
+        let Some(display) = gdk::Display::default() else {
+            return;
+        };
+        let monitors = display.monitors();
         let count = monitors.n_items();
         if count < 2 {
-            return None;
+            return;
         }
 
-        let submenu = gio::Menu::new();
         for index in 0..count {
             let monitor = monitors.item(index).and_downcast::<gdk::Monitor>();
-            let label = Self::monitor_label(index, monitor.as_ref());
+            let target = Self::monitor_label(index, monitor.as_ref());
+            let label = i18n_f("Move to New Window on {}", &[&target]);
             let item = gio::MenuItem::new(Some(&label), None);
             item.set_action_and_target_value(
                 Some("tab.detach-to-monitor"),
                 Some(&index.to_variant()),
             );
-            submenu.append_item(&item);
+            section.append_item(&item);
         }
-        Some(submenu)
     }
 
     /// Names a monitor for the submenu, for example "Monitor 1 (DP-1)".
@@ -739,6 +818,15 @@ impl TerminalNotebook {
     /// (which would invalidate the popover's reference and cause a SIGSEGV on
     /// rapid repeated right-clicks).
     pub(crate) fn populate_tab_context_menu(menu: &gio::Menu, state: TabMenuState) {
+        // Reconnect section — only for a disconnected session, whose connection
+        // has ended but whose tab is still open (issue #328). The primary action
+        // for such a tab, so it comes first.
+        if state.is_disconnected {
+            let reconnect_section = gio::Menu::new();
+            reconnect_section.append(Some(&i18n("Reconnect")), Some("tab.reconnect"));
+            menu.append_section(None, &reconnect_section);
+        }
+
         // Pin/Unpin section
         let pin_section = gio::Menu::new();
         if state.is_pinned {
@@ -762,6 +850,17 @@ impl TerminalNotebook {
         }
         menu.append_section(None, &group_section);
 
+        // Broadcast section (issue #329) — add or remove this tab from the
+        // cross-tab broadcast group. The label reflects current membership.
+        let broadcast_section = gio::Menu::new();
+        let broadcast_label = if state.in_broadcast {
+            i18n("Remove from Broadcast")
+        } else {
+            i18n("Add to Broadcast")
+        };
+        broadcast_section.append(Some(&broadcast_label), Some("tab.toggle-broadcast"));
+        menu.append_section(None, &broadcast_section);
+
         // Monitor section with current mode in label
         let monitor_section = gio::Menu::new();
         let mode = state.monitor_mode.unwrap_or(MonitorMode::Off);
@@ -782,10 +881,16 @@ impl TerminalNotebook {
         if state.can_detach {
             let detach_section = gio::Menu::new();
             detach_section.append(Some(&i18n("Move to New Window")), Some("tab.detach"));
-            if let Some(monitors) = Self::monitor_detach_submenu() {
-                // No ellipsis: this opens a submenu, not a dialog (HIG).
-                detach_section.append_submenu(Some(&i18n("Move to New Window on")), &monitors);
-            }
+            // Per-monitor targets are appended as flat items, not a submenu.
+            // A submenu becomes a page in the PopoverMenu's internal GtkStack,
+            // and because the TabView keeps one long-lived PopoverMenu bound to
+            // a model we clear and rebuild on every `setup-menu`, that stack
+            // page was re-added under the same name on each rebuild —
+            // `Gtk-WARNING: duplicate child name in GtkStack: Move to New
+            // Window on`. Flat items carry no stack page, so the collision is
+            // gone; each monitor still has its own `tab.detach-to-monitor`
+            // entry (issue #328 follow-up).
+            Self::append_monitor_detach_items(&detach_section);
             menu.append_section(None, &detach_section);
         }
 

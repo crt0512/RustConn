@@ -10,7 +10,7 @@
   <a href="https://snapcraft.io/rustconn"><img src="https://img.shields.io/snapcraft/v/rustconn/latest/stable" alt="Snap"></a>
   <a href="https://aur.archlinux.org/packages/rustconn"><img src="https://img.shields.io/aur/version/rustconn" alt="AUR"></a>
   <a href="https://build.opensuse.org/package/show/home:totoshko88:rustconn/rustconn"><img src="https://img.shields.io/badge/dynamic/xml?url=https%3a%2f%2fapi.opensuse.org%2fpublic%2fbuild%2fhome%3atotoshko88%3arustconn%2fopenSUSE_Tumbleweed%2fx86_64%2frustconn%3fview%3dbinaryversions&query=substring-before%28substring-after%28%2f%2fbinary%5bcontains%28%40name%2c%27x86_64.rpm%27%29%5d%2f%40name%2c%27rustconn-%27%29%2c%27-%27%29&label=OBS&color=green" alt="OBS"></a>
-  <a href="https://www.freshports.org/net/rustconn/"><img src="https://repology.org/badge/version-for-repo/freebsd/rustconn.svg?header=FreeBSD" alt="FreeBSD"></a>
+  <a href="https://www.freshports.org/net/rustconn/"><img src="https://img.shields.io/badge/FreeBSD-ports-red" alt="FreeBSD"></a>
   <a href="https://github.com/totoshko88/RustConn/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/totoshko88/RustConn/ci.yml?label=CI" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License"></a>
 </p>
@@ -21,7 +21,7 @@ RustConn is a cross-platform connection orchestrator with a GTK4/libadwaita inte
 It brings SSH, RDP, VNC, SPICE, MOSH, Telnet, Serial, Kubernetes, and Zero Trust connections under one roof — with embedded Rust clients where possible and seamless integration with external tools where needed.
 Runs on Linux (GTK4/libadwaita), macOS, FreeBSD, and Windows via WSLg.
 
-[![Demo](https://img.youtube.com/vi/-9b3mKy4n20/sddefault.jpg)](https://youtu.be/-9b3mKy4n20)
+[![Demo](https://img.youtube.com/vi/yLfYP0I5OIw/sddefault.jpg)](https://youtu.be/yLfYP0I5OIw)
 
 ## Screenshots
 

@@ -2128,6 +2128,28 @@ fn build_single_backend(
     Ok(backend)
 }
 
+/// Serialises every vault backend operation across the process.
+///
+/// The connect path resolves credentials on a background thread
+/// ([`spawn_blocking_with_callback`]), so opening several RDP connections in
+/// quick succession fires several `dispatch_vault_op_for` calls at once. Without
+/// a lock they collide on the one backend underneath — a CLI backend runs
+/// `bw`/`op`/`pass` twice, a `keepassxc-cli` database opens twice, Secret Service
+/// gets two concurrent D-Bus round trips — and the loser stalls long enough to
+/// hit [`vault_op_timeout`]. A timed-out or empty resolve then collapses to
+/// [`CredentialResolutionResult::NotNeeded`] and the connection falls through to
+/// the password prompt, which is exactly the "asks for a password even though it
+/// is saved" race the RDP reporter hit.
+///
+/// A plain [`std::sync::Mutex`]: these calls never run on the GTK thread, so
+/// blocking one background resolve behind another is a short serial wait, not a
+/// frozen window. It does not dedupe identical requests — the app-level
+/// `password_cache` is what keeps the second connect from looking up at all once
+/// the first has warmed it — it only stops two lookups from running *at the same
+/// time*. A poisoned lock (a panic mid-operation) must not wedge every future
+/// vault call, so the guard is recovered with `into_inner()`.
+static VAULT_OP_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Dispatches a single vault operation to an explicitly named backend.
 ///
 /// [`dispatch_vault_op`] always addresses whichever backend the settings prefer,
@@ -2159,6 +2181,15 @@ pub fn dispatch_vault_op_for(
     // One budget for whichever operation follows, derived from the backend that
     // was named rather than assumed to be a local one.
     let budget = vault_op_timeout(backend_type);
+
+    // Serialise against any other in-flight vault op — see VAULT_OP_LOCK. Held
+    // for the whole build-plus-operation so a concurrent call cannot slip its
+    // backend construction (a Bitwarden unlock, an Argon2id derivation) between
+    // this one's lock and its work. Recover a poisoned guard rather than
+    // propagating the panic and wedging the backend for the session.
+    let _serial = VAULT_OP_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
 
     crate::async_utils::with_runtime(|rt| {
         let backend = build_single_backend(secret_settings, backend_type, rt)?;

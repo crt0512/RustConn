@@ -1,3 +1,45 @@
+rustconn (0.22.1-1) unstable; urgency=medium
+
+  * Version bump to 0.22.1
+  * Added: broadcast keystrokes to a group of tabs (issue #329). Membership is
+    an explicit per-session opt-in; typing in a member tab mirrors to the other
+    members, a non-member tab types only into itself, and the mode toggles with
+    Ctrl+Shift+A. Only terminal sessions participate; it is independent of the
+    split-view broadcast.
+  * Added: reconnect any pane in a split view, not only the split owner
+    (issue #328). Reconnect is reachable from the tab menu, a pane's menu, a
+    banner inside the disconnected pane, and a configurable shortcut
+    (default Ctrl+Shift+Y).
+  * Added: rustconn-cli add --tunnel-via <NAME|UUID> for Web connections, so a
+    host-only web UI can be reached through an existing SSH connection's host.
+  * Fixed: multi-hop SSH with an identity key failed on every hop past the
+    first; identity-only chains now use OpenSSH -J with the key in the agent.
+  * Fixed: the monitoring bar could open for a jump-host session that never
+    connected; the contains_ssh_failure guard is now applied to the monitoring
+    start too.
+  * Fixed: reconnect sometimes did not send the vault password past the cache
+    TTL (issue #330); reconnect now falls back to a blocking vault resolve.
+  * Fixed: rapidly opening RDP connections could pop a password prompt for a
+    saved credential; vault backend operations are now serialised and the RDP
+    path caches resolved credentials like the other protocols.
+  * Fixed: the RDP password dialog had no visible close button; the native
+    close button is restored on the start side (GNOME HIG).
+  * Fixed: rustconn-cli add --protocol web was rejected despite being
+    advertised; the parser now accepts web, http and https.
+  * Fixed: rustconn-cli add --aws-profile help described the wrong field; it
+    now matches the code (sets the AWS profile, not the instance ID).
+  * Changed: embedded RDP status text no longer names the underlying client;
+    labels now read "Starting RDP..." and "external window".
+  * Fixed: "Select Tab" in a split pane did not open the tab picker, most
+    stubbornly in the right pane of a vertical split (issue #328); the picker
+    now opens downward from the unclipped panel container with a size-capped
+    list, so it always fits.
+  * Fixed: a duplicate-GtkStack-name warning from the tab menu on multi-monitor
+    setups; the detach-to-monitor submenu is now flat menu items.
+  * Dependencies: cc 1.4.6->1.4.7.
+
+ -- Anton Isaiev <totoshko88@gmail.com>  Sat, 19 Sep 2026 12:00:00 +0200
+
 rustconn (0.22.0-1) unstable; urgency=medium
 
   * Version bump to 0.22.0

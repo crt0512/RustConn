@@ -156,18 +156,20 @@ pub fn draw_status_overlay(
             }
         }
         RdpConnectionState::Connecting => {
-            if embedded {
-                (i18n("Connecting via IronRDP…"), (0.8, 0.8, 0.6))
-            } else {
-                (i18n("Starting FreeRDP…"), (0.8, 0.8, 0.6))
-            }
+            // The wording stays technology-neutral for both paths on purpose:
+            // "IronRDP" / "FreeRDP" is an implementation detail the user did not
+            // choose and cannot act on, and the embedded path can silently fall
+            // back from one to the other mid-connect. "Starting RDP…" describes
+            // what is happening in terms of the protocol they picked.
+            let _ = embedded;
+            (i18n("Starting RDP…"), (0.8, 0.8, 0.6))
         }
         RdpConnectionState::Connected => {
             if embedded {
                 (i18n("Connected"), (0.6, 0.8, 0.6))
             } else {
                 (
-                    i18n("RDP session running in FreeRDP window"),
+                    i18n("RDP session running in external window"),
                     (0.6, 0.8, 0.6),
                 )
             }
@@ -185,7 +187,7 @@ pub fn draw_status_overlay(
     if current_state == RdpConnectionState::Connected && !embedded {
         cr.set_source_rgb(0.6, 0.6, 0.6);
         cr.set_font_size(11.0);
-        let hint = i18n("Switch to the FreeRDP window to interact with the session");
+        let hint = i18n("Switch to the external window to interact with the session");
         if let Ok(extents) = cr.text_extents(&hint) {
             cr.move_to((f64::from(width) - extents.width()) / 2.0, center_y + 125.0);
             let _ = cr.show_text(&hint);

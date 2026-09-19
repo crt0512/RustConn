@@ -27,6 +27,7 @@ pub fn create_header_bar() -> (
     crate::spinner::Spinner,
     gtk4::Button,
     gtk4::ToggleButton,
+    gtk4::ToggleButton,
     MenuButton,
     Label,
 ) {
@@ -165,6 +166,31 @@ pub fn create_header_bar() -> (
     broadcast_toggle.set_visible(false);
     header_bar.pack_end(&broadcast_toggle);
 
+    // Group broadcast toggle (issue #329) — visible only when two or more tabs
+    // have been added to the cross-tab broadcast set. Mirrors keystrokes from
+    // the active member tab to the other members, each on its own tab. Kept
+    // distinct from the split broadcast above: different scope, different action.
+    let group_broadcast_toggle = gtk4::ToggleButton::new();
+    let gbc_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
+    let gbc_icon = gtk4::Image::from_icon_name("network-transmit-receive-symbolic");
+    gbc_icon.set_pixel_size(16);
+    let gbc_label = Label::new(Some(&i18n("Group Broadcast")));
+    gbc_label.add_css_class("caption");
+    gbc_box.append(&gbc_icon);
+    gbc_box.append(&gbc_label);
+    group_broadcast_toggle.set_child(Some(&gbc_box));
+    group_broadcast_toggle.set_tooltip_text(Some(&i18n(
+        "Mirror keystrokes to all tabs in the broadcast group",
+    )));
+    group_broadcast_toggle.update_property(&[gtk4::accessible::Property::Label(&i18n(
+        "Toggle group broadcast",
+    ))]);
+    group_broadcast_toggle.set_action_name(Some("win.toggle-group-broadcast"));
+    group_broadcast_toggle.add_css_class("flat");
+    group_broadcast_toggle.add_css_class("pill");
+    group_broadcast_toggle.set_visible(false);
+    header_bar.pack_end(&group_broadcast_toggle);
+
     // Keyboard passthrough indicator — visible only when passthrough mode is active
     let passthrough_indicator = Button::new();
     let pt_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
@@ -219,6 +245,7 @@ pub fn create_header_bar() -> (
         busy_spinner,
         passthrough_indicator,
         broadcast_toggle,
+        group_broadcast_toggle,
         menu_button,
         title,
     )

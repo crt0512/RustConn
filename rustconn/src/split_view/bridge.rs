@@ -1704,6 +1704,24 @@ impl SplitViewBridge {
         self.adapter.borrow().get_panel_widget(panel_id)
     }
 
+    /// Returns the container box of the pane currently showing `session_id`.
+    ///
+    /// This is the `split-panel` box a reconnect banner attaches to for a split
+    /// guest (issue #328), which has no `TabPage` of its own — so
+    /// [`crate::terminal::TerminalNotebook::session_content_box`] returns `None`
+    /// for it and falls back to this. Returns `None` when the session is not
+    /// displayed in any pane of this layout.
+    #[must_use]
+    pub fn pane_container_for_session(&self, session_id: Uuid) -> Option<gtk4::Box> {
+        let session = SessionId::from_uuid(session_id);
+        let adapter = self.adapter.borrow();
+        let panel_id = adapter
+            .panel_ids()
+            .into_iter()
+            .find(|&pid| adapter.get_panel_session(pid) == Some(session))?;
+        adapter.get_panel_widget(panel_id)
+    }
+
     /// Gets the panel ID for a given pane UUID.
     ///
     /// This is useful when you need to interact with the adapter using panel IDs
@@ -2146,30 +2164,62 @@ impl SplitViewBridge {
         // This ensures new panels added during splits are visible to the callback
         let panel_uuid_map = Rc::clone(&self.panel_uuid_map);
         let adapter = Rc::clone(&self.adapter);
-        let root = self.root.clone();
 
         self.adapter
             .borrow()
-            .set_select_tab_callback(move |panel_id| {
+            .set_select_tab_callback(move |panel_id, button| {
                 // Get the panel UUID for this panel_id
                 let Some(panel_uuid) = panel_uuid_map.borrow().get(&panel_id).copied() else {
                     tracing::warn!("No UUID found for panel {panel_id}");
                     return;
                 };
 
-                // Get the panel widget to use as popover parent (more reliable than root)
-                let panel_widget = adapter.borrow().get_panel_widget(panel_id);
-                let popover_parent = panel_widget
-                    .as_ref()
-                    .map_or_else(|| root.clone().upcast::<gtk4::Widget>(), |w| w.clone().upcast::<gtk4::Widget>());
+                // Parent the popover to the panel *container*, not to the
+                // clicked button, and point it at the button (issue #328). The
+                // button lives inside an `Overlay` with `Overflow::Hidden`
+                // (create_empty_placeholder clips it so the placeholder cannot
+                // force the Paned past 50 %), and a popover parented into that
+                // clipped subtree is clipped away — it maps and pops up but
+                // paints nothing. In the right pane of a vertical split the
+                // clip is on the width, which is exactly what the popover needs,
+                // so it vanished there while the bottom pane of a horizontal
+                // split (clipped on height, full width) still showed it. The
+                // panel container is the unclipped `split-panel` box that the
+                // working context menu already parents to; use the same target.
+                let popover_parent = adapter
+                    .borrow()
+                    .get_panel_widget(panel_id)
+                    .map(|w| w.upcast::<gtk4::Widget>());
+                let Some(popover_parent) = popover_parent else {
+                    tracing::warn!("No panel widget for panel {panel_id}; cannot show picker");
+                    return;
+                };
+
+                // Point the popover at the button's position within the panel
+                // container, so the arrow still lands on "Select Tab".
+                let pointing_to = button
+                    .compute_bounds(&popover_parent)
+                    .map(|b| {
+                        gtk4::gdk::Rectangle::new(
+                            b.x() as i32,
+                            b.y() as i32,
+                            b.width() as i32,
+                            b.height() as i32,
+                        )
+                    });
+
+                // Tear down any previously open context menu / select popover
+                // before building a new one. This is the same shared mechanism
+                // the panel context menu uses and is what makes repeated opens
+                // reliable — one active popover at a time (issue #87, #328).
+                crate::sidebar_ui::close_active_popover();
 
                 tracing::debug!(
-                    "select_tab_callback: panel_id={}, panel_uuid={}, parent_mapped={}, parent_size={}x{}",
+                    "select_tab_callback: panel_id={}, panel_uuid={}, parent_mapped={}, has_point={}",
                     panel_id,
                     panel_uuid,
                     popover_parent.is_mapped(),
-                    popover_parent.width(),
-                    popover_parent.height(),
+                    pointing_to.is_some(),
                 );
 
                 // Get sessions already displayed in this split view using the adapter
@@ -2195,10 +2245,23 @@ impl SplitViewBridge {
 
                 if available_sessions.is_empty() {
                     tracing::debug!("No sessions available to select (all already in split view)");
-                    // Show a toast or message that all sessions are already displayed
+                    // Message that all sessions are already displayed.
                     let popover = gtk4::Popover::new();
                     popover.set_parent(&popover_parent);
+                    // Parented to the unclipped panel container, autohide
+                    // behaves: the container is not an embedded RDP/web surface,
+                    // so it does not repaint and steal the popover's grab.
+                    // autohide gives correct click-outside and Escape dismissal
+                    // for free (issue #328).
                     popover.set_autohide(true);
+                    popover.set_has_arrow(true);
+                    if let Some(ref rect) = pointing_to {
+                        popover.set_pointing_to(Some(rect));
+                    }
+                    // Open downward — see the note on the session-list popover
+                    // below (issue #328): the right split pane has no room to
+                    // the side.
+                    popover.set_position(gtk4::PositionType::Bottom);
 
                     let content = GtkBox::new(Orientation::Vertical, 6);
                     content.set_margin_top(12);
@@ -2214,30 +2277,38 @@ impl SplitViewBridge {
 
                     popover.set_child(Some(&content));
 
-                    let width = popover_parent.width();
-                    let height = popover_parent.height();
-                    popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
-                        width / 2,
-                        height / 2,
-                        1,
-                        1,
-                    )));
-
-                    popover.popup();
-
-                    let parent_weak = popover_parent.downgrade();
+                    // Track as the single active popover and clean up on close,
+                    // mirroring the panel context menu (issue #87, #328).
+                    crate::sidebar_ui::set_active_popover(popover.upcast_ref::<gtk4::Popover>());
                     popover.connect_closed(move |pop| {
-                        if parent_weak.upgrade().is_some() {
+                        crate::sidebar_ui::clear_active_popover(pop.upcast_ref::<gtk4::Popover>());
+                        if pop.parent().is_some() {
                             pop.unparent();
                         }
                     });
+                    popover.popup();
                     return;
                 }
 
-                // Create a popover with session list
+                // Create a popover with session list, parented to the panel
+                // container (not the clipped button — see the parent note above).
                 let popover = gtk4::Popover::new();
                 popover.set_parent(&popover_parent);
+                // autohide=true — see the note on the empty-state popover above
+                // (issue #328): parented to the unclipped panel container (not to
+                // an embedded pane that repaints), the grab survives and autohide
+                // gives correct click-outside/Escape dismissal.
                 popover.set_autohide(true);
+                popover.set_has_arrow(true);
+                if let Some(ref rect) = pointing_to {
+                    popover.set_pointing_to(Some(rect));
+                }
+                // Open downward, not sideways. In the right pane of a vertical
+                // split the button sits against the window's right edge, so a
+                // popover opening to the side has nowhere to go and GTK, unable
+                // to place it, shows nothing (issue #328). The pane always has
+                // room below, and the scroller below caps the size so it fits.
+                popover.set_position(gtk4::PositionType::Bottom);
 
                 let content = GtkBox::new(Orientation::Vertical, 6);
                 content.set_margin_top(12);
@@ -2262,16 +2333,18 @@ impl SplitViewBridge {
                         .title(&session_name)
                         .activatable(true)
                         .build();
-                    let icon_name = rustconn_core::protocol::icons::get_protocol_icon_by_name(&protocol);
+                    let icon_name =
+                        rustconn_core::protocol::icons::get_protocol_icon_by_name(&protocol);
                     row.add_prefix(&gtk4::Image::from_icon_name(icon_name));
 
                     // Show split color indicator if session is in any split view
                     if let Some(&color_index) = split_colors.borrow().get(&session_id)
-                        && let Some(icon) = create_colored_circle_icon(color_index, 12) {
-                            let color_image = gtk4::Image::from_gicon(&icon);
-                            color_image.set_pixel_size(12);
-                            row.add_suffix(&color_image);
-                        }
+                        && let Some(icon) = create_colored_circle_icon(color_index, 12)
+                    {
+                        let color_image = gtk4::Image::from_gicon(&icon);
+                        color_image.set_pixel_size(12);
+                        row.add_suffix(&color_image);
+                    }
 
                     let callback = on_session_selected.clone();
                     let popover_weak = popover.downgrade();
@@ -2285,28 +2358,37 @@ impl SplitViewBridge {
                     list_box.append(&row);
                 }
 
-                content.append(&list_box);
+                // Cap the list's size and let it scroll. Without a cap the
+                // popover is as wide and tall as the full session list, which in
+                // a narrow right-hand split pane exceeds the space GTK has to
+                // place the popover — so it silently fails to appear. A bounded,
+                // scrolling child always fits (issue #328). `propagate_natural_*`
+                // keeps a short list exactly as small as its rows.
+                let scroller = gtk4::ScrolledWindow::builder()
+                    .hscrollbar_policy(gtk4::PolicyType::Never)
+                    .vscrollbar_policy(gtk4::PolicyType::Automatic)
+                    .propagate_natural_height(true)
+                    .propagate_natural_width(true)
+                    .max_content_height(360)
+                    .min_content_width(240)
+                    .max_content_width(360)
+                    .child(&list_box)
+                    .build();
+                content.append(&scroller);
                 popover.set_child(Some(&content));
 
-                // Position popover in center of panel widget
-                let width = popover_parent.width();
-                let height = popover_parent.height();
-                popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
-                    width / 2,
-                    height / 2,
-                    1,
-                    1,
-                )));
-
-                popover.popup();
-
-                // Clean up popover when closed
-                let parent_weak = popover_parent.downgrade();
+                // Track as the single active popover and clean up on close,
+                // mirroring the panel context menu (issue #87, #328). autohide
+                // and the per-row popdown() handle dismissal.
+                crate::sidebar_ui::set_active_popover(popover.upcast_ref::<gtk4::Popover>());
                 popover.connect_closed(move |pop| {
-                    if parent_weak.upgrade().is_some() {
+                    crate::sidebar_ui::clear_active_popover(pop.upcast_ref::<gtk4::Popover>());
+                    if pop.parent().is_some() {
                         pop.unparent();
                     }
                 });
+
+                popover.popup();
             });
     }
 
@@ -2342,6 +2424,23 @@ impl SplitViewBridge {
     {
         let handler = self.panel_action_handler("pop-pane-to-tab", on_focus);
         self.adapter.borrow().set_pop_panel_callback(handler);
+    }
+
+    /// Sets up the "Reconnect" callback for the panel context menu (issue #328).
+    ///
+    /// Same two steps as [`Self::setup_pop_panel_callback`], but activates
+    /// `win.reconnect-pane`, which reconnects the focused pane's session in
+    /// place.
+    ///
+    /// # Arguments
+    ///
+    /// * `on_focus` - Callback to focus the panel, receives the pane UUID
+    pub fn setup_reconnect_panel_callback<F>(&self, on_focus: F)
+    where
+        F: Fn(Uuid) + Clone + 'static,
+    {
+        let handler = self.panel_action_handler("reconnect-pane", on_focus);
+        self.adapter.borrow().set_reconnect_panel_callback(handler);
     }
 
     /// Builds the "focus this panel, then activate a window action" handler that
