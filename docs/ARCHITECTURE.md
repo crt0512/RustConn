@@ -234,6 +234,31 @@ Two consequences worth knowing when editing session code:
   teardown path (reconnect banner, log flush, monitoring, tab state) still hangs
   off that signal.
 
+### Keystroke broadcast — two independent models
+
+Broadcast mirrors one session's typed input to others. Both models share the same
+primitive: a per-session VTE `commit` handler reads the input and calls
+`TerminalNotebook::send_text_to_session` on each target, which is just a
+`feed_child` to that target's PTY — visibility-independent, so a background tab
+receives it fine. A single shared re-entrancy guard stops the fed text's own
+`commit` from re-broadcasting.
+
+- **Split broadcast** targets the panels of one tab. State lives on that tab's
+  `SplitViewBridge` (`broadcast_active` / `broadcast_wired_sessions` /
+  `broadcast_busy`); targets are the split's active panes. Wired in
+  `window/navigation_actions.rs`.
+- **Group broadcast** (#329) targets sessions that each own their own tab, so its
+  state cannot live on any one bridge — it lives on `MainWindow`'s
+  `GroupBroadcast` (`window/group_broadcast.rs`). Membership is an explicit
+  per-session opt-in set, deliberately not derived from the tab-group label.
+  `resolve_broadcast_targets` is a pure function (unit-tested) that returns the
+  members to feed only when the broadcast is active and the source is itself a
+  member — a non-member tab types only into itself (the iTerm2 asymmetric rule).
+  A persistent banner and a large-group confirmation exist because a group
+  broadcast reaches tabs that are not all on screen.
+
+The two are orthogonal and can be active at once without interfering.
+
 ### Why This Separation?
 
 1. **Testability**: Core logic can be tested without a display server
@@ -1397,6 +1422,7 @@ rustconn/src/
 ├── window/                # Main window (modular structure)
 │   ├── mod.rs             # Module exports, MainWindow struct
 │   ├── detach_actions.rs  # win.detach-session / win.attach-session / win.toggle-detach
+│   ├── group_broadcast.rs # Cross-tab keystroke broadcast (GroupBroadcast, #329)
 │   └── ...                # Domain-specific window functionality
 ├── state.rs               # SharedAppState
 ├── async_utils.rs         # Async helpers (spawn_async, block_on_async_with_timeout)

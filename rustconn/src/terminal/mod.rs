@@ -246,6 +246,14 @@ pub struct TerminalNotebook {
     /// bridges. `session_content_box` consults this as a last resort so the
     /// reconnect banner reaches every pane, not only the split owner's.
     split_pane_box_provider: Rc<RefCell<Option<Rc<dyn Fn(Uuid) -> Option<GtkBox>>>>>,
+    /// Toggles a tab's membership in the cross-tab broadcast group (issue #329).
+    ///
+    /// Wired by the window; the tab context menu calls it to activate the
+    /// `win.toggle-tab-broadcast` action. `None` until the window wires it.
+    on_tab_broadcast_toggle: Rc<RefCell<Option<Box<dyn Fn(Uuid)>>>>,
+    /// Reports whether a tab is currently in the broadcast group, so the tab
+    /// context menu can label its toggle item. Wired by the window (issue #329).
+    tab_broadcast_membership: Rc<RefCell<Option<Rc<dyn Fn(Uuid) -> bool>>>>,
     /// Callback fired when terminal focus changes (`true` = focus entered the
     /// VTE, `false` = focus left). Drives focus-based accelerator suspend (#197).
     on_terminal_focus: Rc<RefCell<Option<Box<dyn Fn(bool)>>>>,
@@ -506,6 +514,8 @@ impl TerminalNotebook {
             tab_group_manager: Rc::new(RefCell::new(TabGroupManager::new())),
             on_reconnect: Rc::new(RefCell::new(None)),
             split_pane_box_provider: Rc::new(RefCell::new(None)),
+            on_tab_broadcast_toggle: Rc::new(RefCell::new(None)),
+            tab_broadcast_membership: Rc::new(RefCell::new(None)),
             on_terminal_focus: Rc::new(RefCell::new(None)),
             reconnect_shown: Rc::new(RefCell::new(HashSet::new())),
             disconnected_sessions: Rc::new(RefCell::new(HashSet::new())),
@@ -1862,6 +1872,37 @@ impl TerminalNotebook {
 
         // R6.2: a session left the split — clear/refresh its sidebar marker.
         self.notify_split_colors_changed();
+    }
+
+    /// Marks or unmarks a tab as a member of the cross-tab broadcast group.
+    ///
+    /// The marker is a title prefix (`⇄ `) rather than the tab indicator icon,
+    /// which is already claimed by the split colour, the protocol colour and the
+    /// offline state; the prefix stacks with all of them and with a group label
+    /// prefix. Idempotent: the prefix is stripped before being re-applied, so
+    /// repeated calls never double it, and a tooltip line is kept in sync so the
+    /// membership is discoverable on hover (issue #329).
+    pub fn set_broadcast_member_marker(&self, session_id: Uuid, member: bool) {
+        const MARKER: &str = "⇄ ";
+        const TOOLTIP_LINE: &str = "\n[Broadcast]";
+
+        if let Some(page) = self.sessions.borrow().get(&session_id) {
+            let title = page.title().to_string();
+            let base = title.strip_prefix(MARKER).unwrap_or(&title);
+            if member {
+                page.set_title(&format!("{MARKER}{base}"));
+            } else {
+                page.set_title(base);
+            }
+
+            let tooltip = page.tooltip().unwrap_or_default().to_string();
+            let base_tooltip = tooltip.strip_suffix(TOOLTIP_LINE).unwrap_or(&tooltip);
+            if member {
+                page.set_tooltip(&format!("{base_tooltip}{TOOLTIP_LINE}"));
+            } else {
+                page.set_tooltip(base_tooltip);
+            }
+        }
     }
 
     /// Sets whether an in-place reconnect keeps the previous scrollback (#253).

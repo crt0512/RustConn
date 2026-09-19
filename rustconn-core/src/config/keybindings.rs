@@ -366,6 +366,15 @@ pub fn default_keybindings() -> Vec<KeybindingDef> {
             "Toggle Split Broadcast",
             View,
         ),
+        // Cross-tab broadcast group (issue #329), distinct from the split
+        // broadcast above: mirrors keystrokes to tabs that each have their own
+        // tab rather than to panes of one split.
+        KeybindingDef::new(
+            "win.toggle-group-broadcast",
+            "<Control><Shift>a",
+            "Toggle Group Broadcast",
+            View,
+        ),
         // Application (additional)
         KeybindingDef::new(
             "win.show-history",

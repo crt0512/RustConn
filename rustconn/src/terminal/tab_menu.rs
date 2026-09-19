@@ -15,13 +15,15 @@ use super::*;
 #[derive(Debug, Clone, Copy, Default)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "five independent per-tab facts, each gating one menu section"
+    reason = "six independent per-tab facts, each gating one menu section"
 )]
 pub struct TabMenuState {
     /// Activity or silence monitoring mode of the tab's session, if any.
     pub monitor_mode: Option<MonitorMode>,
     /// The tab belongs to a tab group.
     pub has_group: bool,
+    /// The tab is a member of the cross-tab broadcast group (issue #329).
+    pub in_broadcast: bool,
     /// The tab is pinned.
     pub is_pinned: bool,
     /// At least one tab in the window belongs to a group.
@@ -66,6 +68,7 @@ impl TerminalNotebook {
         let session_info_for_menu = self.session_info.clone();
         let activity_for_menu = self.activity_coordinator.clone();
         let detach_hooks_for_menu = self.detach_hooks();
+        let broadcast_membership_for_menu = self.tab_broadcast_membership.clone();
         let menu_for_setup = menu;
         self.tab_view.connect_setup_menu(move |_tab_view, page| {
             *context_page_setup.borrow_mut() = page.cloned();
@@ -93,9 +96,16 @@ impl TerminalNotebook {
                     let has_group = session_id
                         .and_then(|sid| info_ref.get(&sid).and_then(|i| i.tab_group.clone()))
                         .is_some();
+                    let in_broadcast = session_id.is_some_and(|sid| {
+                        broadcast_membership_for_menu
+                            .borrow()
+                            .as_ref()
+                            .is_some_and(|q| q(sid))
+                    });
                     TabMenuState {
                         monitor_mode: mode,
                         has_group,
+                        in_broadcast,
                         is_pinned: page.is_pinned(),
                         // Check if ANY tab has a group assigned (for showing
                         // group-related actions)
@@ -347,6 +357,31 @@ impl TerminalNotebook {
             tracing::debug!(session_id = %session_id, "Tab removed from group via context menu");
         });
         action_group.add_action(&remove_group_action);
+
+        // "Add to / Remove from Broadcast" action (issue #329). Toggles the
+        // right-clicked tab's membership in the cross-tab broadcast group via
+        // the window-wired callback.
+        let toggle_broadcast_action = gio::SimpleAction::new("toggle-broadcast", None);
+        let context_page_bc = context_page.clone();
+        let sessions_for_bc = self.sessions.clone();
+        let on_tab_broadcast_toggle = self.on_tab_broadcast_toggle.clone();
+        toggle_broadcast_action.connect_activate(move |_, _| {
+            let Some(target_page) = context_page_bc.borrow().clone() else {
+                return;
+            };
+            let session_id = sessions_for_bc
+                .borrow()
+                .iter()
+                .find(|(_, p)| *p == &target_page)
+                .map(|(id, _)| *id);
+            let Some(session_id) = session_id else {
+                return;
+            };
+            if let Some(ref cb) = *on_tab_broadcast_toggle.borrow() {
+                cb(session_id);
+            }
+        });
+        action_group.add_action(&toggle_broadcast_action);
 
         // "Close All in Group" action — closes all tabs belonging to the same group
         let close_all_group_action = gio::SimpleAction::new("close-all-in-group", None);
@@ -761,6 +796,17 @@ impl TerminalNotebook {
             );
         }
         menu.append_section(None, &group_section);
+
+        // Broadcast section (issue #329) — add or remove this tab from the
+        // cross-tab broadcast group. The label reflects current membership.
+        let broadcast_section = gio::Menu::new();
+        let broadcast_label = if state.in_broadcast {
+            i18n("Remove from Broadcast")
+        } else {
+            i18n("Add to Broadcast")
+        };
+        broadcast_section.append(Some(&broadcast_label), Some("tab.toggle-broadcast"));
+        menu.append_section(None, &broadcast_section);
 
         // Monitor section with current mode in label
         let monitor_section = gio::Menu::new();

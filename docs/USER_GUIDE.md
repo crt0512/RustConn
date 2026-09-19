@@ -49,6 +49,7 @@ RustConn is a modern connection manager designed for Linux with Wayland-first ap
    - [Workspace Profiles](#workspace-profiles)
    - [Port Knocking](#port-knocking)
    - [Broadcast Input](#broadcast-input)
+   - [Group Broadcast](#group-broadcast)
    - [Command Palette](#command-palette)
    - [Global Variables](#global-variables)
    - [Password Generator](#password-generator)
@@ -2727,7 +2728,32 @@ Broadcast is a property of a **split layout**, not of a cluster: whichever termi
 
 The toggle only becomes available when the active tab's split holds at least two terminal sessions and a terminal panel has focus. Mirroring never targets an embedded RDP, VNC or SPICE panel — those are not terminals and receive their own input only.
 
-Opening a [cluster](#clusters) is the quick way to get the members on screen; from there, split them and toggle broadcast. Earlier releases had a separate cluster-owned broadcast mode with checkboxes on tabs. It was removed in 0.14.8 in favour of the split-view toggle, which has one visible target set instead of two competing ones. `Cluster` still carries a `broadcast_enabled` flag on disk for CLI compatibility; it does not affect the GUI.
+Opening a [cluster](#clusters) is the quick way to get the members on screen; from there, split them and toggle broadcast. `Cluster` still carries a `broadcast_enabled` flag on disk for CLI compatibility; it does not affect the GUI.
+
+If the sessions live on separate tabs rather than in one split, use **Group Broadcast** below instead.
+
+### Group Broadcast
+
+Broadcast keystrokes to several sessions that each live on **their own tab**, rather than to the panels of one split. This is the equivalent of MobaXterm's MultiExec or iTerm2's "broadcast to a set of sessions".
+
+Membership is explicit: you choose which tabs are in the broadcast set, one at a time. Nothing is broadcast to a tab you did not add.
+
+**Usage:**
+1. Right-click a terminal tab → **Add to Broadcast**. Repeat for each tab you want in the set. A member tab shows a `⇄ ` marker in its title.
+2. Once at least two tabs are members, the **Group Broadcast** toggle appears in the header bar while a member tab is active. Turn it on with the toggle or **Ctrl+Shift+A**.
+3. Type into any member tab — the keystrokes are mirrored to the other members. A tab that is **not** a member types only into itself, even while the broadcast is on.
+4. Turn it off with the toggle, **Ctrl+Shift+A**, or the **Stop** button on the banner.
+
+To remove a tab from the set, right-click it → **Remove from Broadcast**. Dropping below two members turns the broadcast off automatically.
+
+**Safety.** A group broadcast reaches tabs you cannot see all at once, so a mistyped command runs on every member. Two guardrails make the active state impossible to miss and hard to trigger by accident:
+
+- While broadcast is on, a persistent banner across the top of the window names how many sessions receive input. It stays until you turn broadcast off.
+- Enabling the broadcast on more than five sessions asks for confirmation first.
+
+**Limits.** Only terminal sessions (SSH, Telnet, Serial, Kubernetes, MOSH, Zero Trust) participate; an embedded RDP, VNC or SPICE tab cannot be a broadcast target and is skipped even if added. Membership is session-only and is not saved across restarts. Closing a tab removes it from the set.
+
+Group Broadcast and the split [Broadcast Input](#broadcast-input) are independent: one mirrors across tabs, the other across the panels of a single split. Either can be on without affecting the other.
 
 ### Command Palette
 

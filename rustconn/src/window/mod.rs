@@ -13,6 +13,7 @@ mod detach_actions;
 mod edit_actions;
 mod edit_dialogs;
 mod edit_group;
+mod group_broadcast;
 mod groups;
 mod history_actions;
 mod navigation_actions;
@@ -299,6 +300,18 @@ pub struct MainWindow {
     /// active panels in the current application session, so the hint is
     /// shown at most once. Not persisted across restarts.
     broadcast_hint_shown: Rc<std::cell::Cell<bool>>,
+    /// Cross-tab keystroke broadcast state (issue #329). Independent of the
+    /// per-tab split broadcast: this mirrors keystrokes across sessions that
+    /// each live on their own tab. See `window::group_broadcast`.
+    group_broadcast: group_broadcast::GroupBroadcast,
+    /// Header-bar toggle for cross-tab group broadcast. Visible only when the
+    /// broadcast set has two or more members; drives `win.toggle-group-broadcast`.
+    group_broadcast_toggle: gtk4::ToggleButton,
+    /// Persistent banner shown below the header bar while group broadcast is
+    /// active, naming how many sessions receive the mirrored input. A group
+    /// broadcast is not all-visible at once, so its active state must be
+    /// impossible to miss (issue #329).
+    group_broadcast_banner: adw::Banner,
     /// Persistent banner below the header bar for cloud sync failures.
     /// Shown by `show_sync_error_banner`, hidden on the next successful
     /// sync or via its Dismiss button.
@@ -362,6 +375,7 @@ impl MainWindow {
             busy_spinner,
             passthrough_indicator,
             broadcast_toggle,
+            group_broadcast_toggle,
             menu_button,
             header_title,
         ) = ui::create_header_bar();
@@ -446,6 +460,11 @@ impl MainWindow {
         // Create global color pool shared across all split containers
         // This ensures different split containers get different colors
         let global_color_pool: SharedColorPool = Rc::new(RefCell::new(ColorPool::new()));
+
+        // Cross-tab broadcast group state (issue #329). Created here so a clone
+        // can be captured by the page-closed handler below to forget a closed
+        // session, before the window struct that owns it is built.
+        let group_broadcast = group_broadcast::GroupBroadcast::new();
 
         // Create split terminal view as the main terminal container
         // Uses the global color pool for consistent color allocation
@@ -572,9 +591,13 @@ impl MainWindow {
         // The detach/attach paths suspend and resume the monitoring bar around
         // the widget move, mirroring the split path.
         terminal_notebook.set_monitoring_coordinator(Rc::clone(&monitoring));
+        let group_broadcast_for_close = group_broadcast.clone();
         terminal_notebook.set_on_page_closed(move |session_id, connection_id| {
             monitoring_for_close.stop_monitoring(session_id);
             activity_for_close.stop(session_id);
+            // Drop the closed session from the broadcast set so a reused UUID
+            // can never inherit its membership, and the wired set stays bounded.
+            group_broadcast_for_close.forget(session_id);
             sidebar_for_close.decrement_session_count(&connection_id.to_string(), false);
         });
 
@@ -835,6 +858,24 @@ impl MainWindow {
         });
         toolbar_view.add_top_bar(&secret_banner);
 
+        // Persistent banner shown while cross-tab group broadcast is active
+        // (issue #329). Unlike a split broadcast, whose panels are all on screen,
+        // a group broadcast reaches tabs the user cannot see, so its active state
+        // must be unmissable — a banner, not a transient toast. Its button turns
+        // the broadcast off. Hidden until group broadcast is enabled.
+        let group_broadcast_banner = adw::Banner::new("");
+        group_broadcast_banner.set_button_label(Some(&crate::i18n::i18n("Stop")));
+        group_broadcast_banner.add_css_class("accent");
+        group_broadcast_banner.connect_button_clicked(|banner| {
+            if let Some(win) = banner
+                .root()
+                .and_then(|r| r.downcast::<adw::ApplicationWindow>().ok())
+            {
+                gio::prelude::ActionGroupExt::activate_action(&win, "toggle-group-broadcast", None);
+            }
+        });
+        toolbar_view.add_top_bar(&group_broadcast_banner);
+
         toolbar_view.set_content(Some(toast_overlay.widget()));
 
         // Wrap everything with TabOverview — must be the outermost widget
@@ -1080,6 +1121,9 @@ impl MainWindow {
             menu_button,
             broadcast_toggle,
             broadcast_hint_shown: Rc::new(std::cell::Cell::new(false)),
+            group_broadcast,
+            group_broadcast_toggle,
+            group_broadcast_banner,
             sync_banner,
             secret_banner,
         };
@@ -1247,6 +1291,7 @@ impl MainWindow {
             &self.session_split_bridges,
         );
         self.setup_group_operations_actions(window, &state, &terminal_notebook, &sidebar);
+        self.setup_group_broadcast_actions(window, &terminal_notebook);
         self.setup_snippet_actions(window, &state, &terminal_notebook, &sidebar);
         self.setup_cluster_actions(window, &state, &terminal_notebook, &sidebar);
         self.setup_template_actions(window, &state, &sidebar);

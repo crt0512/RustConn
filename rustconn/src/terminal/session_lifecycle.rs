@@ -489,6 +489,22 @@ impl TerminalNotebook {
         *self.split_pane_box_provider.borrow_mut() = Some(Rc::new(provider));
     }
 
+    /// Wires the tab context menu's broadcast-membership toggle (issue #329).
+    pub fn set_on_tab_broadcast_toggle<F>(&self, callback: F)
+    where
+        F: Fn(Uuid) + 'static,
+    {
+        *self.on_tab_broadcast_toggle.borrow_mut() = Some(Box::new(callback));
+    }
+
+    /// Wires the broadcast-membership query used to label the tab menu item.
+    pub fn set_tab_broadcast_membership_provider<F>(&self, provider: F)
+    where
+        F: Fn(Uuid) -> bool + 'static,
+    {
+        *self.tab_broadcast_membership.borrow_mut() = Some(Rc::new(provider));
+    }
+
     /// Returns a clone of the reconnect callback reference for use in auto-reconnect polling
     #[must_use]
     pub fn reconnect_callback(&self) -> Rc<RefCell<Option<Box<dyn Fn(Uuid, Uuid)>>>> {
