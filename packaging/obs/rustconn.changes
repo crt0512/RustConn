@@ -12,6 +12,9 @@ Sun Sep 20 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.2
 - Changed: group broadcast no longer shows a toast when enabled; the persistent
   banner alone announces the active state (GNOME HIG), disabling still toasts,
   and split-view broadcast is unchanged
+- Improved: the "only reconnect a disconnected session" guard now lives in the
+  one function every in-place reconnect passes through, so no path can reset a
+  live terminal (issue #328); no user-visible change today
 - Dependencies: gtk4/gdk4/gsk4 0.11.4->0.11.5, gio/glib 0.22.9->0.22.10, rand
   0.10.2->0.10.3
 

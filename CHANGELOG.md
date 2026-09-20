@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Group broadcast no longer shows a toast when enabled** — enabling group broadcast raised both a transient toast and the persistent banner with near-identical text, so the same state was announced twice and the extra toast added noise. Enabling now shows only the banner, which is the correct surface for a persistent state that reaches tabs the user cannot see (GNOME HIG). Disabling still shows a toast, because the banner disappears and a brief confirmation is the only feedback left. Split-view broadcast is unchanged: its panes are all on screen, so it keeps its toast and needs no banner.
 
+### Improved
+
+- **Reconnect can no longer reset a live session (issue #328)** — the "only reconnect a disconnected session" guard now lives in the one function every in-place reconnect passes through (`prepare_for_reconnect`), rather than in a single UI action. Every reconnect entry point already fired only for a disconnected session, so nothing changes for users today; the point is that no future call site can bypass it and wipe a working terminal. The tab/detached/split-pane placement decision behind it is now a pure function with unit tests.
+- **Developer tooling** — the mechanical Definition of Done (`scripts/verify.sh`) is now referenced from the always-loaded contributor docs, and a new `scripts/sync-cargo-sources.sh` regenerates both Flatpak and Flathub `cargo-sources.json` in one step so a dependency bump cannot leave them stale. No effect on the shipped application.
+
 ### Dependencies
 
 - **Updated**: gtk4/gdk4/gsk4 0.11.4→0.11.5, gio/glib 0.22.9→0.22.10, rand 0.10.2→0.10.3.
