@@ -32,13 +32,13 @@ first.
 - `packaging/flatpak/*.yml` and `packaging/flathub/*.yml` are separate manifests
   with the same content requirements. Bump one, bump the other — including the
   bundled FreeRDP version *and* its `sha256`.
-- `cargo-sources.json` exists twice for the same reason. Regenerate from
-  `Cargo.lock`, then copy:
+- `cargo-sources.json` exists twice for the same reason. Regenerate both — from
+  `Cargo.lock`, then copied to Flathub — with one command so they cannot drift:
   ```bash
-  python3 packaging/flatpak/flatpak-cargo-generator.py Cargo.lock \
-      -o packaging/flatpak/cargo-sources.json
-  cp packaging/flatpak/cargo-sources.json packaging/flathub/cargo-sources.json
+  scripts/sync-cargo-sources.sh          # regenerate + copy; --check to verify only
   ```
+  Run it straight after any `cargo update`; otherwise the first
+  `release.sh --dry-run` fails on stale sources (release.sh section 11b).
 - `.kiro/powers/rustconn/` and `~/.kiro/powers/installed/rustconn/` are copies of
   each other. The installed one drifts silently.
 

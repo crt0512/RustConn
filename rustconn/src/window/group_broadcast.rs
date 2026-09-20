@@ -423,9 +423,13 @@ impl MainWindow {
                 &[&group.member_count().to_string()],
             ));
             banner.set_revealed(true);
-            toast.show_toast(&i18n(
-                "Group broadcast enabled — keystrokes mirrored to all group tabs",
-            ));
+            // No toast on enable: the persistent banner already announces the
+            // active state, and it is the correct surface for a dangerous mode
+            // that reaches tabs the user cannot see (GNOME HIG — a state needing
+            // attention is a banner, not a transient toast). A toast here would
+            // just duplicate the banner and add noise. The disable path below
+            // still toasts, because the banner vanishes and a transient
+            // confirmation is the only feedback left.
         } else {
             toggle.remove_css_class("broadcasting");
             banner.set_revealed(false);

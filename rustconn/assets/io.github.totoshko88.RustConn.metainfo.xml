@@ -140,6 +140,17 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.22.2" date="2026-09-20">
+      <description>
+        <p>Version 0.22.2 - split-pane reconnect and broadcast fixes:</p>
+        <ul>
+          <li>Fixed: reconnecting a split-screen guest pane dropped it into a new tab; it now reconnects in place and stays in its pane with its scrollback intact (issue #328)</li>
+          <li>Fixed: the Reconnect Session shortcut could reset a live pane; it now acts only on a disconnected session (issue #328)</li>
+          <li>Changed: group broadcast no longer shows a toast when enabled; the persistent banner alone announces the active state</li>
+          <li>Improved: reconnect can never disturb a live session — the safeguard now covers every way a reconnect can be triggered (issue #328)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.22.1" date="2026-09-19">
       <description>
         <p>Version 0.22.1 - group broadcast, split-pane reconnect, and SSH, RDP and CLI fixes:</p>

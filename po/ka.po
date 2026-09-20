@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.20.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 16:58+0300\n"
+"POT-Creation-Date: 2026-09-20 14:13+0300\n"
 "PO-Revision-Date: 2026-08-19 09:53+0200\n"
 "Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
 "Language-Team: Georgian <(nothing)>\n"
@@ -164,7 +164,7 @@ msgstr "{} — RustConn"
 #: rustconn/src/embedded_rdp/mod.rs:2037
 #: rustconn/src/embedded_rdp/polling_handlers.rs:69
 #: rustconn/src/embedded_vnc/ui.rs:142
-#: rustconn/src/terminal/session_lifecycle.rs:337
+#: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Session disconnected"
 msgstr "სესია გათიშულია"
 
@@ -9680,14 +9680,14 @@ msgstr "ფაილების შენახვა დაშორებუ�
 
 #: rustconn/src/embedded_rdp/mod.rs:764 rustconn/src/embedded_vnc/ui.rs:145
 #: rustconn/src/split_view/adapter.rs:1432 rustconn/src/terminal/mod.rs:1323
-#: rustconn/src/terminal/session_lifecycle.rs:350
+#: rustconn/src/terminal/session_lifecycle.rs:365
 #: rustconn/src/terminal/tab_menu.rs:826
 msgid "Reconnect"
 msgstr "თავიდან დაკავშირება"
 
 #: rustconn/src/embedded_rdp/mod.rs:766 rustconn/src/embedded_vnc/ui.rs:147
 #: rustconn/src/terminal/mod.rs:1325
-#: rustconn/src/terminal/session_lifecycle.rs:352
+#: rustconn/src/terminal/session_lifecycle.rs:367
 msgid "Reconnect to this session"
 msgstr "თავიდან დაკავშირება ამ სესიასთან"
 
@@ -10695,17 +10695,17 @@ msgstr "დაკვრა: {}"
 msgid "●REC"
 msgstr "●ჩწრ"
 
-#: rustconn/src/terminal/session_lifecycle.rs:127
+#: rustconn/src/terminal/session_lifecycle.rs:142
 msgid "Reconnected at {}"
 msgstr "თავიდან დაკავშირებულია {}"
 
-#: rustconn/src/terminal/session_lifecycle.rs:344
-#: rustconn/src/terminal/session_lifecycle.rs:399
+#: rustconn/src/terminal/session_lifecycle.rs:359
+#: rustconn/src/terminal/session_lifecycle.rs:414
 msgid "Auto-reconnecting…"
 msgstr "ხელახლა დაკავშირება…"
 
-#: rustconn/src/terminal/session_lifecycle.rs:439
-#: rustconn/src/terminal/session_lifecycle.rs:449
+#: rustconn/src/terminal/session_lifecycle.rs:454
+#: rustconn/src/terminal/session_lifecycle.rs:464
 msgid "Auto-reconnecting (attempt {}/{})"
 msgstr "ხელახლა დაკავშირება (მცდელობა {}/{})"
 
@@ -11752,12 +11752,7 @@ msgstr "მაუწყებლობის ჩართვა"
 msgid "Group broadcast active — keystrokes mirrored to {} sessions"
 msgstr "ჯგუფური მაუწყებლობა აქტიურია — კლავიშები აისახება {} სესიაზე"
 
-#: rustconn/src/window/group_broadcast.rs:427
-msgid "Group broadcast enabled — keystrokes mirrored to all group tabs"
-msgstr ""
-"ჯგუფური მაუწყებლობა ჩართულია — კლავიშები აისახება ჯგუფის ყველა ჩანართზე"
-
-#: rustconn/src/window/group_broadcast.rs:433
+#: rustconn/src/window/group_broadcast.rs:437
 msgid "Group broadcast disabled — keystrokes go to the focused tab only"
 msgstr ""
 "ჯგუფური მაუწყებლობა გამორთულია — კლავიშები მხოლოდ ფოკუსირებულ ჩანართზე მიდის"
@@ -12644,6 +12639,10 @@ msgstr "RustConn"
 #: rustconn/assets/io.github.totoshko88.RustConn.desktop:15
 msgid "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connection;terminal;remote;kubernetes;k8s;serial;sftp;"
 msgstr "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connection;terminal;remote;kubernetes;k8s;serial;sftp;"
+
+#~ msgid "Group broadcast enabled — keystrokes mirrored to all group tabs"
+#~ msgstr ""
+#~ "ჯგუფური მაუწყებლობა ჩართულია — კლავიშები აისახება ჯგუფის ყველა ჩანართზე"
 
 #~ msgid "Connecting via IronRDP…"
 #~ msgstr "დაკავშირება IronRDP-ით…"

@@ -1075,6 +1075,18 @@ impl MainWindow {
                     None => active,
                 }
             };
+            // Cheap early-out on a live pane so the shortcut does no work and
+            // logs nothing when pressed by accident. This is an optimisation,
+            // not the safety net: `prepare_for_reconnect` refuses a live session
+            // regardless of how it is reached (issue #328), so the invariant
+            // does not depend on this check being here.
+            if !notebook_for_reconnect.is_session_disconnected(target) {
+                tracing::debug!(
+                    session = %target,
+                    "reconnect-pane: session is live, ignoring"
+                );
+                return;
+            }
             let Some(connection_id) = notebook_for_reconnect
                 .get_session_info(target)
                 .map(|i| i.connection_id)

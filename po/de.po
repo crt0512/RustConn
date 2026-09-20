@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rustconn 0.12.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-19 16:58+0300\n"
+"POT-Creation-Date: 2026-09-20 14:13+0300\n"
 "PO-Revision-Date: 2026-04-25 10:46+0000\n"
 "Last-Translator: RustConn Team\n"
 "Language-Team: German\n"
@@ -164,7 +164,7 @@ msgstr "{} — RustConn"
 #: rustconn/src/embedded_rdp/mod.rs:2037
 #: rustconn/src/embedded_rdp/polling_handlers.rs:69
 #: rustconn/src/embedded_vnc/ui.rs:142
-#: rustconn/src/terminal/session_lifecycle.rs:337
+#: rustconn/src/terminal/session_lifecycle.rs:352
 msgid "Session disconnected"
 msgstr "Sitzung getrennt"
 
@@ -9727,14 +9727,14 @@ msgstr "Dateien aus Remote-Zwischenablage speichern"
 
 #: rustconn/src/embedded_rdp/mod.rs:764 rustconn/src/embedded_vnc/ui.rs:145
 #: rustconn/src/split_view/adapter.rs:1432 rustconn/src/terminal/mod.rs:1323
-#: rustconn/src/terminal/session_lifecycle.rs:350
+#: rustconn/src/terminal/session_lifecycle.rs:365
 #: rustconn/src/terminal/tab_menu.rs:826
 msgid "Reconnect"
 msgstr "Neu verbinden"
 
 #: rustconn/src/embedded_rdp/mod.rs:766 rustconn/src/embedded_vnc/ui.rs:147
 #: rustconn/src/terminal/mod.rs:1325
-#: rustconn/src/terminal/session_lifecycle.rs:352
+#: rustconn/src/terminal/session_lifecycle.rs:367
 msgid "Reconnect to this session"
 msgstr "Erneut mit dieser Sitzung verbinden"
 
@@ -10751,17 +10751,17 @@ msgstr "Wiedergabe: {}"
 msgid "●REC"
 msgstr "●REC"
 
-#: rustconn/src/terminal/session_lifecycle.rs:127
+#: rustconn/src/terminal/session_lifecycle.rs:142
 msgid "Reconnected at {}"
 msgstr "Neu verbunden um {}"
 
-#: rustconn/src/terminal/session_lifecycle.rs:344
-#: rustconn/src/terminal/session_lifecycle.rs:399
+#: rustconn/src/terminal/session_lifecycle.rs:359
+#: rustconn/src/terminal/session_lifecycle.rs:414
 msgid "Auto-reconnecting…"
 msgstr "Automatische Wiederverbindung…"
 
-#: rustconn/src/terminal/session_lifecycle.rs:439
-#: rustconn/src/terminal/session_lifecycle.rs:449
+#: rustconn/src/terminal/session_lifecycle.rs:454
+#: rustconn/src/terminal/session_lifecycle.rs:464
 msgid "Auto-reconnecting (attempt {}/{})"
 msgstr "Automatisch neu verbinden (Versuch {}/{})"
 
@@ -11818,12 +11818,7 @@ msgstr "Broadcast aktivieren"
 msgid "Group broadcast active — keystrokes mirrored to {} sessions"
 msgstr "Gruppen-Broadcast aktiv — Tastenanschläge an {} Sitzungen gespiegelt"
 
-#: rustconn/src/window/group_broadcast.rs:427
-msgid "Group broadcast enabled — keystrokes mirrored to all group tabs"
-msgstr ""
-"Gruppen-Broadcast aktiviert — Tastenanschläge an alle Gruppen-Tabs gespiegelt"
-
-#: rustconn/src/window/group_broadcast.rs:433
+#: rustconn/src/window/group_broadcast.rs:437
 msgid "Group broadcast disabled — keystrokes go to the focused tab only"
 msgstr ""
 "Gruppen-Broadcast deaktiviert — Tastenanschläge gehen nur an den "
@@ -12722,6 +12717,11 @@ msgstr "RustConn"
 #: rustconn/assets/io.github.totoshko88.RustConn.desktop:15
 msgid "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;connection;terminal;remote;kubernetes;k8s;serial;sftp;"
 msgstr "ssh;rdp;vnc;spice;mosh;telnet;zerotrust;verbindung;terminal;remote;kubernetes;k8s;seriell;sftp;"
+
+#~ msgid "Group broadcast enabled — keystrokes mirrored to all group tabs"
+#~ msgstr ""
+#~ "Gruppen-Broadcast aktiviert — Tastenanschläge an alle Gruppen-Tabs "
+#~ "gespiegelt"
 
 #~ msgid "Connecting via IronRDP…"
 #~ msgstr "Verbinde über IronRDP…"

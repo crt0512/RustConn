@@ -43,6 +43,18 @@ specific.
 
 ## Commands
 
+The mechanical Definition of Done is one script — prefer it over reassembling
+the individual commands, and never over an inline `sh -c` cargo chain (that
+trips on `${PIPESTATUS}` under `/bin/sh` and lets a cache-hit clippy pass):
+
+```bash
+scripts/verify.sh --tests   # fmt + machete + clippy -D warnings + tests + i18n/boundary gates
+                            # (bash, real clippy re-check, log at target/verify.log; timeout=900000)
+scripts/verify.sh --quick   # fast gates only — .md / .po-only work
+```
+
+The individual commands, when one is needed in isolation:
+
 ```bash
 cargo fmt --all                                   # format
 cargo clippy --all-targets                        # lint — must be 0 warnings
