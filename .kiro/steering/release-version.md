@@ -63,11 +63,13 @@ Then perform ALL of the following steps:
 
 7. **Regenerate Cargo.lock** — run `cargo generate-lockfile`
 
-8. **Regenerate cargo-sources.json** — run:
-   ```
-   python3 packaging/flatpak/flatpak-cargo-generator.py Cargo.lock -o packaging/flatpak/cargo-sources.json
-   cp packaging/flatpak/cargo-sources.json packaging/flathub/cargo-sources.json
-   ```
+8. **Regenerate cargo-sources.json** — run `scripts/sync-cargo-sources.sh`.
+   It regenerates the Flatpak manifest from `Cargo.lock` and copies it to
+   Flathub, so both stay in step (the drift `release.sh` section 11b fails on).
+   Do this right after step 7's lockfile regeneration — a dependency bump
+   without it leaves both manifests stale and the first `release.sh --dry-run`
+   fails on exactly that. `scripts/sync-cargo-sources.sh --check` verifies
+   without writing.
 
 9. **Verify consistency** — grep for the OLD version across the repo (excluding Cargo.lock, target/, .git/) and report any remaining references that are NOT historical changelog entries.
 
