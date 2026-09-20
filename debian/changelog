@@ -1,3 +1,21 @@
+rustconn (0.22.2-1) unstable; urgency=medium
+
+  * Version bump to 0.22.2
+  * Fixed: reconnecting a split-screen guest pane dropped it into a new tab
+    (issue #328); prepare_for_reconnect now recognises a session living in a
+    split pane, so the in-place reconnect reuses the pane's own widget and the
+    session stays where it was with its scrollback intact.
+  * Fixed: the Reconnect Session shortcut (default Ctrl+Shift+Y) could reset a
+    live pane (issue #328); it now acts only on a disconnected session and is a
+    silent no-op on a live pane.
+  * Changed: group broadcast no longer shows a toast when enabled; the
+    persistent banner alone announces the active state (GNOME HIG). Disabling
+    still toasts, and split-view broadcast is unchanged.
+  * Dependencies: gtk4/gdk4/gsk4 0.11.4->0.11.5, gio/glib 0.22.9->0.22.10,
+    rand 0.10.2->0.10.3.
+
+ -- Anton Isaiev <totoshko88@gmail.com>  Sun, 20 Sep 2026 15:03:35 +0300
+
 rustconn (0.22.1-1) unstable; urgency=medium
 
   * Version bump to 0.22.1

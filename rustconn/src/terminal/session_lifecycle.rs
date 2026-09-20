@@ -29,11 +29,26 @@ impl TerminalNotebook {
     /// in its detached window — and `false` if the session no longer exists
     /// (closed by the user).
     pub fn prepare_for_reconnect(&self, session_id: Uuid) -> bool {
-        // Check that the session still has a place to reconnect into: a tab, or
-        // a detached window (issue #236) — the latter keeps the reconnected
-        // session in the same window instead of falling back to close+create.
+        // Check that the session still has a place to reconnect into: a tab, a
+        // detached window (issue #236), or a split pane (issue #328). All three
+        // keep the reconnected session where it is instead of falling back to
+        // close+create, which would drop a split guest into a fresh tab and tear
+        // the split layout apart.
+        //
+        // A split guest owns no `TabPage` (parking removed its entry from
+        // `self.sessions`) and is not detached, but its VTE widget still lives
+        // inside the owner's pane and is still keyed by `session_id` in
+        // `self.terminals` — so the in-place spawn below reuses it and the
+        // session stays in its pane. The split-pane box provider, wired for
+        // #328, resolves `Some` exactly for a session shown in some bridge's
+        // pane, so it is the cheapest "has a pane home" predicate.
         let page = self.sessions.borrow().get(&session_id).cloned();
-        if page.is_none() && !self.is_detached(session_id) {
+        let in_split_pane = self
+            .split_pane_box_provider
+            .borrow()
+            .as_ref()
+            .is_some_and(|provider| provider(session_id).is_some());
+        if page.is_none() && !self.is_detached(session_id) && !in_split_pane {
             return false;
         }
 

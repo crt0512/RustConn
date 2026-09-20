@@ -5,6 +5,22 @@ All notable changes to RustConn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.2] - 2026-09-20
+
+### Fixed
+
+- **Reconnecting a split-screen guest pane dropped it into a new tab (issue #328)** — after the split-view reconnect affordances landed, reconnecting a *guest* pane (any pane that is not the one owning the tab) still opened the reconnected session as a fresh tab and tore the split apart, instead of reconnecting in place. The in-place reconnect bailed out because `prepare_for_reconnect` recognised only two homes for a session — a tab page or a detached window — and a split guest has neither: parking it into the split removed its tab-page entry, and it is not detached, so the guard returned early and the reconnect fell through to the close-and-recreate fallback, which only knows how to restore a tab position or a detached window. It now also recognises a session that lives in a split pane (via the split-pane container provider already wired for #328). Because a guest's VTE widget never leaves the owner's pane and is still keyed by session id, the in-place spawn reuses it and the session stays exactly where it was, with its scrollback intact.
+- **The Reconnect Session shortcut could reset a live pane (issue #328)** — the configurable "Reconnect Session" key (default Ctrl+Shift+Y) reconnected the focused pane unconditionally, so pressing it on a still-connected session reset its terminal and dropped the connection. It now only acts on a session that has actually disconnected and is a silent no-op on a live pane, matching the MobaXterm-style "reconnect when a session is disconnected" behaviour the issue asked for.
+
+### Changed
+
+- **Group broadcast no longer shows a toast when enabled** — enabling group broadcast raised both a transient toast and the persistent banner with near-identical text, so the same state was announced twice and the extra toast added noise. Enabling now shows only the banner, which is the correct surface for a persistent state that reaches tabs the user cannot see (GNOME HIG). Disabling still shows a toast, because the banner disappears and a brief confirmation is the only feedback left. Split-view broadcast is unchanged: its panes are all on screen, so it keeps its toast and needs no banner.
+
+### Dependencies
+
+- **Updated**: gtk4/gdk4/gsk4 0.11.4→0.11.5, gio/glib 0.22.9→0.22.10, rand 0.10.2→0.10.3.
+- **Unchanged, checked**: `./scripts/check-cli-versions.sh` — every CLI download endpoint reachable and current (TigerVNC pinned at 1.16.2; the auto-latest tools resolve at runtime). Flatpak GNOME runtime 50 and bundled sources unchanged from 0.22.1.
+
 ## [0.22.1] - 2026-09-19
 
 ### Added

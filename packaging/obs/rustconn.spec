@@ -6,7 +6,7 @@
 #
 
 Name:           rustconn
-Version:        0.22.1
+Version:        0.22.2
 Release:        0
 # rpmlint caps Summary at 79 characters (summary-too-long, badness 200); the
 # protocol list belongs in %description, which has room for all of it. Kept in
@@ -387,6 +387,13 @@ done
 %{_datadir}/icons/hicolor/*/apps/io.github.totoshko88.RustConn.*
 
 %changelog
+* Sun Sep 20 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.2-0
+- Version bump to 0.22.2
+- Fixed: reconnecting a split-screen guest pane dropped it into a new tab (issue #328); the in-place reconnect now recognises a session living in a split pane and reuses the pane's own widget, so the session stays where it was with its scrollback intact
+- Fixed: the Reconnect Session shortcut (default Ctrl+Shift+Y) could reset a live pane (issue #328); it now acts only on a disconnected session and is a silent no-op on a live pane
+- Changed: group broadcast no longer shows a toast when enabled; the persistent banner alone announces the active state (GNOME HIG), disabling still toasts, and split-view broadcast is unchanged
+- Dependencies: gtk4/gdk4/gsk4 0.11.4->0.11.5, gio/glib 0.22.9->0.22.10, rand 0.10.2->0.10.3
+
 * Sat Sep 19 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.1-0
 - Version bump to 0.22.1
 - Added: broadcast keystrokes to a group of tabs (issue #329); explicit per-session opt-in, mirrors typing to the other members, a non-member tab types only into itself, toggles with Ctrl+Shift+A; terminal sessions only, independent of the split-view broadcast
