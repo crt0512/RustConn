@@ -932,8 +932,7 @@ else
         else
             rm -f "$TMP_SOURCES"
             fail "$SOURCES is stale — regenerate it, commit, and re-run:
-    python3 $FCG Cargo.lock -o $SOURCES
-    cp $SOURCES packaging/flathub/cargo-sources.json"
+    scripts/sync-cargo-sources.sh"
         fi
     else
         skipped "cargo-sources.json check" "flatpak-cargo-generator failed, most likely no network"
