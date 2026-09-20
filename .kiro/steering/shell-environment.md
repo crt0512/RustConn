@@ -126,6 +126,12 @@ the form without it.
 
 ## Cargo traps in this workspace
 
+`scripts/verify.sh` exists precisely to keep you out of the two traps below: it
+forces a real clippy re-check and never passes `--all-features`. Prefer it (see
+`core-rules.md` Quick Commands) over a hand-assembled cargo chain — an inline
+`sh -c` gate also trips on `${PIPESTATUS}` under `/bin/sh`, which the script,
+being `#!/usr/bin/env bash`, does not.
+
 - **A cached clippy run hides warnings.** With nothing changed it prints
   `Finished … in 0.2s` and reports zero warnings *even when warnings exist*. Force
   a real re-check (`touch` the `.rs` files, or `cargo clean -p <crate>`) and

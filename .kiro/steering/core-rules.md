@@ -153,6 +153,23 @@ maintainer had never read. Undoing it meant deleting a published release. The
 
 ## Quick Commands
 
+The whole mechanical Definition of Done is **one script** — reach for it before
+assembling a cargo chain by hand:
+
+```
+scripts/verify.sh --tests          # fmt + machete + clippy -D warnings + tests + i18n/boundary gates
+scripts/verify.sh                  # same, without the workspace test run
+scripts/verify.sh --quick          # fast gates only — right for .md / .po-only work
+```
+
+It is `#!/usr/bin/env bash` (not `sh`), forces a real clippy re-check, strips
+ANSI before scanning, and writes everything to `target/verify.log`. Do **not**
+hand-roll an inline `sh -c 'cargo … ; cargo …'` gate: under `/bin/sh` that trips
+on `${PIPESTATUS[...]}` and a cache-hit clippy passes silently — both traps
+`verify.sh` already handles. Pass `timeout=900000` when running it with `--tests`.
+
+The individual commands, when you need one in isolation:
+
 ```
 cargo fmt --all                    # Format
 cargo clippy --all-targets         # Lint (0 warnings; never --all-features)
@@ -161,6 +178,6 @@ typos                              # Spell check (config: typos.toml)
 bash po/update-pot.sh              # Regenerate POT after new i18n strings
 ```
 
-Delegate fmt+clippy+tests to the `rust-quality-check` sub-agent rather than
-running them in the main context. For quick single-file validation →
-`getDiagnostics`.
+Delegate the gate to the `rust-quality-check` sub-agent ("Run scripts/verify.sh
+--tests") rather than running it in the main context. For quick single-file
+validation → `getDiagnostics`.
