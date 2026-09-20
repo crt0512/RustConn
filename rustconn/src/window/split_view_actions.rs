@@ -1075,12 +1075,11 @@ impl MainWindow {
                     None => active,
                 }
             };
-            // Only reconnect a session that has actually disconnected. A live
-            // session's reconnect would reset its VTE and kill the connection —
-            // exactly what an accidental keypress must not do (issue #328 asks
-            // for a MobaXterm-style key that fires "anytime a session is
-            // disconnected"). Silently no-op otherwise; the key is harmless to
-            // press on a live pane.
+            // Cheap early-out on a live pane so the shortcut does no work and
+            // logs nothing when pressed by accident. This is an optimisation,
+            // not the safety net: `prepare_for_reconnect` refuses a live session
+            // regardless of how it is reached (issue #328), so the invariant
+            // does not depend on this check being here.
             if !notebook_for_reconnect.is_session_disconnected(target) {
                 tracing::debug!(
                     session = %target,

@@ -6,6 +6,19 @@
 
 use super::*;
 
+/// Decides whether a disconnected session still has a widget home to reconnect
+/// into, given the three placements it can occupy one at a time.
+///
+/// Pure and GTK-free so the branching is unit-testable; the live signals are
+/// gathered by [`TerminalNotebook::has_reconnect_home`]. A session is
+/// reconnectable in place when it owns a tab page, lives in a detached window
+/// (issue #236), or occupies a split pane (issue #328) — the last being the one
+/// that has no `TabPage` of its own.
+#[must_use]
+fn session_has_home(has_tab: bool, is_detached: bool, in_split_pane: bool) -> bool {
+    has_tab || is_detached || in_split_pane
+}
+
 impl TerminalNotebook {
     // ========================================================================
     // Reconnect Preparation
@@ -29,28 +42,30 @@ impl TerminalNotebook {
     /// in its detached window — and `false` if the session no longer exists
     /// (closed by the user).
     pub fn prepare_for_reconnect(&self, session_id: Uuid) -> bool {
+        // Refuse to reconnect a session that is still live. Resetting a live
+        // VTE (below) would wipe its screen and the in-place spawn would launch
+        // a second process over a working connection — exactly what an
+        // accidental Reconnect keypress must never do (issue #328). Every UI
+        // entry point already fires only for a disconnected session, but this
+        // is the shared invariant: a future caller cannot bypass it, and it is
+        // checked before the `disconnected_sessions` removal further down.
+        if !self.is_session_disconnected(session_id) {
+            tracing::debug!(
+                %session_id,
+                "prepare_for_reconnect: session is live, refusing to reset it"
+            );
+            return false;
+        }
+
         // Check that the session still has a place to reconnect into: a tab, a
         // detached window (issue #236), or a split pane (issue #328). All three
         // keep the reconnected session where it is instead of falling back to
         // close+create, which would drop a split guest into a fresh tab and tear
         // the split layout apart.
-        //
-        // A split guest owns no `TabPage` (parking removed its entry from
-        // `self.sessions`) and is not detached, but its VTE widget still lives
-        // inside the owner's pane and is still keyed by `session_id` in
-        // `self.terminals` — so the in-place spawn below reuses it and the
-        // session stays in its pane. The split-pane box provider, wired for
-        // #328, resolves `Some` exactly for a session shown in some bridge's
-        // pane, so it is the cheapest "has a pane home" predicate.
-        let page = self.sessions.borrow().get(&session_id).cloned();
-        let in_split_pane = self
-            .split_pane_box_provider
-            .borrow()
-            .as_ref()
-            .is_some_and(|provider| provider(session_id).is_some());
-        if page.is_none() && !self.is_detached(session_id) && !in_split_pane {
+        if !self.has_reconnect_home(session_id) {
             return false;
         }
+        let page = self.sessions.borrow().get(&session_id).cloned();
 
         // Cancel any background polling (auto-reconnect)
         self.cancel_poll(session_id);
@@ -108,6 +123,29 @@ impl TerminalNotebook {
         self.vte_child_pids.borrow_mut().remove(&session_id);
 
         true
+    }
+
+    /// Whether a session still has somewhere to reconnect into.
+    ///
+    /// A reconnect reuses the session's existing VTE widget in place, so it
+    /// needs a live home for that widget: its own tab page, a detached window
+    /// (issue #236), or a pane of some split layout (issue #328). A split guest
+    /// owns no `TabPage` — parking removed its `self.sessions` entry — and is
+    /// not detached, but its widget still lives inside the owner's pane and is
+    /// still keyed by `session_id` in `self.terminals`, so the split-pane box
+    /// provider resolving `Some` is the cheapest "has a pane home" signal.
+    ///
+    /// The decision itself is [`session_has_home`], kept pure and GTK-free so it
+    /// can be unit-tested; this method only gathers the three live signals.
+    #[must_use]
+    fn has_reconnect_home(&self, session_id: Uuid) -> bool {
+        let has_tab = self.sessions.borrow().contains_key(&session_id);
+        let in_split_pane = self
+            .split_pane_box_provider
+            .borrow()
+            .as_ref()
+            .is_some_and(|provider| provider(session_id).is_some());
+        session_has_home(has_tab, self.is_detached(session_id), in_split_pane)
     }
 
     /// Resets a terminal for reconnect while keeping its scrollback (issue #253).
@@ -563,5 +601,37 @@ impl TerminalNotebook {
             .filter(|s| !disconnected.contains(&s.id))
             .cloned()
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::session_has_home;
+
+    // A session with its own tab page is reconnectable — the ordinary case.
+    #[test]
+    fn a_tabbed_session_has_a_home() {
+        assert!(session_has_home(true, false, false));
+    }
+
+    // A detached session has no tab page but its own window is a valid home
+    // (issue #236).
+    #[test]
+    fn a_detached_session_has_a_home() {
+        assert!(session_has_home(false, true, false));
+    }
+
+    // A split guest owns no tab page and is not detached, but its widget lives
+    // in a pane — the regression that sent it to a fresh tab (issue #328).
+    #[test]
+    fn a_split_guest_has_a_home() {
+        assert!(session_has_home(false, false, true));
+    }
+
+    // No placement at all means the session was closed: nothing to reconnect
+    // into, so the caller must fall back to close+create.
+    #[test]
+    fn a_session_with_no_placement_has_no_home() {
+        assert!(!session_has_home(false, false, false));
     }
 }
