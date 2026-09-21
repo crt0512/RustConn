@@ -17,6 +17,32 @@ use super::*;
 /// [#247](https://github.com/totoshko88/RustConn/issues/247)).
 const PARTIAL_LINE_GRACE: std::time::Duration = std::time::Duration::from_millis(500);
 
+/// Longest run of bytes the transcript writer holds without a newline before it
+/// flushes them as one partial record.
+///
+/// Without this cap a session that emits a megabyte-scale line with no `\n`
+/// (broken UTF-8 dumps, a `cat` of a binary, a runaway `tmux` capture) grows
+/// [`TranscriptWriter::pending`] without bound, and every 8 KB PTY chunk then
+/// rescans the whole buffer for a newline and for a prompt word — the work is
+/// quadratic in the line length and runs on the GTK main thread, which is the
+/// livelock and the multi-gigabyte blow-up of issue
+/// [#338](https://github.com/totoshko88/RustConn/issues/338). Flushing at a
+/// bound keeps the per-chunk work bounded and the transcript still complete: an
+/// over-long line lands in the log split across a few records instead of one.
+///
+/// 256 KiB is far above any real prompt or log line yet small enough that the
+/// per-chunk rescan stays negligible.
+const MAX_PENDING_LINE_BYTES: usize = 256 * 1024;
+
+/// Bytes at the tail of a still-growing line the prompt check looks at.
+///
+/// A password prompt is short and sits at the very end of the pending bytes, so
+/// scanning the whole buffer for it on every chunk is wasted work — and on a
+/// huge un-terminated line it is one half of the issue #338 quadratic. A prompt
+/// cannot be longer than this window, so the tail carries the same answer at a
+/// fixed cost. Larger than any prompt, small enough to scan on every chunk.
+const PROMPT_SCAN_TAIL_BYTES: usize = 4096;
+
 /// Layers a per-connection activity-monitor override over the global defaults.
 ///
 /// `connection` is `None` for a session with nothing saved behind it — the local
@@ -102,17 +128,39 @@ impl TranscriptWriter {
 
     /// Accepts a chunk of PTY output and writes every complete line in it.
     fn accept(&mut self, chunk: &[u8]) {
+        // The newline search only needs to look at the bytes just added: every
+        // earlier byte was already scanned by a previous `accept` and found to
+        // carry no `\n` (a `\n` would have drained everything up to it). Scanning
+        // only the chunk keeps this O(chunk), not O(whole growing buffer) — the
+        // rescan that made a newline-free megabyte line quadratic (issue #338).
+        let search_from = self.pending.len();
         self.pending.extend_from_slice(chunk);
 
         // `\n` is the only separator worth splitting on. A bare `\r` returns the
         // cursor to the start of the same line — progress bars and spinners use
         // it — and treating it as a line break would turn one download into
         // hundreds of log lines.
-        let last_break = self.pending.iter().rposition(|byte| *byte == b'\n');
+        let last_break = self.pending[search_from..]
+            .iter()
+            .rposition(|byte| *byte == b'\n')
+            .map(|offset| search_from + offset);
         if let Some(index) = last_break {
             let complete = Zeroizing::new(self.pending[..=index].to_vec());
             self.pending = Zeroizing::new(self.pending[index + 1..].to_vec());
             self.write(&complete);
+        }
+
+        // A line with no newline for a very long time — a binary dump, a
+        // `cat` of a huge file, a runaway capture — must not accumulate without
+        // bound: doing so grows `pending` until the per-chunk work and the
+        // memory both explode on the GTK main thread (issue #338). Flush it as a
+        // partial record so the transcript stays complete, split across a few
+        // records rather than held as one unbounded line.
+        if self.pending.len() >= MAX_PENDING_LINE_BYTES {
+            let partial = std::mem::replace(&mut self.pending, Zeroizing::new(Vec::new()));
+            self.pending_since = None;
+            self.write(&partial);
+            return;
         }
 
         // A password prompt (`Password: `) carries no newline, so it would
@@ -122,9 +170,14 @@ impl TranscriptWriter {
         // then, the answer is not recognised as the secret and is logged in the
         // clear (issue #321). Flush a pending prompt through immediately so the
         // logger is armed before the keystrokes arrive.
+        //
+        // A prompt sits at the very end of the pending bytes and is short, so
+        // only the tail is scanned: on a long line, scanning the whole buffer
+        // here on every chunk was the other half of the #338 quadratic.
         if !self.pending.is_empty() {
+            let tail_start = self.pending.len().saturating_sub(PROMPT_SCAN_TAIL_BYTES);
             let plain = Zeroizing::new(rustconn_core::session::strip_ansi_escapes(
-                &String::from_utf8_lossy(&self.pending),
+                &String::from_utf8_lossy(&self.pending[tail_start..]),
             ));
             if rustconn_core::session::contains_sensitive_prompt(&plain) {
                 let prompt = std::mem::replace(&mut self.pending, Zeroizing::new(Vec::new()));
@@ -1337,7 +1390,7 @@ fn log_event(
 mod transcript_writer_tests {
     use rustconn_core::session::{LogConfig, LogContext, SessionLogger};
 
-    use super::{PARTIAL_LINE_GRACE, TranscriptWriter};
+    use super::{MAX_PENDING_LINE_BYTES, PARTIAL_LINE_GRACE, TranscriptWriter};
 
     /// Builds a writer over a real log file and returns both.
     ///
@@ -1546,6 +1599,80 @@ mod transcript_writer_tests {
         assert!(
             written.contains("[REDACTED]"),
             "the line must be marked, not silently dropped: {written}"
+        );
+    }
+
+    // Regression for issue #338: a session that emits a very long line with no
+    // newline used to grow `pending` without bound and rescan the whole buffer
+    // on every 8 KB chunk, spinning the GTK main thread at 100% CPU and
+    // exhausting memory. The writer must instead flush the run at a byte bound.
+    #[test]
+    fn a_newline_free_flood_is_flushed_at_the_byte_bound() {
+        let (mut writer, _dir, path) = writer();
+
+        // Feed well past the cap in relay-sized 8 KB chunks, never a newline —
+        // the shape of a binary dump or a runaway capture. This must complete
+        // quickly and write something, rather than buffering it all.
+        let chunk = vec![b'x'; 8192];
+        let chunks = (MAX_PENDING_LINE_BYTES / chunk.len()) + 4;
+        for _ in 0..chunks {
+            writer.accept(&chunk);
+        }
+
+        // Whatever is still pending is under the cap: the flush happened.
+        assert!(
+            writer.pending.len() < MAX_PENDING_LINE_BYTES,
+            "an un-terminated line must not accumulate past the cap: {} bytes held",
+            writer.pending.len()
+        );
+        assert!(
+            !read(&path).is_empty(),
+            "the flood must reach the log as partial records, not sit unbounded in memory"
+        );
+    }
+
+    #[test]
+    fn a_bounded_flush_loses_no_bytes() {
+        let (mut writer, _dir, path) = writer();
+
+        // Two caps' worth of 'x' with no newline, then a newline to drain the
+        // tail. Every byte must survive, split across records but complete.
+        let total = MAX_PENDING_LINE_BYTES * 2 + 1234;
+        let chunk = vec![b'x'; 8192];
+        let mut sent = 0usize;
+        while sent < total {
+            let take = chunk.len().min(total - sent);
+            writer.accept(&chunk[..take]);
+            sent += take;
+        }
+        writer.accept(b"\n");
+
+        let written = read(&path);
+        let count = written.bytes().filter(|b| *b == b'x').count();
+        assert_eq!(count, total, "every byte of the long line must be logged");
+    }
+
+    #[test]
+    fn a_prompt_at_the_tail_of_a_long_line_still_arms_redaction() {
+        // The prompt check scans only the tail now. A prompt that ends a long
+        // line must still be recognised and flushed at once, so the logger is
+        // armed before the answer arrives on the INPUT channel (issue #321) —
+        // the tail window is where the prompt lives.
+        let (mut writer, _dir, _path) = writer();
+
+        // A long newline-free preamble, then a prompt right at the end, under
+        // the cap so no forced byte-bound flush intervenes.
+        let filler = vec![b'.'; MAX_PENDING_LINE_BYTES / 2];
+        writer.accept(&filler);
+        writer.accept(b"password: ");
+
+        // Recognising the prompt drains `pending` immediately (it is written and
+        // the buffer cleared). If the tail scan had missed it, the preamble plus
+        // prompt would still be held, waiting out PARTIAL_LINE_GRACE.
+        assert!(
+            writer.pending.is_empty(),
+            "a prompt ending a long line must be flushed at once so the logger arms: {} bytes still held",
+            writer.pending.len()
         );
     }
 }

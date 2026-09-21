@@ -493,6 +493,35 @@ mod tests {
         assert_eq!(name, "Groups/Production/Web");
     }
 
+    // Regression for issue #327, the Inherit half: a host with
+    // PasswordSource::Inherit resolves the group password through the same
+    // `get_password_from_kdbx_with_key`, which prepends `RustConn/` itself. The
+    // Inherit branch used to feed it build_group_entry_path (already
+    // root-prefixed), producing a doubled `RustConn/RustConn/Groups/…` lookup
+    // that never matched — so the host fell back to a password prompt. Feeding
+    // build_group_entry_name (no root) reproduces exactly the path save wrote.
+    #[test]
+    fn inherit_and_save_agree_on_the_group_entry() {
+        let root = ConnectionGroup::new("Production".to_string());
+        let child = ConnectionGroup::with_parent("Web".to_string(), root.id);
+        let groups = vec![root, child.clone()];
+
+        // What the Inherit branch now passes as the entry name, and what the
+        // read helper turns it into by prepending the root.
+        let inherit_entry = KeePassHierarchy::build_group_entry_name(&child, &groups);
+        let read_lookup = format!("{KEEPASS_ROOT_GROUP}{PATH_SEPARATOR}{inherit_entry}");
+
+        // The path save actually wrote.
+        let save_path = KeePassHierarchy::build_group_entry_path(&child, &groups);
+
+        assert_eq!(read_lookup, save_path);
+        assert_eq!(read_lookup, "RustConn/Groups/Production/Web");
+        // The old bug: passing the full path made the read helper look here.
+        let doubled = format!("{KEEPASS_ROOT_GROUP}{PATH_SEPARATOR}{save_path}");
+        assert_eq!(doubled, "RustConn/RustConn/Groups/Production/Web");
+        assert_ne!(doubled, save_path);
+    }
+
     #[test]
     fn build_group_entry_name_prepended_with_root_reproduces_saved_path() {
         // What save_password_to_kdbx / candidate_entry_paths do: prepend the

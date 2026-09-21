@@ -6,7 +6,7 @@
 #
 
 Name:           rustconn
-Version:        0.22.2
+Version:        0.22.3
 Release:        0
 # rpmlint caps Summary at 79 characters (summary-too-long, badness 200); the
 # protocol list belongs in %description, which has room for all of it. Kept in
@@ -48,8 +48,8 @@ Source2:        rust-toolchain.tar.zst
 
 # Rust 1.95+ required (MSRV)
 # openSUSE: use devel:languages:rust repo for Rust 1.95+
-# Fedora 42+: system Rust 1.93 is sufficient
-# Fedora <42/RHEL: use rustup fallback since system Rust < 1.95
+# Fedora: system Rust may lag behind MSRV, so a bundled toolchain
+#         (rust-toolchain.tar.zst) is used — see the %if 0%{?fedora} block below
 %if 0%{?suse_version}
 %if !0%{?bundled_rust}
 BuildRequires:  cargo >= 1.95
@@ -281,8 +281,10 @@ if pkg-config --atleast-version=0.78 vte-2.91-gtk4 2>/dev/null; then
     FEATURES="$FEATURES,vte-0-78"
 fi
 
-# WebKitGTK 6.0 is absent on Leap 16.0 and Fedora 42, which carry only the
-# GTK3-flavoured webkit2gtk 4.1.
+# WebKitGTK 6.0 is absent on Leap 16.0, which carries only the GTK3-flavoured
+# webkit2gtk 4.1 (Leap 16.0 has no official webkitgtk package at all). The
+# pkg-config guard below keeps this a build-time detection rather than a
+# distro list, so any target that gains webkitgtk-6.0 picks it up on rebuild.
 if pkg-config --exists webkitgtk-6.0 2>/dev/null; then
     FEATURES="$FEATURES,web-embedded"
 fi
@@ -387,6 +389,10 @@ done
 %{_datadir}/icons/hicolor/*/apps/io.github.totoshko88.RustConn.*
 
 %changelog
+* Tue Sep 22 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.3-0
+- Version bump to 0.22.3
+- Fixed: the window could livelock at 100% CPU on a session emitting a very long line with no newline (issue #338); the transcript writer now scans only the new bytes for a newline, looks for a prompt only in the buffer tail, and flushes an un-terminated run as a partial record at a byte cap, so the per-chunk work is bounded and the transcript stays complete
+- Fixed: KeePass password inheritance still prompted on hosts set to "inherit" (issue #327); the inherit resolver now uses the same prefix-free entry name as save and direct load, so all three agree on where the group password lives
 * Sun Sep 20 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.2-0
 - Version bump to 0.22.2
 - Fixed: reconnecting a split-screen guest pane dropped it into a new tab (issue #328); the in-place reconnect now recognises a session living in a split pane and reuses the pane's own widget, so the session stays where it was with its scrollback intact

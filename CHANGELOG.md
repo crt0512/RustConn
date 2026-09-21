@@ -5,6 +5,23 @@ All notable changes to RustConn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.3] - 2026-09-22
+
+### Fixed
+
+- **The window could livelock at 100% CPU on a session emitting very long lines (issue #338)** — a session whose output contained a line that ran for megabytes without a newline (a binary dump, a `cat` of a large file, a runaway `tmux` capture) could freeze the whole UI at full CPU on one core, and sometimes grow memory into the gigabytes until the process aborted. With output logging on, the transcript writer accumulated the un-terminated line in one growing buffer and, on every 8 KB chunk the PTY delivered, rescanned the *entire* buffer twice on the GTK main thread — once for a newline and once, far more expensively, for a password prompt (a full UTF-8 copy, an ANSI-strip regex pass and a lowercase scan of everything accumulated so far). That is quadratic in the line length, so a 2.7 MB line meant hundreds of gigabytes of scanning and the main loop never returned to redraw or to drain more output. The writer now only scans the newly arrived bytes for a newline, looks for a prompt only in the tail of the buffer, and flushes an un-terminated run to the log as a partial record once it passes a byte cap — the per-chunk work is bounded and the transcript stays complete, split across a few records instead of held as one unbounded line.
+- **KeePass password inheritance still prompted on hosts set to "inherit" (issue #327)** — 0.22.0 fixed loading a group password saved to a KeePass/KDBX vault, but a *host* whose password source is "inherit" still could not reach its group's password and fell back to a password prompt. The inherit resolver passed the group's full `RustConn/Groups/…` path to the KeePass reader, which prepends `RustConn/` itself, so it looked up a doubled `RustConn/RustConn/Groups/…` that never existed — the same root-prefix bug the 0.22.0 fix corrected for the direct group-load path but not for the inherit path. The inherit resolver now uses the same prefix-free entry name as save and direct load, so all three agree on where the group password lives. The non-KeePass backends (Bitwarden, 1Password, Passbolt, pass, libsecret/Keychain, and the encrypted files) were audited for the same class of save/load key mismatch and are correct: they key a group password by its bare UUID, save writes only to the selected backend (no silent fallback), and inherit reads from that same backend under the same key.
+
+### Documentation
+
+- **Corrected stale distro references in packaging comments** — Fedora 42 reached end of life on 2026-05-28, and OBS already builds for Fedora 43/44, but several build-file comments still named it as a current target. The libadwaita feature-flag comments in `rustconn/Cargo.toml` now cite the correct GNOME/Fedora versions (`adw-1-6` → GNOME 47+/Fedora 41+; `adw-1-7`/`adw-1-8` → Fedora 43+), the OBS `rustconn.spec` Rust-toolchain and WebKitGTK comments no longer reference the retired release, and the OBS README's "GTK4 version mismatch" list reads Fedora 43+. Comments only — the actual build targets and pkg-config version detection are unchanged, and historical changelog entries were left as written.
+
+### Dependencies
+
+- **Updated (CI/tooling)**: crate-ci/typos 1.50.1→1.50.2 (PR #332), dtolnay/rust-toolchain and taiki-e/install-action action pins (PRs #333, #334) — GitHub Actions only, no effect on the shipped application.
+- **Updated (macOS tray, behind `tray-macos`)**: tray-icon 0.24→0.25 (PR #336), muda 0.19→0.20 (PR #337). Not built into the Linux packages.
+- **Held back**: x509-cert 0.2→0.3 (PR #335) is not merged. The crate is a direct dependency only so the RDP TLS certificate type is nameable, and that type is produced by `ironrdp-tls`, which still pins x509-cert 0.2 — bumping our copy to 0.3 would make `ironrdp_tls::upgrade()` return a 0.2 `Certificate` where the verifier expects a 0.3 one. It can move once `ironrdp-tls` updates.
+
 ## [0.22.2] - 2026-09-20
 
 ### Fixed
