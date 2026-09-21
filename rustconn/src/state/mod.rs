@@ -1398,19 +1398,27 @@ impl AppState {
 
                 // Check if this group has Vault credentials configured
                 if group.password_source == Some(PasswordSource::Vault) {
-                    let group_path = KeePassHierarchy::build_group_entry_path(group, groups);
+                    // Use the entry NAME without the `RustConn/` root prefix:
+                    // get_password_from_kdbx_with_key prepends `RustConn/` itself
+                    // via candidate_entry_paths. Passing the full path from
+                    // build_group_entry_path here produced a doubled
+                    // `RustConn/RustConn/Groups/…` and the inherited group
+                    // password was never found — the host fell back to a
+                    // password prompt (issue #327, the Inherit half missed by
+                    // the 0.22.0 direct-load fix).
+                    let group_name = KeePassHierarchy::build_group_entry_name(group, groups);
 
                     tracing::debug!(
-                        "[resolve_credentials_blocking] Inherit: checking group '{}' at path '{}'",
+                        "[resolve_credentials_blocking] Inherit: checking group '{}' at entry '{}'",
                         group.name,
-                        group_path
+                        group_name
                     );
 
                     match KeePassStatus::get_password_from_kdbx_with_key(
                         kdbx_path,
                         db_password,
                         key_file,
-                        &group_path,
+                        &group_name,
                         None,
                     ) {
                         Ok(Some(password)) => {
