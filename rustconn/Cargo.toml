@@ -17,7 +17,7 @@ name = "rustconn"
 path = "src/main.rs"
 
 [dependencies]
-rustconn-core = { path = "../rustconn-core", version = "0.22.2", default-features = false }
+rustconn-core = { path = "../rustconn-core", version = "0.22.3", default-features = false }
 tokio = { workspace = true }
 # Event-driven tray message delivery to the GTK main loop (no polling)
 async-channel = { workspace = true }
@@ -75,12 +75,12 @@ shell-words = "1"
 nix = { version = "0.31", features = ["signal", "process"] }
 # PTY creation, sizing and controlling-terminal setup for every session's
 # child. Lives in its own crate because `unsafe` is forbidden here.
-rustconn-pty-sys = { path = "../rustconn-pty-sys", version = "0.22.2" }
+rustconn-pty-sys = { path = "../rustconn-pty-sys", version = "0.22.3" }
 # The startup `setlocale` call, guarded so it can only run from the startup
 # thread, before this program has spawned any thread of its own, and before the
 # window is sealed. Same reason for the separate crate: `setlocale` is `unsafe`
 # in gettext-rs 0.8 and `unsafe` is forbidden here.
-rustconn-locale-sys = { path = "../rustconn-locale-sys", version = "0.22.2" }
+rustconn-locale-sys = { path = "../rustconn-locale-sys", version = "0.22.3" }
 # The startup `GSK_RENDERER` and `LANGUAGE` writes, guarded the same way.
 # Neither GTK nor gettext offers an API for these, so the environment is the only
 # interface, and `std::env::set_var` is `unsafe` in edition 2024 while `unsafe`
@@ -88,14 +88,14 @@ rustconn-locale-sys = { path = "../rustconn-locale-sys", version = "0.22.2" }
 # guest-VM (#274) and Flatpak language (#158) paths all go through it, and an
 # unconditional dependency is what gets the guard compiled and its contract
 # tests run on every job rather than on the one macOS job alone.
-rustconn-env-sys = { path = "../rustconn-env-sys", version = "0.22.2" }
+rustconn-env-sys = { path = "../rustconn-env-sys", version = "0.22.3" }
 # The macOS Dock tile image, for launches LaunchServices cannot find an icon for
 # (a bare binary from a shell, or an .app whose CFBundleExecutable execs a binary
 # outside the bundle). `-[NSApplication setApplicationIconImage:]` is the only
 # interface that works there, GDK exposes no Dock API, and `unsafe` is forbidden
 # here. Unconditional for the same reason as the three above; the AppKit bindings
 # it needs are target-gated inside that crate, since they build nowhere else.
-rustconn-dock-sys = { path = "../rustconn-dock-sys", version = "0.22.2" }
+rustconn-dock-sys = { path = "../rustconn-dock-sys", version = "0.22.3" }
 # WebKitGTK 6.0 bindings for embedded web browser (Linux only)
 webkit6 = { version = "0.6", optional = true }
 
@@ -127,7 +127,7 @@ wayland-native = ["dep:gdk4-wayland"]
 # Embedded WebKitGTK 6.0 web browser for in-tab Web protocol connections (Linux only)
 web-embedded = ["dep:webkit6", "rustconn-core/web-embedded"]
 # Enable libadwaita 1.6+ widgets (AdwSpinner, CSS variables, accent colors)
-# Requires libadwaita >= 1.6 at build time (GNOME 50 Flatpak runtime or Fedora 44+).
+# Requires libadwaita >= 1.6 at build time (GNOME 47+ / Fedora 41+).
 # NOT in `default`, and NOT retirable in 0.21.0 — checked, because the
 # "retire it once no supported target is below 1.6" note below invites the
 # question every release. The binding constraint is **Ubuntu 24.04 LTS**, which
@@ -142,10 +142,10 @@ web-embedded = ["dep:webkit6", "rustconn-core/web-embedded"]
 # GtkSpinner; retire this feature once no supported target is below 1.6.
 adw-1-6 = ["libadwaita/v1_6"]
 # Enable libadwaita 1.7+ widgets (AdwWrapBox, AdwToggleGroup)
-# Requires libadwaita >= 1.7 at build time (GNOME 48+ / Fedora 42+)
+# Requires libadwaita >= 1.7 at build time (GNOME 48+ / Fedora 43+)
 adw-1-7 = ["adw-1-6", "libadwaita/v1_7"]
 # Enable libadwaita 1.8+ widgets (AdwShortcutsDialog, AdwShortcutLabel)
-# Requires libadwaita >= 1.8 at build time (GNOME 49+ Flatpak runtime or Fedora 42+)
+# Requires libadwaita >= 1.8 at build time (GNOME 49+ Flatpak runtime or Fedora 43+)
 adw-1-8 = ["adw-1-7", "libadwaita/v1_8"]
 
 # GTK4 baselines above the `v4_14` floor the workspace pins.

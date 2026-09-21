@@ -198,7 +198,7 @@ Add `alsa-devel` (openSUSE) or `alsa-lib-devel` (Fedora) to BuildRequires.
 
 Requires GTK4 ≥ 4.14. Available in:
 - openSUSE Tumbleweed / Slowroll / Leap 16.0
-- Fedora 42+
+- Fedora 43+
 - Ubuntu 24.04+
 - Debian 13+
 
