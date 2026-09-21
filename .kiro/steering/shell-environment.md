@@ -97,6 +97,20 @@ never a substitute for knowing the rules.
 **Once a terminal has a live foreground job, it is not yours.** Do not send it
 another command — not a status check, not an `echo`, not a `^C`. Read the log file.
 
+**Wait for a command's own output before sending the next one — the tool
+returning is not the command finishing.** A `cargo` build or test regularly
+returns to you with `Exit Code: -1` and an empty body while the process is still
+alive in the tty; that is the 120 s tool timeout elapsing, not the job ending.
+Firing the next command then queues it behind the running one, its output lands
+interleaved or lost, and you end up reasoning from a half-finished run — the exact
+mistake that made a fully green `verify.sh` look ambiguous and cost a round of
+re-runs. The rule is mechanical: a run is finished **only** when its `.rc`
+sentinel file exists (option 2) or the single blocking tool call has returned with
+real output (option 1). An `Exit Code: -1`, empty output, or a prompt line in the
+terminal buffer is **not** proof of completion — never treat it as one, and never
+send a follow-up command on that assumption. When in doubt, read the log/`.rc`
+file; do not poke the terminal.
+
 Three ways out, cheapest first.
 
 **1. Wait inside the one tool call.** Almost always right.
