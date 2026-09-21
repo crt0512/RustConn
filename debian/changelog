@@ -1,3 +1,19 @@
+rustconn (0.22.3-1) unstable; urgency=medium
+
+  * Version bump to 0.22.3
+  * Fixed: the window could livelock at 100% CPU on a session emitting a very
+    long line with no newline (issue #338); the transcript writer used to
+    rescan the whole growing buffer on every 8 KB PTY chunk, which is quadratic
+    in the line length and ran on the GTK main thread. It now scans only the
+    new bytes for a newline, looks for a prompt only in the buffer tail, and
+    flushes an un-terminated run as a partial record at a byte cap.
+  * Fixed: KeePass password inheritance still prompted on hosts set to
+    "inherit" (issue #327); the inherit resolver passed the group's full
+    RustConn/Groups/... path to the reader, which prepends RustConn/ itself, so
+    it looked up a doubled path that never matched. It now uses the same
+    prefix-free entry name as save and direct load, so all three agree.
+ -- Anton Isaiev <totoshko88@gmail.com>  Tue, 22 Sep 2026 12:00:00 +0300
+
 rustconn (0.22.2-1) unstable; urgency=medium
 
   * Version bump to 0.22.2

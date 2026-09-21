@@ -389,6 +389,10 @@ done
 %{_datadir}/icons/hicolor/*/apps/io.github.totoshko88.RustConn.*
 
 %changelog
+* Tue Sep 22 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.3-0
+- Version bump to 0.22.3
+- Fixed: the window could livelock at 100% CPU on a session emitting a very long line with no newline (issue #338); the transcript writer now scans only the new bytes for a newline, looks for a prompt only in the buffer tail, and flushes an un-terminated run as a partial record at a byte cap, so the per-chunk work is bounded and the transcript stays complete
+- Fixed: KeePass password inheritance still prompted on hosts set to "inherit" (issue #327); the inherit resolver now uses the same prefix-free entry name as save and direct load, so all three agree on where the group password lives
 * Sun Sep 20 2026 Anton Isaiev <totoshko88@gmail.com> - 0.22.2-0
 - Version bump to 0.22.2
 - Fixed: reconnecting a split-screen guest pane dropped it into a new tab (issue #328); the in-place reconnect now recognises a session living in a split pane and reuses the pane's own widget, so the session stays where it was with its scrollback intact

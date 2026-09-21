@@ -140,6 +140,15 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.22.3" date="2026-09-22">
+      <description>
+        <p>Version 0.22.3 - transcript livelock and KeePass inheritance fixes:</p>
+        <ul>
+          <li>Fixed: the window could livelock at 100% CPU on a session emitting a very long line with no newline; the transcript writer now bounds its per-chunk work and flushes an over-long run as a partial record (issue #338)</li>
+          <li>Fixed: KeePass password inheritance still prompted on hosts set to "inherit"; the inherit resolver now uses the same prefix-free entry name as save and direct load (issue #327)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.22.2" date="2026-09-20">
       <description>
         <p>Version 0.22.2 - split-pane reconnect and broadcast fixes:</p>
